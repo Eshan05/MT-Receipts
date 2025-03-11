@@ -32,7 +32,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const response = await fetch('/api/auth')
+      const response = await fetch('/api/v')
       const data = await response.json()
       if (data.isAuthenticated) {
         router.replace(redirectPath)
