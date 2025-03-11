@@ -47,7 +47,6 @@ export default function AuthPage() {
       email: '',
       password: '',
     },
-    mode: 'onChange',
   })
 
   const signUpForm = useForm<z.infer<typeof signUpFormSchema>>({

@@ -52,7 +52,7 @@ interface IEventModel extends Model<IEvent> {
 
 const EventSchema = new Schema<IEvent, IEventModel>(
   {
-    eventCode: { type: Number, required: true, unique: true },
+    eventCode: { type: Number, required: true },
     type: {
       type: String,
       enum: ['seminar', 'workshop', 'other'],

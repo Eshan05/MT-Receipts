@@ -1,3 +1,5 @@
+'use server'
+
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
