@@ -33,7 +33,6 @@ const userSchema = new Schema<IUser, IUserModel>(
 
 userSchema.index({ email: 1 }, { unique: true })
 userSchema.index({ username: 1 }, { unique: true })
-userSchema.index({ isDeleted: 1 })
 
 userSchema.pre('save', async function (next) {
   if (this.isModified('passhash')) {

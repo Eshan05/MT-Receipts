@@ -72,5 +72,7 @@ receiptSchema.index({ templateId: 1 })
 receiptSchema.index({ 'customer.email': 1 })
 receiptSchema.index({ purchaseIds: 1 })
 
-const Receipt = model<IReceipt>('Receipt', receiptSchema)
+export const Receipt: Model<IReceipt> =
+  (mongoose.models.Receipt as Model<IReceipt>) ||
+  model<IReceipt>('Receipt', receiptSchema)
 export default Receipt

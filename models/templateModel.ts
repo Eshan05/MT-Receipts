@@ -57,8 +57,7 @@ ReceiptTemplateSchema.pre('save', function (next) {
   next()
 })
 
-export const ReceiptTemplate = model<IReceiptTemplate, Model<IReceiptTemplate>>(
-  'ReceiptTemplate',
-  ReceiptTemplateSchema
-)
+export const ReceiptTemplate: Model<IReceiptTemplate> =
+  (mongoose.models.ReceiptTemplate as Model<IReceiptTemplate>) ||
+  model<IReceiptTemplate>('ReceiptTemplate', ReceiptTemplateSchema)
 export default ReceiptTemplate
