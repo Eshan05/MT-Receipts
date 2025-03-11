@@ -6,12 +6,12 @@ export async function middleware(request: NextRequest) {
   const token = await getTokenServer()
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith('/') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !request.nextUrl.pathname.startsWith('/v')
 
   if (isProtectedRoute) {
     if (!token) {
       const url = request.nextUrl.clone()
-      url.pathname = '/auth'
+      url.pathname = '/v'
       url.search = `redirect=${request.nextUrl.pathname}`
       return NextResponse.redirect(url)
     }
@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
     const verifiedToken = await verifyAuthToken(token)
     if (!verifiedToken) {
       const url = request.nextUrl.clone()
-      url.pathname = '/auth'
+      url.pathname = '/v'
       url.search = `redirect=${request.nextUrl.pathname}`
       return NextResponse.redirect(url)
     }

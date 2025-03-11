@@ -29,7 +29,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'ACES | Receipts Generator',
-  description: 'Hi',
+  description:
+    'The internal web application used by ACES (Association of Computer Engineers) to generate and mail receipts for all events, external or internal. Contributions by Madhur, Eshan, Vivek, Aman, Bhavesh, Sumeet',
 }
 
 export default function RootLayout({
