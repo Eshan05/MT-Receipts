@@ -2,12 +2,13 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import {
-  BookOpen,
+  CalendarDaysIcon,
   ChartArea,
+  FileTextIcon,
   Frame,
   Newspaper,
   PieChart,
-  User2Icon,
+  PlusCircleIcon,
 } from 'lucide-react'
 import * as React from 'react'
 
@@ -25,34 +26,39 @@ import { Skeleton } from '@/components/ui/skeleton'
 const data = {
   navMain: [
     {
-      title: 'View Students',
-      url: '/admin/students',
-      icon: User2Icon,
-    },
-    {
       title: 'View Events',
-      url: '/admin/events',
-      icon: BookOpen,
-    },
-    {
-      title: 'View Graphs',
-      url: '/admin',
-      icon: ChartArea,
+      url: '/events',
+      icon: CalendarDaysIcon,
     },
     {
       title: 'Create Events',
-      url: '/admin/create',
+      url: '/events/create',
+      icon: PlusCircleIcon,
+    },
+    {
+      title: 'Admin Dashboard',
+      url: '/dashboard',
+      icon: ChartArea,
+    },
+    {
+      title: 'View Receipts',
+      url: '/templates',
+      icon: FileTextIcon,
+    },
+    {
+      title: 'Make Receipts',
+      url: '/receipts',
       icon: Newspaper,
     },
   ],
   projects: [
     {
-      name: 'Web Map',
+      name: 'ACES Merchandise',
       url: '#',
       icon: Frame,
     },
     {
-      name: 'Statistics',
+      name: 'BE Farewell',
       url: '#',
       icon: PieChart,
     },

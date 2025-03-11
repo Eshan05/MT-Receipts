@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronsUpDown, CogIcon, FlagIcon, Heart, LogOut } from 'lucide-react'
+import { ChevronsUpDown, CogIcon, Heart, LogOut } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -18,12 +18,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { ContextUser, useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
-import { IUser } from '@/models/userModel'
-import { ContextUser } from '@/contexts/AuthContext'
 
 export function NavUser({ user }: { user: ContextUser | undefined | null }) {
   const { isMobile } = useSidebar()
+  const { logout } = useAuth()
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -78,16 +78,12 @@ export function NavUser({ user }: { user: ContextUser | undefined | null }) {
             <DropdownMenuGroup>
               <DropdownMenuItem className='cursor-pointer'>
                 <CogIcon />
-                Preferences
-              </DropdownMenuItem>
-              <DropdownMenuItem className='cursor-pointer'>
-                <FlagIcon />
-                Report | Feedback
+                Change Password
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuItem
               className='cursor-pointer'
-              // onClick={() => void signOut()}
+              onClick={() => void logout()}
             >
               <LogOut />
               Log out
