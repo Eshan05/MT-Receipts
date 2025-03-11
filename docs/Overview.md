@@ -4,7 +4,7 @@ Platform which our team will use to send receipts for any events.
 
 ## Users
 
-1. An application (Next + Mongo) only meant for admins. Will have simple mail and password login/sign-up with `jose` and `cookies-next` with something like this but instead of generating some unique ID with `nanoid` can use email instead? Will see if any improvements can be made
+1. An application (Next + Mongo) only meant for admins. Will have simple mail and password login/sign-up with `jose` and `cookies-next` with something like this. Will see if any improvements can be made
 
 ```ts
 import dbConnect from "@utils/db";
@@ -130,10 +130,13 @@ const Events = new Schema({
       phone: { type: String }
     },
     paymentMethod: { type: String },
-    price: { type: Number, required: true },
-    itemName: { type: String, required: true },
-    itemDesc: { type: String },
-    quantity: { type: Number, required: true },
+    items: [{
+        itemId: { type: String, required: true },
+        itemName: { type: String, required: true },
+        itemDesc: { type: String },
+        quantity: { type: Number, required: true },
+        price: { type: Number, required: true },
+    }],
     timestamp: { type: Date, default: Date.now },
     status: {type: String, enum: ['pending', 'completed', 'cancelled', 'refunded'], default: 'pending'}
   }],
@@ -182,7 +185,8 @@ const receiptSchema = new Schema({
   ],
 })
 ```
-1. Template Schema
+
+6. Template Schema
 ```js
 const ReceiptTemplateSchema = new Schema({
   name: { type: String, required: true, unique: true },
@@ -194,8 +198,17 @@ const ReceiptTemplateSchema = new Schema({
   // All metadata  and other things will be done by react-pdf
 });
 ```
-1. Other libraries 
-   1. Mongoose
-   2. ShadCN
-   3. Zod
-   4. Bcrypt
+7. There will be admin signup but no reset or forgot password functionality, since we control the database we can just delete and make new.
+8. Should be way to create new events completely
+9. Can add purchases or edit a user's purchases in the table
+10. Can see receipts in bulk (Entire table) or just to one user
+11. View receipt and to edit will just edit the component where `react-pdf` is used, will have to hard code the design of the template but will have dynamic values for name and such
+12. A separate route for one off receipts
+13. A simple route where we can see all the templates (Not one-offs)
+14. Won't be storing the files because file storage solutions are expensive
+
+15. Other libraries 
+    1. Mongoose
+    2. ShadCN
+    3. Zod
+    4. Bcrypt
