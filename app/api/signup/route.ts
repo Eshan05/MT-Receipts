@@ -42,11 +42,18 @@ export async function POST(request: Request) {
     await setAuthCookie(email, response)
 
     return response
-  } catch (error: any) {
-    console.error(error)
-    return NextResponse.json(
-      { message: 'Internal Server Error', error: error.message },
-      { status: 500 }
-    )
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(error)
+      return NextResponse.json(
+        { message: 'Internal Server Error', error: error.message },
+        { status: 500 }
+      )
+    } else {
+      return NextResponse.json(
+        { message: 'Internal Server Error', error: 'Unknown error' },
+        { status: 500 }
+      )
+    }
   }
 }

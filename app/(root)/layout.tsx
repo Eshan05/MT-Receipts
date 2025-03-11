@@ -23,7 +23,7 @@ export default function VLayout({
                 <aside className='flex items-center gap-2'>
                   <SidebarTrigger className='-ml-1' />
                   <h1 className='text-lg font-semibold leading-none tracking-tight'>
-                    Sinhgad CDC Attendance
+                    ACES Receipts
                   </h1>
                 </aside>
                 <aside>

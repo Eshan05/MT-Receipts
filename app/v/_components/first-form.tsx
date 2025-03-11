@@ -26,7 +26,7 @@ const FirstForm: React.FC<FirstFormProps> = ({ form }) => {
         <p className='text-muted-foreground text-sm mb-6 text-left'>
           Enter your preferred username (Unique) and email address. If you get
           an error please recall if you have used the email or username
-          beforehand. If you haven't then drop a message in the WP group.
+          beforehand. If you haven&apos;t then drop a message in the WP group.
         </p>
       </header>
       <FormField

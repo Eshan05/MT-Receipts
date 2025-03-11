@@ -34,7 +34,7 @@ export interface IItemAnalytics {
 }
 
 export interface IEvent extends Document {
-  eventCode: number
+  eventCode: string
   type: 'seminar' | 'workshop' | 'other'
   name: string
   desc?: string
@@ -47,12 +47,12 @@ export interface IEvent extends Document {
 }
 
 interface IEventModel extends Model<IEvent> {
-  findByEventCodeNotDeleted(eventCode: number): Promise<IEvent | null>
+  findByEventCodeNotDeleted(eventCode: string): Promise<IEvent | null>
 }
 
 const EventSchema = new Schema<IEvent, IEventModel>(
   {
-    eventCode: { type: Number, required: true },
+    eventCode: { type: String, required: true },
     type: {
       type: String,
       enum: ['seminar', 'workshop', 'other'],
@@ -70,7 +70,7 @@ const EventSchema = new Schema<IEvent, IEventModel>(
     createdAt: { type: Date, default: Date.now },
     purchases: [
       {
-        purchaseId: { type: String, required: true, unique: true },
+        purchaseId: { type: String, required: true },
         user: {
           name: { type: String },
           email: { type: String },
@@ -113,7 +113,7 @@ EventSchema.index({ 'purchases.purchaseId': 1 })
 EventSchema.index({ 'purchases.user.email': 1 })
 EventSchema.index({ 'itemAnalytics.itemName': 1 })
 
-EventSchema.statics.findByEventCodeNotDeleted = function (eventCode: number) {
+EventSchema.statics.findByEventCodeNotDeleted = function (eventCode: string) {
   return this.findOne({ eventCode, isDeleted: false })
 }
 
@@ -162,7 +162,7 @@ function calculateItemAnalytics(purchases: IPurchase[]): IItemAnalytics[] {
   }))
 }
 
-const Event: IEventModel =
+const AEvent: IEventModel =
   (mongoose.models.Event as IEventModel) ||
   model<IEvent, IEventModel>('Event', EventSchema)
-export default Event
+export default AEvent

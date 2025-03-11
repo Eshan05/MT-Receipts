@@ -80,8 +80,10 @@ export default function AuthPage() {
 
       toast.success(data.message || 'Success!')
       router.push(redirectPath)
-    } catch (error: any) {
-      toast.error(error.message || 'An error occurred')
+    } catch (error) {
+      if (error instanceof Error)
+        toast.error(error.message || 'An error occurred')
+      else toast.error('An error occurred')
     }
   }
 
@@ -108,8 +110,10 @@ export default function AuthPage() {
 
       toast.success(data.message || 'Account created!  Please log in.')
       setIsSignUp(false)
-    } catch (error: any) {
-      toast.error(error.message || 'An error occurred')
+    } catch (error) {
+      if (error instanceof Error)
+        toast.error(error.message || 'An error occurred')
+      else toast.error('An error occurred')
     }
   }
 
