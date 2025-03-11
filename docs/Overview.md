@@ -203,11 +203,12 @@ const ReceiptTemplateSchema = new Schema({
 9. Can add purchases or edit a user's purchases in the table
 10. Can see receipts in bulk (Entire table) or just to one user
 11. View receipt and to edit will just edit the component where `react-pdf` is used, will have to hard code the design of the template but will have dynamic values for name and such
-12. A separate route for one off receipts
-13. A simple route where we can see all the templates (Not one-offs)
-14. Won't be storing the files because file storage solutions are expensive
+12. Should also be able to go to a slug URL and see the receipt sent a specific person 
+13. A separate route for one off receipts
+14. A simple route where we can see all the templates (Not one-offs)
+15. Won't be storing the files because file storage solutions are expensive. Will do either blob or save file in repo and modify it
 
-15. Other libraries 
+16. Other libraries 
     1. Mongoose
     2. ShadCN
     3. Zod
