@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { getCookie, deleteCookie, setCookie } from 'cookies-next'
 import { jwtVerify, type JWTPayload } from 'jose'
 
-interface User {
+export interface ContextUser {
   email: string
   username: string
   lastLogin?: Date
@@ -20,7 +20,7 @@ interface User {
 
 interface AuthContextProps {
   isAuthenticated: boolean
-  user: User | null
+  user: ContextUser | null
   loading: boolean
   login: (email: string, pass: string) => Promise<void>
   signup: (username: string, email: string, pass: string) => Promise<void>
@@ -44,7 +44,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<ContextUser | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const router = useRouter()
 
