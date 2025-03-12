@@ -3,7 +3,16 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  --font-inter: 'Inter', sans-serif;
+  --font-sans: 'Geist', 'Geist Sans', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --breakpoint-xs: 30rem;
+  --breakpoint-emd: 768px;
+  --container-8xl: 1440px;
+  --text-2xs: 0.7rem;
+  --text-tiny: 0.625rem;
+  --color-informative: hsl(var(--informative));
+  --color-informative-foreground: hsl(var(--informative-foreground));
 }
 
 @theme {
@@ -205,6 +214,14 @@
   --light-pink: 275, 100%, 97%;
   --grayish-purple: 292, 16%, 49%;
   --dark-purple: 292, 42%, 14%;
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 .text-light-pink {

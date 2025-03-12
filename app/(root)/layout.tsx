@@ -31,7 +31,7 @@ export default function VLayout({
                 </aside>
               </div>
             </header>
-            <main className='admin-children-container relative group-has-[[data-collapsible=icon]]/sidebar-wrapper:ml-0 ml-0 w-full flex justify-center @container'>
+            <main className='admin-children-container relative group-has-[[data-collapsible=icon]]/sidebar-wrapper:ml-0 ml-0 w-full flex justify-center @container px-4'>
               {children}
               {/* <footer className='w-full mx-auto relative'>
               <Footer />
