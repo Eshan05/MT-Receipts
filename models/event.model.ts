@@ -8,7 +8,20 @@ export interface IEventItem {
 
 export interface IEvent extends Document {
   eventCode: string
-  type: 'seminar' | 'workshop' | 'other'
+  type:
+    | 'seminar'
+    | 'workshop'
+    | 'conference'
+    | 'competition'
+    | 'meetup'
+    | 'training'
+    | 'webinar'
+    | 'hackathon'
+    | 'concert'
+    | 'fundraiser'
+    | 'networking'
+    | 'internal'
+    | 'other'
   name: string
   desc?: string
   items: IEventItem[]
@@ -33,7 +46,21 @@ const EventSchema = new Schema<IEvent, IEventModel>(
     eventCode: { type: String, required: true },
     type: {
       type: String,
-      enum: ['seminar', 'workshop', 'other'],
+      enum: [
+        'seminar',
+        'workshop',
+        'conference',
+        'competition',
+        'meetup',
+        'training',
+        'webinar',
+        'hackathon',
+        'concert',
+        'fundraiser',
+        'networking',
+        'internal',
+        'other',
+      ],
       required: true,
     },
     name: { type: String, required: true },
