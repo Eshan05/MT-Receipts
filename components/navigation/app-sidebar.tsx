@@ -31,11 +31,6 @@ const data = {
       icon: CalendarDaysIcon,
     },
     {
-      title: 'Create Events',
-      url: '/events/create',
-      icon: PlusCircleIcon,
-    },
-    {
       title: 'Admin Dashboard',
       url: '/dashboard',
       icon: ChartArea,
