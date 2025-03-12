@@ -147,7 +147,9 @@ export default function AuthPage() {
             <SignInForm form={form} />
           )}
           <footer className='flex justify-end mt-4 gap-4 flex-wrap flex-col md:flex-row'>
-            <Button type='submit'>{isSignUp ? 'Sign Up' : 'Sign In'}</Button>
+            {isSignUp && (
+              <Button type='submit'>{isSignUp ? 'Sign Up' : 'Sign In'}</Button>
+            )}
             <Button
               variant='secondary'
               type='button'

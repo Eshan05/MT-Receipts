@@ -2,6 +2,7 @@
 
 import { AutosizeTextarea } from '@/components/ui/autoresize-textarea'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import {
   Form,
   FormControl,
@@ -21,35 +22,36 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PlusCircle, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-export const eventItemSchema = z.object({
-  name: z.string().min(1).max(64),
-  description: z.string().min(1).max(128),
+const eventItemSchema = z.object({
+  id: z.string().optional(), // Only for useFieldArray
+  name: z.string().min(1, 'Name is required').max(64, 'Max 64 characters'),
+  description: z
+    .string()
+    .min(1, 'Description is required')
+    .max(128, 'Max 128 characters'),
   price: z
     .number({
-      required_error: 'Item price is required',
+      required_error: 'Price is required',
       invalid_type_error: 'Price should be a number',
     })
-    .positive({ message: 'Item price must be positive' })
+    .positive({ message: 'Price must be positive' })
     .min(1, 'Price must be 1 or more'),
 })
 
-export const eventSchema = z.object({
-  // eventCode: z
-  //   .coerce.number({
-  //     required_error: 'Event code is required',
-  //     invalid_type_error: 'Event code should be a number',
-  //   })
-  //   .positive({ message: 'Event code must be positive' }),
-  eventCode: z.string(),
+const eventSchema = z.object({
+  eventCode: z.string().min(1, 'Event code is required'),
   type: z.enum(['seminar', 'workshop', 'other'], {
     required_error: 'Event type is required',
   }),
-  name: z.string().min(1).max(64),
-  desc: z.string().min(1).max(128).optional(),
+  name: z
+    .string()
+    .min(1, 'Event name is required')
+    .max(64, 'Max 64 characters'),
+  desc: z.string().max(128, 'Max 128 characters').optional(),
   items: z.array(eventItemSchema),
 })
 
@@ -65,21 +67,31 @@ export default function CreateEventPage() {
       type: 'seminar',
       name: '',
       desc: '',
-      items: [{ name: '', description: '', price: 0 }],
+      items: [{ id: 'initial', name: '', description: '', price: 0 }],
     },
     mode: 'onChange',
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items',
   })
 
   const onSubmit = async (data: EventFormValues) => {
     setLoading(true)
     try {
+      const cleanedData = {
+        ...data,
+        items: data.items.map(({ id, ...rest }) => rest),
+      }
+
       const response = await fetch('/api/events/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           // 'Authorization': `Bearer ${await getTokenServer()}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       })
 
       if (!response.ok) {
@@ -98,7 +110,6 @@ export default function CreateEventPage() {
       setLoading(false)
     }
   }
-
   return (
     <main className='p-4 flex flex-col gap-4 mx-auto max-w-4xl lg:max-w-4xl 2xl:max-w-5xl min-h-screen items-center justify-center'>
       <article className='w-full'>
@@ -182,81 +193,91 @@ export default function CreateEventPage() {
                 />
               </section>
             </div>
-
-            {/* Items Section (Dynamic) */}
             <div className='rounded-md p-2'>
               <h2 className='text-3xl text-center font-semibold mb-4 shadow-heading'>
                 Items
               </h2>
-              {form.watch('items').map((item, index) => (
-                <div key={index} className='grid grid-cols-3 gap-4 mb-4'>
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.name`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Item Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.description`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder='Useless' />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.price`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price</FormLabel>
-                        <FormControl>
-                          <Input
-                            onChange={(e) =>
-                              field.onChange(Number(e.target.value))
-                            }
-                            value={field.value}
-                            type='number'
-                            name='price'
-                            placeholder='Price'
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type='button'
-                    variant='outline'
-                    size='icon'
-                    className='mt-4'
-                    onClick={() => form.unregister(`items.${index}`)}
-                  >
-                    <Trash2 className='h-4 w-4' />
-                  </Button>
-                </div>
+              {fields.map((item, index) => (
+                <Card key={item.id} className='mb-4'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardHeader>{index + 1}</CardHeader>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon'
+                      onClick={() => remove(index)}
+                    >
+                      <Trash2 className='h-4 w-4 text-red-500' />
+                    </Button>
+                  </CardHeader>
+                  <CardContent className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                    {/* Item Name */}
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className='hidden'>Item Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className='border-0'
+                              placeholder='Item Name'
+                            />
+                          </FormControl>
+                          {/* <FormMessage /> */}
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.description`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className='hidden'>Description</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className='border-0'
+                              placeholder='Description'
+                            />
+                          </FormControl>
+                          {/* <FormMessage /> */}
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Item Price */}
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className='hidden'>Price</FormLabel>
+                          <FormControl>
+                            <Input
+                              type='number'
+                              className='border-0'
+                              placeholder='Price'
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(Number(e.target.value))
+                              }
+                              value={field.value}
+                            />
+                          </FormControl>
+                          {/* <FormMessage /> */}
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
               ))}
               <Button
                 type='button'
                 variant='outline'
-                onClick={() =>
-                  form.setValue('items', [
-                    ...form.watch('items'),
-                    { name: '', description: '', price: 0 },
-                  ])
-                }
+                onClick={() => append({ name: '', description: '', price: 0 })}
               >
                 <PlusCircle className='mr-2 h-4 w-4' /> Add Item
               </Button>

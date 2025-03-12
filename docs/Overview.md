@@ -7,23 +7,29 @@ Platform which our team will use to send receipts for any events.
 1. An application (Next + Mongo) only meant for admins. Will have simple mail and password login/sign-up with `jose` and `cookies-next` with something like this. Will see if any improvements can be made
 
 ```ts
-import dbConnect from "@utils/db";
-import Url from '@models/url';
-import { NextApiRequest, NextApiResponse } from "next";
+import dbConnect from '@utils/db'
+import Url from '@models/url'
+import { NextApiRequest, NextApiResponse } from 'next'
 import { nanoid } from 'nanoid'
 import { SignJWT } from 'jose'
-import { setCookie } from 'cookies-next';
+import { setCookie } from 'cookies-next'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method === 'POST') {
-    const { passcode } = req.body;
+    const { passcode } = req.body
     try {
-      await dbConnect();
-      const url = await Url.findOne({ q: passcode });
+      await dbConnect()
+      const url = await Url.findOne({ q: passcode })
 
       if (url) {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || '5322c9714a5e9451e84e9f4da58074b4d2af21cb9bafa65a2bbdf8de9f95e5b3');
-        const payload = { passcode: url.q, uniqueId: nanoid() };
+        const secret = new TextEncoder().encode(
+          process.env.JWT_SECRET ||
+            '5322c9714a5e9451e84e9f4da58074b4d2af21cb9bafa65a2bbdf8de9f95e5b3'
+        )
+        const payload = { passcode: url.q, uniqueId: nanoid() }
 
         const token = await new SignJWT(payload)
           .setProtectedHeader({ alg: 'HS256' })
@@ -38,61 +44,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sameSite: 'strict',
           httpOnly: process.env.NODE_ENV === 'production', // Make false if not working
           secure: process.env.NODE_ENV === 'production', // Same
-        });
+        })
 
-        return res.status(200).json({ message: 'Authenticated successfully' });
+        return res.status(200).json({ message: 'Authenticated successfully' })
       } else {
-        return res.status(401).json({ message: 'Invalid passcode' });
+        return res.status(401).json({ message: 'Invalid passcode' })
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+        console.error(error)
+        return res
+          .status(500)
+          .json({ message: 'Internal Server Error', error: error.message })
       }
     }
   } else {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+    return res.status(405).json({ message: 'Method Not Allowed' })
   }
 }
 ```
+
 ```ts
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { jwtVerify } from 'jose';
-import { getCookie } from 'cookies-next';
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { jwtVerify } from 'jose'
+import { getCookie } from 'cookies-next'
 
 export const useAuthen = () => {
-  const [authenticated, setAuthenticated] = useState(false);
-  const router = useRouter();
+  const [authenticated, setAuthenticated] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const checkAuthentication = async () => {
-      const token = await getCookie('authToken');
+      const token = await getCookie('authToken')
       // console.log(token)
 
       if (token && typeof token === 'string' && token.trim() !== '') {
         try {
-          const secret = new TextEncoder().encode(process.env.JWT_SECRET || '5322c9714a5e9451e84e9f4da58074b4d2af21cb9bafa65a2bbdf8de9f95e5b3');
-          await jwtVerify(token, secret, { algorithms: ['HS256'] });
-          setAuthenticated(true);
+          const secret = new TextEncoder().encode(
+            process.env.JWT_SECRET ||
+              '5322c9714a5e9451e84e9f4da58074b4d2af21cb9bafa65a2bbdf8de9f95e5b3'
+          )
+          await jwtVerify(token, secret, { algorithms: ['HS256'] })
+          setAuthenticated(true)
         } catch (error) {
           // console.error("T:", error);
-          setAuthenticated(false);
-          router.push(`/`);
+          setAuthenticated(false)
+          router.push(`/`)
         }
       } else {
         // console.log("No token found");
-        setAuthenticated(false);
-        router.push(`/`);
+        setAuthenticated(false)
+        router.push(`/`)
       }
-    };
+    }
 
-    checkAuthentication();
-  }, [router.pathname]);
+    checkAuthentication()
+  }, [router.pathname])
 
-  return authenticated;
-};
+  return authenticated
+}
 ```
+
 ```js
 // Schema for admin login, only admins allowed on platform. Does not refer to recipients
 const userSchema = new Schema({
@@ -111,44 +124,57 @@ const userSchema = new Schema({
 ```js
 const Events = new Schema({
   // Will use _id for other stuff
-  eventCode: { type: Number, required: true, unique: true },
-  type: { type: String, enum: ["seminar", "workshop", "other"] },
+  eventCode: { type: String, required: true, unique: true },
+  type: { type: String, enum: ['seminar', 'workshop', 'other'] },
   name: { type: String, required: true },
   desc: { type: String },
-  items: [{
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    price: { type: Number, required: true },
-  }],
-  createdAt: { type: Date, default: Date.now },
-  purchases: [{
-    purchaseId: { type: String, required: true, unique: true },
-    user: {
-      // userId: { type: String, required: true }, 
-      name: { type: String },
-      email: { type: String },
-      phone: { type: String }
+  items: [
+    {
+      name: { type: String, required: true },
+      description: { type: String, required: true },
+      price: { type: Number, required: true },
     },
-    paymentMethod: { type: String },
-    items: [{
-        itemId: { type: String, required: true },
-        itemName: { type: String, required: true },
-        itemDesc: { type: String },
-        quantity: { type: Number, required: true },
-        price: { type: Number, required: true },
-    }],
-    timestamp: { type: Date, default: Date.now },
-    status: {type: String, enum: ['pending', 'completed', 'cancelled', 'refunded'], default: 'pending'}
-  }],
-  itemAnalytics: [{
-    itemName: { type: String },
-    totalSold: { type: Number },
-    totalRevenue: { type: Number }
-  }],
-});
+  ],
+  createdAt: { type: Date, default: Date.now },
+  purchases: [
+    {
+      purchaseId: { type: String, required: true, unique: true },
+      user: {
+        name: { type: String },
+        email: { type: String },
+        phone: { type: String },
+      },
+      paymentMethod: { type: String },
+      items: [
+        {
+          itemId: { type: String, required: true },
+          itemName: { type: String, required: true },
+          itemDesc: { type: String },
+          quantity: { type: Number, required: true },
+          price: { type: Number, required: true },
+        },
+      ],
+      timestamp: { type: Date, default: Date.now },
+      status: {
+        type: String,
+        enum: ['pending', 'completed', 'cancelled', 'refunded'],
+        default: 'pending',
+      },
+    },
+  ],
+  itemAnalytics: [
+    {
+      itemName: { type: String },
+      totalSold: { type: Number },
+      totalRevenue: { type: Number },
+    },
+  ],
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date },
+})
 ```
 
-3. To actually send receipts, you go to the table select all users and hit send receipt button, then it will show you select a receipt template. Templates will be made using `react-pdf` and mailed using `mailgun.js`, the template will automatically be made based on the recipient's purchases passing as props. Need to make a schema for it.
+1. To actually send receipts, you go to the table select all users and hit send receipt button, then it will show you select a receipt template. Templates will be made using `react-pdf` and mailed using `mailgun.js`, the template will automatically be made based on the recipient's purchases passing as props. Need to make a schema for it.
 
 ## Extra
 
@@ -186,29 +212,31 @@ const receiptSchema = new Schema({
 })
 ```
 
-6. Template Schema
+1. Template Schema
+
 ```js
 const ReceiptTemplateSchema = new Schema({
   name: { type: String, required: true, unique: true },
   description: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  isActive: { type: Boolean, default: true }, 
-  templateType: { type: String, enum: ['event', 'one-off'], default: 'event' }, 
+  isActive: { type: Boolean, default: true },
+  templateType: { type: String, enum: ['event', 'one-off'], default: 'event' },
   // All metadata  and other things will be done by react-pdf
-});
+})
 ```
-7. There will be admin signup but no reset or forgot password functionality, since we control the database we can just delete and make new.
-8. Should be way to create new events completely
-9. Can add purchases or edit a user's purchases in the table
-10. Can see receipts in bulk (Entire table) or just to one user
-11. View receipt and to edit will just edit the component where `react-pdf` is used, will have to hard code the design of the template but will have dynamic values for name and such
-12. Should also be able to go to a slug URL and see the receipt sent a specific person 
-13. A separate route for one off receipts
-14. A simple route where we can see all the templates (Not one-offs)
-15. Won't be storing the files because file storage solutions are expensive. Will do either blob or save file in repo and modify it
 
-16. Other libraries 
+1. There will be admin signup but no reset or forgot password functionality, since we control the database we can just delete and make new.
+2. Should be way to create new events completely
+3. Can add purchases or edit a user's purchases in the table
+4. Can see receipts in bulk (Entire table) or just to one user
+5. View receipt and to edit will just edit the component where `react-pdf` is used, will have to hard code the design of the template but will have dynamic values for name and such
+6. Should also be able to go to a slug URL and see the receipt sent a specific person
+7. A separate route for one off receipts
+8. A simple route where we can see all the templates (Not one-offs)
+9. Won't be storing the files because file storage solutions are expensive. Will do either blob or save file in repo and modify it
+
+10. Other libraries
     1. Mongoose
     2. ShadCN
     3. Zod
