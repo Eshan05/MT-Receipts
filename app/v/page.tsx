@@ -1,52 +1,81 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Form } from '@/components/ui/form'
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useState, Suspense } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import FirstForm from './_components/first-form'
 import SignInForm from './_components/form'
 
-export const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+const formSchema = z.object({
+  email: z
+    .string()
+    .email({ error: 'Invalid email address' })
+    .trim()
+    .min(1, { error: 'Email is required' })
+    .max(48, { error: 'Email must be at most 48 characters' })
+    .transform((val) => val.trim().toLowerCase()),
+  password: z
+    .string()
+    .min(8, { error: 'Password must be at least 8 characters' })
+    .max(48, { error: 'Password must be at most 48 characters' }),
 })
 
-export const signUpFormSchema = z.object({
-  username: z.string().min(3).max(20),
-  email: z.string().min(1),
-  password: z.string().min(8),
-  confirmPassword: z.string().min(8),
-})
+const signUpFormSchema = z
+  .object({
+    username: z.string().min(3).max(20),
+    email: z
+      .string()
+      .email({ error: 'Invalid email address' })
+      .trim()
+      .min(1, { error: 'Email is required' })
+      .max(48, { error: 'Email must be at most 48 characters' })
+      .transform((val) => val.trim().toLowerCase()),
+    password: z
+      .string()
+      .min(8, { error: 'Password must be at least 8 characters' })
+      .max(48, { error: 'Password must be at most 48 characters' })
+      .regex(/[A-Z]/, {
+        error: 'Password must contain at least one uppercase letter',
+      })
+      .regex(/[a-z]/, {
+        error: 'Password must contain at least one lowercase letter',
+      })
+      .regex(/[0-9]/, { error: 'Password must contain at least one number' })
+      .regex(/[!@#$%^&*]/, {
+        error: 'Password must contain at least one special character',
+      }),
+    confirmPassword: z
+      .string()
+      .min(8, { error: 'Confirm Password must be at least 8 characters' })
+      .max(48, { error: 'Confirm Password must be at most 48 characters' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    error: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectPath = searchParams.get('redirect') || '/'
   const [isSignUp, setIsSignUp] = useState(false)
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const response = await fetch('/api/v')
-      const data = await response.json()
-      if (data.isAuthenticated) {
-        router.replace(redirectPath)
-      }
-    }
-    checkAuth()
-  }, [router, redirectPath])
+  const [isLoading, setIsLoading] = useState(false)
+  const signupDisabled = process.env.NEXT_PUBLIC_DISABLE_SIGNUP === 'true'
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+    defaultValues: { email: '', password: '' },
   })
 
   const signUpForm = useForm<z.infer<typeof signUpFormSchema>>({
@@ -60,106 +89,135 @@ export default function AuthPage() {
     mode: 'onChange',
   })
 
+  useEffect(() => {
+    const checkAuth = async () => {
+      const response = await fetch('/api/v')
+      const data = await response.json()
+      if (data.isAuthenticated) router.replace(redirectPath)
+    }
+    checkAuth()
+  }, [router, redirectPath])
+
+  useEffect(() => {
+    if (signupDisabled && isSignUp) setIsSignUp(false)
+  }, [signupDisabled, isSignUp])
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const endpoint = isSignUp ? '/api/signup' : '/api/login'
-    console.log(values)
+    setIsLoading(true)
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       })
-
       const data = await response.json()
       if (!response.ok) {
         toast.error(data.error || 'An unexpected error occurred')
         return
       }
-
       toast.success(data.message || 'Success!')
       router.push(redirectPath)
     } catch (error) {
       if (error instanceof Error)
         toast.error(error.message || 'An error occurred')
       else toast.error('An error occurred')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   async function onSignUpSubmit(values: z.infer<typeof signUpFormSchema>) {
+    if (signupDisabled) {
+      toast.error('Sign up is currently disabled')
+      return
+    }
+    setIsLoading(true)
     try {
       const response = await fetch('/api/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: values.username,
           email: values.email,
           password: values.password,
         }),
       })
-
       const data = await response.json()
-
       if (!response.ok) {
         toast.error(data.error || 'An unexpected error occurred')
         return
       }
-
       toast.success(data.message || 'Account created!  Please log in.')
       setIsSignUp(false)
     } catch (error) {
       if (error instanceof Error)
         toast.error(error.message || 'An error occurred')
       else toast.error('An error occurred')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <main className='p-4 flex flex-col gap-4 mx-auto min-w-80 max-w-xl min-h-screen items-center justify-center'>
-      <Form {...form}>
-        <form
-          onSubmit={
-            isSignUp
-              ? signUpForm.handleSubmit(onSignUpSubmit)
-              : form.handleSubmit(onSubmit)
-          }
-          className='flex flex-col p-2 w-full mx-auto rounded-md gap-2 items-center'
-        >
-          <header className='flex flex-col items-center space-y-1'>
-            <Image
-              src='https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
-              alt='logo'
-              width={100}
-              height={100}
-              className='w-[3.33em] h-[3.33em] rounded-full'
-            />
-            <h1 className='text-3xl font-bold !mt-3'>Welcome Back</h1>
-            <p className='text-sm text-muted-foreground'>
-              Please {!isSignUp ? 'login' : 'register'}
-            </p>
-          </header>
-          {isSignUp ? (
-            <FirstForm form={signUpForm} />
-          ) : (
-            <SignInForm form={form} />
+      <form
+        onSubmit={
+          isSignUp
+            ? signUpForm.handleSubmit(onSignUpSubmit)
+            : form.handleSubmit(onSubmit)
+        }
+        className='flex flex-col p-2 w-full mx-auto rounded-md gap-2 items-center'
+      >
+        <header className='flex flex-col items-center space-y-1'>
+          <Image
+            src='https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
+            alt='logo'
+            width={100}
+            height={100}
+            className='w-[3.33em] h-[3.33em] rounded-full'
+          />
+          <h1 className='text-3xl font-bold !mt-3'>Welcome Back</h1>
+          <p className='text-sm text-muted-foreground'>
+            Please {!isSignUp ? 'login' : 'register'}
+          </p>
+        </header>
+        {isSignUp ? (
+          <FirstForm form={signUpForm} isLoading={isLoading} />
+        ) : (
+          <SignInForm form={form} isLoading={isLoading} />
+        )}
+        <footer className='flex justify-end mt-4 gap-4 flex-wrap flex-col md:flex-row'>
+          {isSignUp && (
+            <Button type='submit' disabled={isLoading}>
+              {isLoading ? 'Signing Up...' : 'Sign Up'}
+            </Button>
           )}
-          <footer className='flex justify-end mt-4 gap-4 flex-wrap flex-col md:flex-row'>
-            {isSignUp && (
-              <Button type='submit'>{isSignUp ? 'Sign Up' : 'Sign In'}</Button>
-            )}
+          {!signupDisabled && (
             <Button
               variant='secondary'
               type='button'
               onClick={() => setIsSignUp(!isSignUp)}
+              disabled={isLoading}
             >
               {isSignUp ? 'Switch to Sign In' : 'Switch to Sign Up'}
             </Button>
-          </footer>
-        </form>
-      </Form>
+          )}
+        </footer>
+      </form>
     </main>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className='p-4 flex flex-col gap-4 mx-auto min-w-80 max-w-xl min-h-screen items-center justify-center'>
+          <div className='animate-pulse'>Loading...</div>
+        </main>
+      }
+    >
+      <AuthPageContent />
+    </Suspense>
   )
 }

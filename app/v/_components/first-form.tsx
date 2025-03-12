@@ -1,88 +1,113 @@
 import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { useRouter } from 'next/navigation'
 import React from 'react'
+import { UseFormReturn, Controller } from 'react-hook-form'
+import { z } from 'zod'
 import { PasswordCompare } from './password-compare'
 
+const signUpFormSchema = z
+  .object({
+    username: z.string().min(3).max(20),
+    email: z
+      .string()
+      .email({ error: 'Invalid email address' })
+      .trim()
+      .min(1, { error: 'Email is required' })
+      .max(48, { error: 'Email must be at most 48 characters' })
+      .transform((val) => val.trim().toLowerCase()),
+    password: z
+      .string()
+      .min(8, { error: 'Password must be at least 8 characters' })
+      .max(48, { error: 'Password must be at most 48 characters' })
+      .regex(/[A-Z]/, {
+        error: 'Password must contain at least one uppercase letter',
+      })
+      .regex(/[a-z]/, {
+        error: 'Password must contain at least one lowercase letter',
+      })
+      .regex(/[0-9]/, { error: 'Password must contain at least one number' })
+      .regex(/[!@#$%^&*]/, {
+        error: 'Password must contain at least one special character',
+      }),
+    confirmPassword: z
+      .string()
+      .min(8, { error: 'Confirm Password must be at least 8 characters' })
+      .max(48, { error: 'Confirm Password must be at most 48 characters' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    error: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+type SignUpFormValues = z.infer<typeof signUpFormSchema>
+
 interface FirstFormProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: any
-  // form: UseFormReturn<z.infer<typeof signUpFormSchema>>
+  form: UseFormReturn<SignUpFormValues>
+  isLoading?: boolean
 }
 
-const FirstForm: React.FC<FirstFormProps> = ({ form }) => {
-  const router = useRouter()
-
+const FirstForm: React.FC<FirstFormProps> = ({ form, isLoading = false }) => {
   return (
     <article className='max-w-sm sm:max-md lg:w-lg p-1 flex flex-col items-center space-y-4'>
       <header className='flex flex-col gap-1 my-2 max-w-sm'>
-        {/* <h2 className='shadow-heading text-center text-5xl'>Register</h2> */}
         <p className='text-muted-foreground text-sm mb-6 text-left'>
           Enter your preferred username (Unique) and email address. If you get
           an error please recall if you have used the email or username
           beforehand. If you haven&apos;t then drop a message in the WP group.
         </p>
       </header>
-      <FormField
-        control={form.control}
-        name='username'
-        render={({ field }) => (
-          <FormItem className=''>
-            <FormLabel className=''>Preferred Name</FormLabel>
-            <FormControl>
+      <FieldGroup>
+        <Controller
+          name='username'
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor='username'>Preferred Name</FieldLabel>
               <Input
+                {...field}
+                id='username'
+                className='w-80'
+                tabIndex={1}
                 placeholder='Enter your username'
-                className='w-80'
-                tabIndex={1}
-                {...field}
+                disabled={isLoading}
+                aria-invalid={fieldState.invalid}
+                value={field.value ?? ''}
               />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name='email'
-        render={({ field }) => (
-          <FormItem className=''>
-            <FormLabel className=''>Email</FormLabel>
-            <FormControl>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+        <Controller
+          name='email'
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor='email'>Email</FieldLabel>
               <Input
-                placeholder='Enter your email'
+                {...field}
+                id='email'
                 className='w-80'
                 tabIndex={1}
-                {...field}
+                placeholder='Enter your email'
+                disabled={isLoading}
+                aria-invalid={fieldState.invalid}
+                value={field.value ?? ''}
               />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
-        name='password'
-        render={({ field }) => (
-          <FormItem className=''>
-            {/* <FormLabel className='text-base'>Password</FormLabel> */}
-            <FormControl>
-              {/* <PasswordInput form={form} field={field} /> */}
-              <PasswordCompare
-                form={form}
-                className='w-80 mx-auto flex flex-col items-start justify-start gap-4'
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+        <PasswordCompare
+          form={form}
+          className='w-80 mx-auto flex flex-col items-start justify-start gap-4'
+          isLoading={isLoading}
+        />
+      </FieldGroup>
     </article>
   )
 }

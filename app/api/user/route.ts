@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import dbConnect from '@/lib/dbConnect'
-import User from '@/models/userModel'
+import dbConnect from '@/lib/db-conn'
+import User from '@/models/user.model'
 import { z } from 'zod'
 
 const userSchema = z.object({

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import dbConnect from '@/lib/dbConnect'
-import User from '@/models/userModel'
+import dbConnect from '@/lib/db-conn'
+import User from '@/models/user.model'
 import { setAuthCookie } from '@/lib/auth'
 import { z } from 'zod'
 
@@ -12,6 +12,14 @@ const signupSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // Check if signups are disabled
+    if (process.env.NEXT_PUBLIC_DISABLE_SIGNUP === 'true') {
+      return NextResponse.json(
+        { error: 'Sign up is currently disabled' },
+        { status: 403 }
+      )
+    }
+
     await dbConnect()
     const body = await request.json()
 
