@@ -11,7 +11,7 @@ export const MadeBy = () => {
           href='https://github.com/ACES-RMDSSOE'
           className='hover:underline'
         >
-          ACES
+          Eshan
         </Link>
       </span>
     </div>

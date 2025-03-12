@@ -5,7 +5,6 @@ import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { FormControl } from '@/components/ui/form'
 import {
   Popover,
   PopoverContent,
@@ -30,7 +29,6 @@ export function DateTimePickerForm({
 
   function handleTimeChange(type: 'hour' | 'minute' | 'ampm', value: string) {
     const currentDate = fieldValue || new Date()
-    // eslint-disable-next-line prefer-const
     let newDate = new Date(currentDate)
 
     if (type === 'hour') {
@@ -53,22 +51,20 @@ export function DateTimePickerForm({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <FormControl>
-          <Button
-            variant={'outline'}
-            className={cn(
-              'w-full pl-3 text-left font-normal',
-              !fieldValue && 'text-muted-foreground'
-            )}
-          >
-            {fieldValue ? (
-              format(fieldValue, 'MM/dd/yyyy hh:mm aa')
-            ) : (
-              <span>MM/DD/YYYY hh:mm aa</span>
-            )}
-            <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-          </Button>
-        </FormControl>
+        <Button
+          variant={'outline'}
+          className={cn(
+            'w-full pl-3 text-left font-normal',
+            !fieldValue && 'text-muted-foreground'
+          )}
+        >
+          {fieldValue ? (
+            format(fieldValue, 'MM/dd/yyyy hh:mm aa')
+          ) : (
+            <span>MM/DD/YYYY hh:mm aa</span>
+          )}
+          <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0 pointer-events-auto'>
         <div className='sm:flex'>

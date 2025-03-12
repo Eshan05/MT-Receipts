@@ -1,16 +1,51 @@
 import * as React from 'react'
 import { CheckCircle, Eye, EyeOff, XCircle } from 'lucide-react'
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { UseFormReturn } from 'react-hook-form'
-import { signUpFormSchema } from '../page'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
+import { UseFormReturn, Controller } from 'react-hook-form'
 import { z } from 'zod'
 
+const signUpFormSchema = z
+  .object({
+    username: z.string().min(3).max(20),
+    email: z
+      .string()
+      .email({ error: 'Invalid email address' })
+      .trim()
+      .min(1, { error: 'Email is required' })
+      .max(48, { error: 'Email must be at most 48 characters' })
+      .transform((val) => val.trim().toLowerCase()),
+    password: z
+      .string()
+      .min(8, { error: 'Password must be at least 8 characters' })
+      .max(48, { error: 'Password must be at most 48 characters' })
+      .regex(/[A-Z]/, {
+        error: 'Password must contain at least one uppercase letter',
+      })
+      .regex(/[a-z]/, {
+        error: 'Password must contain at least one lowercase letter',
+      })
+      .regex(/[0-9]/, { error: 'Password must contain at least one number' })
+      .regex(/[!@#$%^&*]/, {
+        error: 'Password must contain at least one special character',
+      }),
+    confirmPassword: z
+      .string()
+      .min(8, { error: 'Confirm Password must be at least 8 characters' })
+      .max(48, { error: 'Confirm Password must be at most 48 characters' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    error: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+type SignUpFormValues = z.infer<typeof signUpFormSchema>
+
 export interface PasswordCompareProps {
-  form: UseFormReturn<z.infer<typeof signUpFormSchema>>
+  form: UseFormReturn<SignUpFormValues>
   className?: string
+  isLoading?: boolean
 }
 
 export interface PasswordFlag {
@@ -54,7 +89,7 @@ export const defaultFlags: PasswordFlag[] = [
 ]
 
 const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
-  ({ form, className, ...props }, ref) => {
+  ({ form, className, isLoading = false, ...props }, ref) => {
     const flagFactory = React.useCallback((inputFlags: PasswordFlag[]) => {
       const flagsObject: Record<string, PasswordFlag> = {}
       inputFlags.forEach((flag) => {
@@ -77,7 +112,7 @@ const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
         if (Object.prototype.hasOwnProperty.call(flagsCopy, key)) {
           flagsCopy[key as keyof typeof flagsCopy].value = flagsCopy[
             key as keyof typeof flagsCopy
-          ].regex.test(passwordValue!)
+          ].regex.test(passwordValue ?? '')
         }
       }
       setFlags(flagsCopy)
@@ -95,12 +130,14 @@ const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
           id='password'
           label='Password'
           fieldName='password'
+          isLoading={isLoading}
         />
         <PasswordField
           form={form}
           id='confirmPassword'
           label='Confirm password'
           fieldName='confirmPassword'
+          isLoading={isLoading}
         />
         <div className='flex w-full flex-col items-start justify-center'>
           <div className='mx-auto flex flex-col items-start justify-start gap-2'>
@@ -125,51 +162,58 @@ const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
 PasswordCompare.displayName = 'PasswordCompare'
 
 export interface PasswordFieldProps {
-  form: UseFormReturn<z.infer<typeof signUpFormSchema>>
+  form: UseFormReturn<SignUpFormValues>
   id: string
   placeholder?: string
   label?: string
-  fieldclassName?: string
-  fieldName: keyof z.infer<typeof signUpFormSchema>
+  fieldName: keyof SignUpFormValues
+  isLoading?: boolean
 }
 
 const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
-  ({ form, id, placeholder, label, fieldName }, ref) => {
+  ({ form, id, placeholder, label, fieldName, isLoading = false }, ref) => {
     const [visible, setVisible] = React.useState<boolean>(false)
-    const { register } = form
     const field = form.watch(fieldName)
     return (
-      <div
-        ref={ref}
-        className='flex w-full flex-col items-start justify-start gap-1'
-      >
-        <Label htmlFor={id} className=''>
-          {label}
-        </Label>
-        <div className='inline-flex w-full items-center justify-start gap-2'>
-          <Input
-            {...register(fieldName as keyof z.infer<typeof signUpFormSchema>, {
-              onChange: () => {
-                form.trigger(fieldName)
-                if (fieldName === 'password') form.trigger('confirmPassword')
-              },
-            })}
-            type={visible ? 'text' : 'password'}
-            id={id}
-            tabIndex={2}
-            value={field?.toString() || ''}
-            placeholder={placeholder}
-          />
-          <Button
-            className='min-w-10'
-            variant={'outline'}
-            size={'icon'}
-            onClick={() => setVisible(!visible)}
-          >
-            {visible ? <Eye size={16} /> : <EyeOff size={16} />}
-          </Button>
-        </div>
-      </div>
+      <Controller
+        name={fieldName}
+        control={form.control}
+        render={({ field: controllerField, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+            <div className='flex w-full flex-col items-start justify-start gap-1'>
+              <div className='inline-flex w-full items-center justify-start gap-2'>
+                <Input
+                  {...controllerField}
+                  type={visible ? 'text' : 'password'}
+                  id={id}
+                  tabIndex={2}
+                  value={field?.toString() || ''}
+                  placeholder={placeholder}
+                  disabled={isLoading}
+                  aria-invalid={fieldState.invalid}
+                  onChange={(e) => {
+                    controllerField.onChange(e)
+                    form.trigger(fieldName)
+                    if (fieldName === 'password')
+                      form.trigger('confirmPassword')
+                  }}
+                />
+                <Button
+                  className='min-w-10'
+                  variant='outline'
+                  size='icon'
+                  onClick={() => setVisible(!visible)}
+                  disabled={isLoading}
+                >
+                  {visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                </Button>
+              </div>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </div>
+          </Field>
+        )}
+      />
     )
   }
 )
