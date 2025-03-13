@@ -80,6 +80,7 @@ import {
 interface EventFormProps {
   onSuccess: (event: IEvent) => void
   onCancel: () => void
+  event?: IEvent
 }
 
 const eventTypeConfig = {
@@ -253,18 +254,27 @@ function getIconForName(name: string): IconType {
   ]
 }
 
-export function EventForm({ onSuccess, onCancel }: EventFormProps) {
+export function EventForm({ onSuccess, onCancel, event }: EventFormProps) {
   const [loading, setLoading] = useState(false)
   const [itemIcons, setItemIcons] = useState<Record<string, IconType>>({})
+
+  const isEditing = !!event
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
-      eventCode: '',
-      type: 'seminar',
-      name: '',
-      desc: '',
-      items: [{ id: crypto.randomUUID(), name: '', description: '', price: 0 }],
+      eventCode: event?.eventCode || '',
+      type: event?.type || 'seminar',
+      name: event?.name || '',
+      desc: event?.desc || '',
+      items: event?.items?.length
+        ? event.items.map((item) => ({
+            id: crypto.randomUUID(),
+            name: item.name,
+            description: item.description || '',
+            price: item.price,
+          }))
+        : [{ id: crypto.randomUUID(), name: '', description: '', price: 0 }],
     },
     mode: 'onChange',
   })
@@ -300,22 +310,39 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
         ...data,
         items: data.items.map(({ id, ...rest }) => rest),
       }
-      const response = await fetch('/api/events/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanedData),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create event')
+
+      if (isEditing) {
+        const response = await fetch(`/api/events/${event.eventCode}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cleanedData),
+        })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to update event')
+        }
+        const responseData = await response.json()
+        onSuccess(responseData.event)
+      } else {
+        const response = await fetch('/api/events/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cleanedData),
+        })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to create event')
+        }
+        const responseData = await response.json()
+        onSuccess(responseData.event)
       }
-      const responseData = await response.json()
-      onSuccess(responseData.event)
     } catch (error) {
       if (error instanceof Error) {
-        toast.error(error.message || 'Failed to create event')
+        toast.error(
+          error.message || `Failed to ${isEditing ? 'update' : 'create'} event`
+        )
       } else {
-        toast.error('Failed to create event')
+        toast.error(`Failed to ${isEditing ? 'update' : 'create'} event`)
       }
     } finally {
       setLoading(false)
@@ -335,7 +362,9 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
             className: 'w-4 h-4',
           })}
         </div>
-        <span className='font-medium'>New Event</span>
+        <span className='font-medium'>
+          {isEditing ? 'Edit Event' : 'New Event'}
+        </span>
       </div>
 
       <div className='grid grid-cols-2 gap-2'>
@@ -609,7 +638,13 @@ export function EventForm({ onSuccess, onCancel }: EventFormProps) {
           disabled={loading}
           className='min-w-[80px]'
         >
-          {loading ? 'Creating...' : 'Create'}
+          {loading
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+              ? 'Save'
+              : 'Create'}
         </Button>
       </div>
     </form>

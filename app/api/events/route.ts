@@ -6,7 +6,10 @@ export async function GET(req: NextRequest) {
   try {
     await dbConnect()
 
-    const events = await AEvent.find({ isActive: true })
+    const { searchParams } = new URL(req.url)
+    const includeDeleted = searchParams.get('deleted') === 'true'
+
+    const events = await AEvent.find({ isActive: !includeDeleted })
       .sort({ createdAt: -1 })
       .exec()
 
