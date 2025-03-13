@@ -32,20 +32,26 @@ import { defaultIcons, iconMap, typeIcons, typeStyles } from '@/utils/mappings'
 import {
   ArrowRight,
   Calendar,
+  Filter,
   Link2,
   LinkIcon,
   MoreVertical,
   Package,
   Pencil,
   PlusCircle,
+  RotateCcw,
   Trash2,
   Users,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
 import { EventForm } from './_components/event-form'
+import {
+  EventFilters as EventFiltersComponent,
+  type EventFilters,
+} from './_components/event-filters'
 
 interface ItemCounts {
   [eventId: string]: {
@@ -61,12 +67,28 @@ export default function EventsPage() {
   const [editEvent, setEditEvent] = useState<IEvent | null>(null)
   const [deleteEvent, setDeleteEvent] = useState<IEvent | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filters, setFilters] = useState<EventFilters>({
+    search: '',
+    types: [],
+    tags: [],
+    minItems: '',
+    maxItems: '',
+    minPrice: '',
+    maxPrice: '',
+    startDateAfter: undefined,
+    startDateBefore: undefined,
+    includeDeleted: false,
+  })
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/events')
+        const includeDeleted = filters.includeDeleted
+        const response = await fetch(
+          `/api/events?includeDeleted=${includeDeleted}`
+        )
         if (!response.ok) {
           throw new Error('Failed to fetch events')
         }
@@ -94,7 +116,7 @@ export default function EventsPage() {
     }
 
     fetchEvents()
-  }, [])
+  }, [filters.includeDeleted])
 
   const handleEventCreated = (newEvent: IEvent) => {
     setEvents((prevEvents) => [newEvent, ...prevEvents])
@@ -134,17 +156,32 @@ export default function EventsPage() {
       if (!response.ok) {
         throw new Error('Failed to delete event')
       }
-      setEvents((prevEvents) =>
-        prevEvents.filter(
-          (e) => e._id?.toString() !== deleteEvent._id?.toString()
-        )
-      )
       setDeleteEvent(null)
+      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
       toast.success(`Event "${deleteEvent.name}" deleted`)
     } catch (error) {
       toast.error('Failed to delete event')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleRestoreEvent = async (e: React.MouseEvent, event: IEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    try {
+      const response = await fetch(`/api/events/${event.eventCode}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: true }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to restore event')
+      }
+      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      toast.success(`Event "${event.name}" restored`)
+    } catch (error) {
+      toast.error('Failed to restore event')
     }
   }
 
@@ -156,32 +193,135 @@ export default function EventsPage() {
     toast.success('Link copied to clipboard')
   }
 
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    events.forEach((event) => {
+      event.tags?.forEach((tag) => tagSet.add(tag))
+    })
+    return Array.from(tagSet).sort()
+  }, [events])
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase()
+        const matchesName = event.name.toLowerCase().includes(searchLower)
+        const matchesDesc = event.desc?.toLowerCase().includes(searchLower)
+        const matchesCode = event.eventCode.toLowerCase().includes(searchLower)
+        if (!matchesName && !matchesDesc && !matchesCode) {
+          return false
+        }
+      }
+
+      if (filters.types.length > 0 && !filters.types.includes(event.type)) {
+        return false
+      }
+
+      if (filters.tags.length > 0) {
+        const eventTags = event.tags || []
+        if (!filters.tags.some((tag) => eventTags.includes(tag))) {
+          return false
+        }
+      }
+
+      if (filters.minItems !== '') {
+        const min = parseInt(filters.minItems, 10)
+        if (!isNaN(min) && event.items.length < min) {
+          return false
+        }
+      }
+
+      if (filters.maxItems !== '') {
+        const max = parseInt(filters.maxItems, 10)
+        if (!isNaN(max) && event.items.length > max) {
+          return false
+        }
+      }
+
+      if (filters.minPrice !== '' || filters.maxPrice !== '') {
+        const minPrice =
+          filters.minPrice !== '' ? parseFloat(filters.minPrice) : 0
+        const maxPrice =
+          filters.maxPrice !== '' ? parseFloat(filters.maxPrice) : Infinity
+        if (!isNaN(minPrice) || !isNaN(maxPrice)) {
+          const hasItemInRange = event.items.some((item) => {
+            const price = item.price
+            return price >= minPrice && price <= maxPrice
+          })
+          if (!hasItemInRange) {
+            return false
+          }
+        }
+      }
+
+      if (filters.startDateAfter && event.startDate) {
+        if (new Date(event.startDate) < filters.startDateAfter) {
+          return false
+        }
+      }
+
+      if (filters.startDateBefore && event.startDate) {
+        if (new Date(event.startDate) > filters.startDateBefore) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [events, filters])
+
+  const hasActiveFilters =
+    filters.search !== '' ||
+    filters.types.length > 0 ||
+    filters.tags.length > 0 ||
+    filters.minItems !== '' ||
+    filters.maxItems !== '' ||
+    filters.minPrice !== '' ||
+    filters.maxPrice !== '' ||
+    filters.startDateAfter !== undefined ||
+    filters.startDateBefore !== undefined ||
+    filters.includeDeleted
+
   return (
     <div className='container py-2'>
       <header className='mb-6'>
         <div className='flex justify-between items-center'>
           <h1 className='text-4xl my-2 font-semibold shadow-heading'>Events</h1>
-          <Credenza open={open} onOpenChange={setOpen}>
-            <CredenzaTrigger asChild>
-              <Button size='sm' className='gap-1.5'>
-                <PlusCircle className='w-4 h-4' />
-                Create
-              </Button>
-            </CredenzaTrigger>
-            <CredenzaContent>
-              <CredenzaHeader>
-                <CredenzaTitle>New Event</CredenzaTitle>
-              </CredenzaHeader>
-              <CredenzaBody>
-                <EventForm
-                  onSuccess={handleEventCreated}
-                  onCancel={() => setOpen(false)}
-                />
-              </CredenzaBody>
-            </CredenzaContent>
-          </Credenza>
+          <div className='flex items-center gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              className='gap-1.5'
+              onClick={() => setFiltersOpen(true)}
+            >
+              <Filter className='w-4 h-4' />
+              Filters
+              {hasActiveFilters && (
+                <span className='w-2 h-2 rounded-full bg-primary' />
+              )}
+            </Button>
+            <Credenza open={open} onOpenChange={setOpen}>
+              <CredenzaTrigger asChild>
+                <Button size='sm' className='gap-1.5'>
+                  <PlusCircle className='w-4 h-4' />
+                  Create
+                </Button>
+              </CredenzaTrigger>
+              <CredenzaContent>
+                <CredenzaHeader>
+                  <CredenzaTitle>New Event</CredenzaTitle>
+                </CredenzaHeader>
+                <CredenzaBody>
+                  <EventForm
+                    onSuccess={handleEventCreated}
+                    onCancel={() => setOpen(false)}
+                  />
+                </CredenzaBody>
+              </CredenzaContent>
+            </Credenza>
+          </div>
         </div>
-        <p className='text-base text-muted-foreground max-w-md text-justify'>
+        <p className='text-base text-muted-foreground max-w-md text-justify leading-5.5'>
           All the events / campaigns are listed below, you can filter as per
           your needs. Hover over the packages icon to see items within an event.
           Click to go to event page
@@ -196,9 +336,9 @@ export default function EventsPage() {
             />
           ))}
         </div>
-      ) : events.length > 0 ? (
+      ) : filteredEvents.length > 0 ? (
         <div className='grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'>
-          {events.map((event) => (
+          {filteredEvents.map((event) => (
             <EventCard
               key={event._id?.toString()}
               event={event}
@@ -206,8 +346,22 @@ export default function EventsPage() {
               onEdit={openEditDialog}
               onDelete={openDeleteDialog}
               onShare={handleShareEvent}
+              onRestore={handleRestoreEvent}
             />
           ))}
+        </div>
+      ) : events.length > 0 ? (
+        <div className='text-center py-12'>
+          <p className='text-muted-foreground mb-4'>
+            No events match your filters
+          </p>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setFiltersOpen(true)}
+          >
+            Adjust Filters
+          </Button>
         </div>
       ) : (
         <div className='text-center py-12'>
@@ -246,8 +400,8 @@ export default function EventsPage() {
           <CredenzaHeader>
             <CredenzaTitle>Delete Event</CredenzaTitle>
             <CredenzaDescription>
-              Are you sure you want to delete "{deleteEvent?.name}"? This event
-              will be moved to trash and can be restored later.
+              Are you sure you want to delete "{deleteEvent?.name}"? You can
+              restore it later by enabling "Include Deleted" in filters.
             </CredenzaDescription>
           </CredenzaHeader>
           <CredenzaFooter>
@@ -270,6 +424,21 @@ export default function EventsPage() {
           </CredenzaFooter>
         </CredenzaContent>
       </Credenza>
+
+      <Credenza open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <CredenzaContent>
+          <CredenzaHeader>
+            <CredenzaTitle>Filter Events</CredenzaTitle>
+          </CredenzaHeader>
+          <CredenzaBody className='overflow-y-auto max-sm:pb-6 no-scrollbar'>
+            <EventFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              availableTags={availableTags}
+            />
+          </CredenzaBody>
+        </CredenzaContent>
+      </Credenza>
     </div>
   )
 }
@@ -280,16 +449,19 @@ function EventCard({
   onEdit,
   onDelete,
   onShare,
+  onRestore,
 }: {
   event: IEvent
   itemCounts: Record<string, number>
   onEdit: (e: React.MouseEvent, event: IEvent) => void
   onDelete: (e: React.MouseEvent, event: IEvent) => void
   onShare: (e: React.MouseEvent, event: IEvent) => void
+  onRestore: (e: React.MouseEvent, event: IEvent) => void
 }) {
   const style = typeStyles[event.type] || typeStyles.other
   const TypeIcon = typeIcons[event.type] || Package
   const EventIcon = getEventIcon(event.name)
+  const isDeleted = !event.isActive
 
   return (
     <Link href={`/events/${event.eventCode}`} className='group block'>
@@ -297,7 +469,8 @@ function EventCard({
         className={cn(
           'rounded-lg overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors',
           'border-l-2',
-          style.border
+          style.border,
+          isDeleted && 'opacity-60'
         )}
       >
         <div
@@ -311,6 +484,11 @@ function EventCard({
             <span className={cn('text-xs font-medium capitalize', style.text)}>
               {event.type}
             </span>
+            {isDeleted && (
+              <span className='text-[10px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive'>
+                Deleted
+              </span>
+            )}
           </div>
           <div
             className='flex items-center gap-1'
@@ -381,13 +559,23 @@ function EventCard({
                   Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => onDelete(e, event)}
-                  className='text-destructive focus:text-destructive h-6'
-                >
-                  <Trash2 className='size-3' />
-                  Delete
-                </DropdownMenuItem>
+                {isDeleted ? (
+                  <DropdownMenuItem
+                    onClick={(e) => onRestore(e, event)}
+                    className='h-6'
+                  >
+                    <RotateCcw className='size-3' />
+                    Restore
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => onDelete(e, event)}
+                    className='text-destructive focus:text-destructive h-6'
+                  >
+                    <Trash2 className='size-3' />
+                    Delete
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             <span className='text-tiny text-muted-foreground font-mono'>

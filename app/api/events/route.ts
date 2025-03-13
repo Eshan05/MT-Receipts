@@ -7,11 +7,11 @@ export async function GET(req: NextRequest) {
     await dbConnect()
 
     const { searchParams } = new URL(req.url)
-    const includeDeleted = searchParams.get('deleted') === 'true'
+    const includeDeleted = searchParams.get('includeDeleted') === 'true'
 
-    const events = await AEvent.find({ isActive: !includeDeleted })
-      .sort({ createdAt: -1 })
-      .exec()
+    const filter = includeDeleted ? {} : { isActive: true }
+
+    const events = await AEvent.find(filter).sort({ createdAt: -1 }).exec()
 
     return NextResponse.json({ events }, { status: 200 })
   } catch (error) {

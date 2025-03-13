@@ -11,6 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { eventSchema, type EventFormValues } from '@/lib/schemas/event'
+import { cn } from '@/lib/utils'
+import { IEvent } from '@/models/event.model'
+import { defaultIcons, iconMap } from '@/utils/mappings'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Calendar,
@@ -21,61 +31,21 @@ import {
   Text,
   Trash2,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { useForm, useFieldArray, Controller } from 'react-hook-form'
-import { toast } from 'sonner'
-import { IEvent } from '@/models/event.model'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import React from 'react'
-import { cn } from '@/lib/utils'
-import {
-  FaTshirt,
-  FaHatCowboy,
-  FaUtensils,
-  FaCoffee,
-  FaCode,
-  FaLaptop,
-  FaTrophy,
-  FaGamepad,
-  FaMusic,
-  FaPaintBrush,
-  FaBook,
-  FaTicketAlt,
-  FaPlane,
-  FaCamera,
-  FaPencilAlt,
-  FaGift,
-  FaMedal,
-  FaIdBadge,
-  FaStickyNote,
-  FaPen,
-  FaShoppingBag,
-  FaDollarSign,
-} from 'react-icons/fa'
-import { BiWater } from 'react-icons/bi'
-import {
-  MdCake,
-  MdCelebration,
-  MdCardMembership,
-  MdMovie,
-  MdSportsSoccer,
-  MdWorkspacePremium,
-} from 'react-icons/md'
-import { IoGameController } from 'react-icons/io5'
-import { BsTools, BsLightningCharge, BsBookmark } from 'react-icons/bs'
-import { HiAcademicCap } from 'react-icons/hi'
-import { RiLuggageCartLine } from 'react-icons/ri'
+import React, { useEffect, useState } from 'react'
+import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import type { IconType } from 'react-icons'
+import { BsLightningCharge, BsTools } from 'react-icons/bs'
 import {
-  eventSchema,
-  eventItemSchema,
-  type EventFormValues,
-} from '@/lib/schemas/event'
+  FaBook,
+  FaDollarSign,
+  FaGift,
+  FaIdBadge,
+  FaLaptop,
+  FaMusic,
+  FaTrophy,
+} from 'react-icons/fa'
+import { HiAcademicCap } from 'react-icons/hi'
+import { toast } from 'sonner'
 
 interface EventFormProps {
   onSuccess: (event: IEvent) => void
@@ -150,88 +120,6 @@ const eventTypeConfig = {
     label: 'Other',
   },
 }
-
-const iconMap: Record<string, IconType> = {
-  shirt: FaTshirt,
-  tshirt: FaTshirt,
-  't-shirt': FaTshirt,
-  hat: FaHatCowboy,
-  cap: FaHatCowboy,
-  food: FaUtensils,
-  meal: FaUtensils,
-  lunch: FaUtensils,
-  dinner: FaUtensils,
-  breakfast: FaUtensils,
-  coffee: FaCoffee,
-  tea: FaCoffee,
-  workshop: BsTools,
-  seminar: HiAcademicCap,
-  code: FaCode,
-  coding: FaCode,
-  programming: FaCode,
-  computer: FaLaptop,
-  tech: FaLaptop,
-  technology: FaLaptop,
-  sport: FaTrophy,
-  sports: MdSportsSoccer,
-  game: IoGameController,
-  gaming: IoGameController,
-  music: FaMusic,
-  art: FaPaintBrush,
-  dance: FaMusic,
-  book: FaBook,
-  books: FaBook,
-  ticket: FaTicketAlt,
-  pass: FaTicketAlt,
-  party: MdCelebration,
-  celebration: MdCelebration,
-  birthday: MdCake,
-  certificate: MdCardMembership,
-  registration: FaIdBadge,
-  travel: FaPlane,
-  trip: FaPlane,
-  photo: FaCamera,
-  photography: FaCamera,
-  video: FaCamera,
-  movie: MdMovie,
-  design: FaPencilAlt,
-  hackathon: BsLightningCharge,
-  admission: FaTicketAlt,
-  entry: FaTicketAlt,
-  badge: FaIdBadge,
-  id: FaIdBadge,
-  lanyard: FaIdBadge,
-  sticker: BsBookmark,
-  poster: FaCamera,
-  banner: FaCamera,
-  kit: RiLuggageCartLine,
-  goodies: FaGift,
-  swag: RiLuggageCartLine,
-  bag: FaShoppingBag,
-  bottle: BiWater,
-  mug: FaCoffee,
-  pen: FaPen,
-  notebook: FaStickyNote,
-  notepad: FaStickyNote,
-  water: BiWater,
-  drink: BiWater,
-  snack: FaUtensils,
-  merchandise: FaTshirt,
-  merch: FaTshirt,
-}
-
-const defaultIcons: IconType[] = [
-  FaTrophy,
-  FaGift,
-  FaTicketAlt,
-  FaLaptop,
-  FaBook,
-  FaMedal,
-  FaCode,
-  RiLuggageCartLine,
-  MdWorkspacePremium,
-  BsLightningCharge,
-]
 
 function hashCode(str: string): number {
   let hash = 0
@@ -628,16 +516,11 @@ export function EventForm({ onSuccess, onCancel, event }: EventFormProps) {
         </div>
       </div>
 
-      <div className='flex justify-end gap-2 pt-1'>
+      <div className='flex justify-end gap-2 pt-1 pb-3'>
         <Button type='button' variant='outline' size='sm' onClick={onCancel}>
           Cancel
         </Button>
-        <Button
-          type='submit'
-          size='sm'
-          disabled={loading}
-          className='min-w-[80px]'
-        >
+        <Button type='submit' size='sm' disabled={loading} className='min-w-20'>
           {loading
             ? isEditing
               ? 'Saving...'

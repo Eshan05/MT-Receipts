@@ -48,7 +48,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            <div data-vaul-drawer-wrapper='' className='overflow-x-hidden'>
+              {children}
+            </div>
+          </TooltipProvider>
           <Toaster />
         </ThemeProvider>
       </body>
