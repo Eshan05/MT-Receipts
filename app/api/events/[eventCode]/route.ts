@@ -51,11 +51,11 @@ export async function PUT(req: NextRequest, { params }: Context) {
     await dbConnect()
 
     const body = await req.json()
-    const { name, type, desc, items } = body
+    const { name, type, desc, items, tags } = body
 
     const event = await AEvent.findOneAndUpdate(
       { eventCode },
-      { name, type, desc, items },
+      { name, type, desc, items, tags },
       { new: true }
     )
 

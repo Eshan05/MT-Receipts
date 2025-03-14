@@ -179,7 +179,7 @@ export function EventFilters({
           </FieldLabel>
           <MultiSelect
             options={eventTypeOptions}
-            onValueChange={(values) =>
+            onValueChange={(values: string[]) =>
               onFiltersChange({ ...filters, types: values })
             }
             defaultValue={filters.types}
@@ -201,7 +201,7 @@ export function EventFilters({
             </FieldLabel>
             <MultiSelect
               options={tagOptions}
-              onValueChange={(values) =>
+              onValueChange={(values: string[]) =>
                 onFiltersChange({ ...filters, tags: values })
               }
               defaultValue={filters.tags}
