@@ -60,6 +60,7 @@ import {
   Filter,
   Link2,
   LinkIcon,
+  Loader2,
   MoreVertical,
   Package,
   Pencil,
@@ -71,7 +72,7 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
 import { EventForm } from './_components/event-form'
@@ -79,6 +80,7 @@ import {
   EventFilters as EventFiltersComponent,
   type EventFilters,
 } from './_components/event-filters'
+import { useInfiniteEvents } from '@/hooks/use-infinite-events'
 
 type SortOption =
   | 'createdAt-desc'
@@ -104,9 +106,7 @@ interface ItemCounts {
 }
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<IEvent[]>([])
   const [itemCounts, setItemCounts] = useState<ItemCounts>({})
-  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editEvent, setEditEvent] = useState<IEvent | null>(null)
   const [deleteEvent, setDeleteEvent] = useState<IEvent | null>(null)
@@ -131,24 +131,39 @@ export default function EventsPage() {
   const [newTag, setNewTag] = useState('')
   const [bulkOperating, setBulkOperating] = useState(false)
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true)
-        const includeDeleted = filters.includeDeleted
-        const response = await fetch(
-          `/api/events?includeDeleted=${includeDeleted}`
-        )
-        if (!response.ok) {
-          throw new Error('Failed to fetch events')
-        }
-        const data = await response.json()
-        setEvents(data.events)
+  const {
+    events,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    mutate: mutateEvents,
+  } = useInfiniteEvents({ includeDeleted: filters.includeDeleted })
 
-        const eventIds = data.events
-          .map((e: IEvent) => e._id?.toString())
-          .filter(Boolean)
-        if (eventIds.length > 0) {
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          loadMore()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [hasMore, isLoadingMore, loadMore])
+
+  useEffect(() => {
+    const fetchItemCounts = async () => {
+      const eventIds = events.map((e) => e._id?.toString()).filter(Boolean)
+      if (eventIds.length > 0) {
+        try {
           const countsResponse = await fetch(
             `/api/events/items?eventIds=${eventIds.join(',')}`
           )
@@ -156,30 +171,25 @@ export default function EventsPage() {
             const countsData = await countsResponse.json()
             setItemCounts(countsData.counts)
           }
+        } catch (error) {
+          console.error('Error fetching item counts:', error)
         }
-      } catch (error) {
-        console.error('Error fetching events:', error)
-        toast.error('Failed to load events')
-      } finally {
-        setLoading(false)
       }
     }
 
-    fetchEvents()
-  }, [filters.includeDeleted])
+    if (events.length > 0) {
+      fetchItemCounts()
+    }
+  }, [events])
 
   const handleEventCreated = (newEvent: IEvent) => {
-    setEvents((prevEvents) => [newEvent, ...prevEvents])
+    mutateEvents()
     setOpen(false)
     toast.success(`Event "${newEvent.name}" created successfully!`)
   }
 
   const handleEventUpdated = (updatedEvent: IEvent) => {
-    setEvents((prevEvents) =>
-      prevEvents.map((e) =>
-        e._id?.toString() === updatedEvent._id?.toString() ? updatedEvent : e
-      )
-    )
+    mutateEvents()
     setEditEvent(null)
     toast.success(`Event "${updatedEvent.name}" updated successfully!`)
   }
@@ -207,7 +217,7 @@ export default function EventsPage() {
         throw new Error('Failed to delete event')
       }
       setDeleteEvent(null)
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
       toast.success(`Event "${deleteEvent.name}" deleted`)
     } catch (error) {
       toast.error('Failed to delete event')
@@ -228,7 +238,7 @@ export default function EventsPage() {
       if (!response.ok) {
         throw new Error('Failed to restore event')
       }
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
       toast.success(`Event "${event.name}" restored`)
     } catch (error) {
       toast.error('Failed to restore event')
@@ -396,7 +406,7 @@ export default function EventsPage() {
       )
       toast.success(`${ids.length} event(s) deleted`)
       clearSelection()
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
     } catch {
       toast.error('Failed to delete events')
     } finally {
@@ -423,7 +433,7 @@ export default function EventsPage() {
       )
       toast.success(`${ids.length} event(s) restored`)
       clearSelection()
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
     } catch {
       toast.error('Failed to restore events')
     } finally {
@@ -455,7 +465,7 @@ export default function EventsPage() {
       )
       toast.success(`Changed type to "${newType}" for ${ids.length} event(s)`)
       clearSelection()
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
     } catch {
       toast.error('Failed to change event types')
     } finally {
@@ -493,7 +503,7 @@ export default function EventsPage() {
       toast.success(`Added tag "${tag}" to ${ids.length} event(s)`)
       setNewTag('')
       clearSelection()
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
     } catch {
       toast.error('Failed to add tag')
     } finally {
@@ -531,7 +541,7 @@ export default function EventsPage() {
       toast.success(`Removed tag "${tag}" from ${ids.length} event(s)`)
       setNewTag('')
       clearSelection()
-      setFilters((prev) => ({ ...prev, includeDeleted: prev.includeDeleted }))
+      mutateEvents()
     } catch {
       toast.error('Failed to remove tag')
     } finally {
@@ -637,7 +647,7 @@ export default function EventsPage() {
           Click to go to event page
         </p>
       </header>
-      {loading ? (
+      {isLoading ? (
         <div className='grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'>
           {[...Array(6)].map((_, index) => (
             <div
@@ -647,21 +657,28 @@ export default function EventsPage() {
           ))}
         </div>
       ) : sortedEvents.length > 0 ? (
-        <div className='grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'>
-          {sortedEvents.map((event) => (
-            <EventCard
-              key={event._id?.toString()}
-              event={event}
-              itemCounts={itemCounts[event._id?.toString() || ''] || {}}
-              onEdit={openEditDialog}
-              onDelete={openDeleteDialog}
-              onShare={handleShareEvent}
-              onRestore={handleRestoreEvent}
-              isSelected={selectedIds.has(event._id?.toString() || '')}
-              onToggleSelect={toggleSelection}
-            />
-          ))}
-        </div>
+        <>
+          <div className='grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3'>
+            {sortedEvents.map((event) => (
+              <EventCard
+                key={event._id?.toString()}
+                event={event}
+                itemCounts={itemCounts[event._id?.toString() || ''] || {}}
+                onEdit={openEditDialog}
+                onDelete={openDeleteDialog}
+                onShare={handleShareEvent}
+                onRestore={handleRestoreEvent}
+                isSelected={selectedIds.has(event._id?.toString() || '')}
+                onToggleSelect={toggleSelection}
+              />
+            ))}
+          </div>
+          <div ref={loadMoreRef} className='flex justify-center py-8'>
+            {isLoadingMore && (
+              <Loader2 className='w-6 h-6 animate-spin text-muted-foreground' />
+            )}
+          </div>
+        </>
       ) : events.length > 0 ? (
         <div className='text-center py-12'>
           <p className='text-muted-foreground mb-4'>
