@@ -6,12 +6,12 @@ import {
   templateInfo,
   getTemplateComponent,
   getAllTemplateInfo,
-} from '../templates'
+} from '@/lib/templates'
 import type {
   TemplateProps,
   TemplateItem,
   TemplateConfig,
-} from '../templates/types'
+} from '@/lib/templates/types'
 
 interface PreviewOptions {
   customer?: { name: string; email: string; phone?: string; address?: string }
@@ -58,6 +58,8 @@ const defaultConfig: TemplateConfig = {
   footerText:
     'Thank you for your purchase! For support, contact support@example.com',
   organizationName: 'ACES Events',
+  logoUrl:
+    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png',
 }
 
 function generateSampleItems(count: number): TemplateItem[] {
@@ -155,6 +157,10 @@ function parseArgs(): PreviewOptions {
         options.config = { ...options.config, organizationName: nextArg }
         i++
         break
+      case '--logo':
+        options.config = { ...options.config, logoUrl: nextArg }
+        i++
+        break
       case '--help':
       case '-h':
         printHelp()
@@ -186,6 +192,7 @@ Options:
   -p, --payment <method>   Payment method (e.g., "credit_card", "upi")
   --color <hex>            Primary color (e.g., "#FF0000")
   --org <name>             Organization name
+  --logo <url>             Logo URL
   -h, --help               Show this help message
 
 Available Templates:

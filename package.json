@@ -6,8 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint-ts": "tsc --noEmit"
+    "lint:es": "eslint .",
+    "lint:ts": "tsc --noEmit"
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {

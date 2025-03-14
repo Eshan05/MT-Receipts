@@ -112,6 +112,21 @@ const defaultTemplates = [
     category: 'classic',
     version: 1,
   },
+  {
+    name: 'Modern Receipt',
+    slug: 'modern-receipt',
+    description:
+      'Clean modern design with rounded corners, soft shadows, and professional layout',
+    isDefault: false,
+    config: {
+      primaryColor: '#2563EB',
+      secondaryColor: '#F3F4F6',
+      showQrCode: true,
+      organizationName: 'ACES Events',
+    },
+    category: 'modern',
+    version: 1,
+  },
 ]
 
 async function seedTemplates() {

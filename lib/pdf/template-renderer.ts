@@ -2,12 +2,12 @@ import { renderToStream } from '@react-pdf/renderer'
 import Template, { ITemplate } from '@/models/template.model'
 import Event from '@/models/event.model'
 import dbConnect from '@/lib/db-conn'
-import { getTemplateComponent, DEFAULT_TEMPLATE } from '@/templates'
+import { getTemplateComponent, DEFAULT_TEMPLATE } from '@/lib/templates'
 import type {
   TemplateProps,
   TemplateConfig,
   TemplateItem,
-} from '@/templates/types'
+} from '@/lib/templates/types'
 
 export interface RenderReceiptOptions {
   receiptNumber: string
@@ -68,18 +68,22 @@ async function getTemplateConfig(
 }
 
 function buildConfig(template: ITemplate | null): TemplateConfig {
+  const defaultLogoUrl =
+    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
+
   if (!template) {
     return {
       primaryColor: '#1E40AF',
       showQrCode: true,
       organizationName: 'Organization',
+      logoUrl: defaultLogoUrl,
     }
   }
 
   return {
     primaryColor: template.config.primaryColor,
     secondaryColor: template.config.secondaryColor,
-    logoUrl: template.config.logoUrl,
+    logoUrl: template.config.logoUrl || defaultLogoUrl,
     showQrCode: template.config.showQrCode,
     footerText: template.config.footerText,
     organizationName: template.config.organizationName,
