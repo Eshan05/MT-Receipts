@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Image,
   Font,
+  Link,
 } from '@react-pdf/renderer'
 import type { TemplateProps } from './types'
 
@@ -16,7 +17,7 @@ Font.register({
 Font.register({ family: 'Geist', src: './public/fonts/Geist-Variable.ttf' })
 Font.register({
   family: 'Dancing Script',
-  src: './public/fonts/DancingScript-Variable.ttf',
+  src: './public/fonts/ImperialScript-Regular.ttf',
 })
 
 const createStyles = (primaryColor: string) =>
@@ -184,9 +185,9 @@ const createStyles = (primaryColor: string) =>
       paddingRight: 30,
     },
     signature: {
-      fontSize: 48, // Reduced from 70
+      fontSize: 42, // Reduced from 70
       fontFamily: 'Dancing Script',
-      color: '#000000',
+      color: '#444',
     },
     footerLine: {
       borderTopWidth: 1,
@@ -237,7 +238,7 @@ export default function ProfessionalTemplate({
   config,
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor)
-  const orgName = config.organizationName || 'ACES Events'
+  const orgName = config.organizationName || 'ACES'
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const taxRate = 0.0625
   const taxAmount = subtotal * taxRate
@@ -251,8 +252,10 @@ export default function ProfessionalTemplate({
             <View style={styles.orgSection}>
               <Text style={styles.orgName}>{orgName}</Text>
               <Text style={styles.orgAddress}>
-                1912 Harvest Lane{'\n'}
-                New York, NY 12210
+                Association of Computer Engineers{'\n'}
+                RMDSSOE, Pune, MH, India{'\n'}
+                <Link src='https://aces-rmdssoe.in'>Website</Link> |{' '}
+                <Link src='mailto:aces.rmdssoe@sinhgad.edu'>Email</Link>
               </Text>
             </View>
           </View>
@@ -310,9 +313,11 @@ export default function ProfessionalTemplate({
             Description
           </Text>
           <Text style={[styles.tableHeaderText, styles.colPrice]}>
-            Unit Price
+            Unit Price (₹)
           </Text>
-          <Text style={[styles.tableHeaderText, styles.colAmount]}>Amount</Text>
+          <Text style={[styles.tableHeaderText, styles.colAmount]}>
+            Amount (₹)
+          </Text>
         </View>
 
         {items.map((item, index) => (

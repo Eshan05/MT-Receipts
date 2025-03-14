@@ -57,7 +57,7 @@ const defaultConfig: TemplateConfig = {
   showQrCode: true,
   footerText:
     'Thank you for your purchase! For support, contact support@example.com',
-  organizationName: 'ACES Events',
+  organizationName: 'ACES',
   logoUrl:
     'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png',
 }
