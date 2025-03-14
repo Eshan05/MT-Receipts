@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
 // Receipt template component
 const ReceiptTemplate = ({ customer, items, total }: ReceiptData) => (
   <Document>
-    <Page size='A4' style={styles.page}>
+    <Page size='A7' style={styles.page}>
       <Text style={styles.header}>Receipt</Text>
 
       <View style={styles.section}>

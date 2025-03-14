@@ -33,10 +33,15 @@ export interface SendReceiptOptions {
   eventCode: string
   eventType: string
   eventTemplateId?: string
+  eventLocation?: string
+  eventStartDate?: string
+  eventEndDate?: string
   items: ReceiptItem[]
   totalAmount: number
   paymentMethod?: string
   organizationName?: string
+  notes?: string
+  qrCodeData?: string
 }
 
 export async function sendReceiptEmail({
@@ -49,10 +54,15 @@ export async function sendReceiptEmail({
   eventCode,
   eventType,
   eventTemplateId,
+  eventLocation,
+  eventStartDate,
+  eventEndDate,
   items,
   totalAmount,
   paymentMethod,
   organizationName = 'ACES',
+  notes,
+  qrCodeData,
 }: SendReceiptOptions) {
   const date = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -92,11 +102,16 @@ export async function sendReceiptEmail({
         code: eventCode,
         type: eventType,
         templateId: eventTemplateId,
+        location: eventLocation,
+        startDate: eventStartDate,
+        endDate: eventEndDate,
       },
       items,
       totalAmount,
       paymentMethod,
       date,
+      notes,
+      qrCodeData,
     }
 
     const { stream } = await renderReceiptPDF(renderOptions)

@@ -23,11 +23,16 @@ export interface RenderReceiptOptions {
     code: string
     type: string
     templateId?: string
+    location?: string
+    startDate?: string
+    endDate?: string
   }
   items: TemplateItem[]
   totalAmount: number
   paymentMethod?: string
   date?: string
+  notes?: string
+  qrCodeData?: string
 }
 
 export interface RenderResult {
@@ -93,8 +98,16 @@ function buildConfig(template: ITemplate | null): TemplateConfig {
 export async function renderReceiptPDF(
   options: RenderReceiptOptions
 ): Promise<RenderResult> {
-  const { receiptNumber, customer, event, items, totalAmount, paymentMethod } =
-    options
+  const {
+    receiptNumber,
+    customer,
+    event,
+    items,
+    totalAmount,
+    paymentMethod,
+    notes,
+    qrCodeData,
+  } = options
 
   const date =
     options.date ||
@@ -120,12 +133,17 @@ export async function renderReceiptPDF(
       name: event.name,
       code: event.code,
       type: event.type,
+      location: event.location,
+      startDate: event.startDate,
+      endDate: event.endDate,
     },
     items,
     totalAmount,
     paymentMethod,
     date,
     config,
+    notes,
+    qrCodeData,
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

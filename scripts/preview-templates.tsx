@@ -12,16 +12,25 @@ import type {
   TemplateItem,
   TemplateConfig,
 } from '@/lib/templates/types'
+import { generateReceiptQRCode } from '@/lib/qr-code'
 
 interface PreviewOptions {
   customer?: { name: string; email: string; phone?: string; address?: string }
-  event?: { name: string; code: string; type: string }
+  event?: {
+    name: string
+    code: string
+    type: string
+    location?: string
+    startDate?: string
+    endDate?: string
+  }
   items?: TemplateItem[]
   itemCount?: number
   template?: string
   output?: string
   totalAmount?: number
   paymentMethod?: string
+  notes?: string
   config?: Partial<TemplateConfig>
 }
 
@@ -36,7 +45,13 @@ const defaultEvent = {
   name: 'Tech Innovation Summit 2026',
   code: 'TIS2026',
   type: 'conference',
+  location: 'RMDSSOE, Pune, Maharashtra',
+  startDate: '15 March 2026',
+  endDate: '17 March 2026',
 }
+
+const defaultNotes =
+  'Please bring a valid ID for entry. Workshop materials will be provided on-site.'
 
 const sampleItemNames = [
   { name: 'General Admission', basePrice: 99 },
@@ -91,6 +106,42 @@ function generateReceiptNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase()
   const random = Math.random().toString(36).substring(2, 6).toUpperCase()
   return `RCP-${timestamp}-${random}`
+}
+
+function generateQrCodeDataUrl(receiptNumber: string): string {
+  const size = 60
+  const cellSize = 2
+  const pattern = []
+  for (let i = 0; i < size / cellSize; i++) {
+    const row = []
+    for (let j = 0; j < size / cellSize; j++) {
+      const isCorner =
+        (i < 7 && j < 7) ||
+        (i < 7 && j >= size / cellSize - 7) ||
+        (i >= size / cellSize - 7 && j < 7)
+      const isBorder =
+        i === 0 ||
+        j === 0 ||
+        i === size / cellSize - 1 ||
+        j === size / cellSize - 1
+      row.push(
+        isCorner || isBorder || Math.random() > 0.5 ? '#000000' : '#FFFFFF'
+      )
+    }
+    pattern.push(row)
+  }
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`
+  svg += `<rect width="${size}" height="${size}" fill="#FFFFFF"/>`
+  for (let i = 0; i < pattern.length; i++) {
+    for (let j = 0; j < pattern[i].length; j++) {
+      if (pattern[i][j] === '#000000') {
+        svg += `<rect x="${j * cellSize}" y="${i * cellSize}" width="${cellSize}" height="${cellSize}" fill="#000000"/>`
+      }
+    }
+  }
+  svg += '</svg>'
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
 
 function parseArgs(): PreviewOptions {
@@ -161,6 +212,10 @@ function parseArgs(): PreviewOptions {
         options.config = { ...options.config, logoUrl: nextArg }
         i++
         break
+      case '--notes':
+        options.notes = nextArg
+        i++
+        break
       case '--help':
       case '-h':
         printHelp()
@@ -193,6 +248,7 @@ Options:
   --color <hex>            Primary color (e.g., "#FF0000")
   --org <name>             Organization name
   --logo <url>             Logo URL
+  --notes <text>           Notes to display on receipt
   -h, --help               Show this help message
 
 Available Templates:
@@ -249,9 +305,14 @@ async function main(): Promise<void> {
 
   const items = options.items || generateSampleItems(options.itemCount || 4)
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0)
+  const receiptNumber = generateReceiptNumber()
+  const orgName =
+    options.config?.organizationName || defaultConfig.organizationName || 'ACES'
+
+  const qrCodeData = await generateReceiptQRCode(receiptNumber, orgName)
 
   const props: TemplateProps = {
-    receiptNumber: generateReceiptNumber(),
+    receiptNumber,
     customer: options.customer || defaultCustomer,
     event: options.event || defaultEvent,
     items,
@@ -259,6 +320,8 @@ async function main(): Promise<void> {
     paymentMethod: options.paymentMethod || 'credit_card',
     date: formatDate(),
     config: { ...defaultConfig, ...options.config },
+    notes: options.notes || defaultNotes,
+    qrCodeData,
   }
 
   console.log('\n📄 Template Preview Generator')

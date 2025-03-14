@@ -20,6 +20,9 @@ export interface TemplateEvent {
   name: string
   code: string
   type: string
+  location?: string
+  startDate?: string
+  endDate?: string
 }
 
 export interface TemplateItem {
@@ -39,6 +42,8 @@ export interface TemplateProps {
   paymentMethod?: string
   date: string
   config: TemplateConfig
+  notes?: string
+  qrCodeData?: string
 }
 
 export type TemplateComponent = (props: TemplateProps) => React.ReactElement

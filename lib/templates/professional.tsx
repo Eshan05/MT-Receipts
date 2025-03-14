@@ -144,6 +144,20 @@ const createStyles = (primaryColor: string) =>
       marginTop: 20,
       alignItems: 'flex-end',
     },
+    totalsWithQrContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-end',
+      marginTop: 20,
+    },
+    qrCodeSection: {
+      width: 80,
+      height: 80,
+    },
+    qrCode: {
+      width: 80,
+      height: 80,
+    },
     totalRow: {
       flexDirection: 'row',
       width: 180,
@@ -225,6 +239,21 @@ const createStyles = (primaryColor: string) =>
       color: '#374151',
       lineHeight: 1.5,
     },
+    notesSection: {
+      marginBottom: 10,
+    },
+    notesTitle: {
+      fontSize: 9,
+      fontWeight: 'bold',
+      color: '#d65147',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+    },
+    notesText: {
+      fontSize: 8,
+      color: '#374151',
+      lineHeight: 1.5,
+    },
   })
 
 export default function ProfessionalTemplate({
@@ -236,6 +265,8 @@ export default function ProfessionalTemplate({
   paymentMethod,
   date,
   config,
+  notes,
+  qrCodeData,
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor)
   const orgName = config.organizationName || 'ACES'
@@ -275,17 +306,31 @@ export default function ProfessionalTemplate({
           <View style={styles.infoColumn}>
             <Text style={styles.infoLabel}>Bill To</Text>
             <Text style={styles.infoValue}>{customer.name}</Text>
-            <Text style={styles.infoValue}>
-              {customer.address || '123 Main Street, New York, NY 10001'}
-            </Text>
+            <Text style={styles.infoValue}>{customer.email}</Text>
+            {customer.phone && (
+              <Text style={styles.infoValue}>{customer.phone}</Text>
+            )}
+            {customer.address && (
+              <Text style={styles.infoValue}>{customer.address}</Text>
+            )}
           </View>
           <View style={styles.infoColumn}>
-            <Text style={styles.infoLabel}>Ship To</Text>
-            <Text style={styles.infoValue}>{customer.name}</Text>
+            <Text style={styles.infoLabel}>Event</Text>
+            <Text style={styles.infoValue}>{event.name}</Text>
             <Text style={styles.infoValue}>
-              3787 Pineview Drive{'\n'}
-              Cambridge, MA 12210
+              {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
             </Text>
+            {event.location && (
+              <Text style={styles.infoValue}>{event.location}</Text>
+            )}
+            {event.startDate && (
+              <Text style={styles.infoValue}>
+                {' '}
+                {event.endDate
+                  ? `${event.startDate} - ${event.endDate}`
+                  : event.startDate}
+              </Text>
+            )}
           </View>
           <View style={[styles.infoColumn, { flex: 1.2 }]}>
             <View style={styles.infoRow}>
@@ -296,14 +341,14 @@ export default function ProfessionalTemplate({
               <Text style={styles.infoRowLabel}>Receipt Date</Text>
               <Text style={styles.infoRowValue}>{date}</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoRowLabel}>P.O.#</Text>
-              <Text style={styles.infoRowValue}>2312/2019</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoRowLabel}>Due Date</Text>
-              <Text style={styles.infoRowValue}>26/02/2019</Text>
-            </View>
+            {paymentMethod && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLabel}>Payment Method</Text>
+                <Text style={styles.infoRowValue}>
+                  {paymentMethod.toUpperCase()}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -337,23 +382,30 @@ export default function ProfessionalTemplate({
           </View>
         ))}
 
-        <View style={styles.totalsSection}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal</Text>
-            <Text style={styles.totalValue}>{subtotal.toFixed(2)}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Sales Tax 6.25%</Text>
-            <Text style={styles.totalValue}>{taxAmount.toFixed(2)}</Text>
-          </View>
-          <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>TOTAL</Text>
-            <Text style={styles.grandTotalValue}>
-              $
-              {totalAmount.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}
-            </Text>
+        <View style={styles.totalsWithQrContainer}>
+          {qrCodeData && (
+            <View style={styles.qrCodeSection}>
+              <Image style={styles.qrCode} src={qrCodeData} />
+            </View>
+          )}
+          <View style={styles.totalsSection}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Subtotal</Text>
+              <Text style={styles.totalValue}>{subtotal.toFixed(2)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Sales Tax 6.25%</Text>
+              <Text style={styles.totalValue}>{taxAmount.toFixed(2)}</Text>
+            </View>
+            <View style={styles.grandTotalRow}>
+              <Text style={styles.grandTotalLabel}>TOTAL</Text>
+              <Text style={styles.grandTotalValue}>
+                $
+                {totalAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -368,6 +420,12 @@ export default function ProfessionalTemplate({
             <Text style={styles.thankYou}>Thank you</Text>
           </View>
           <View style={styles.termsSection}>
+            {/* {notes && (
+              <View style={styles.notesSection}>
+                <Text style={styles.notesTitle}>Notes</Text>
+                <Text style={styles.notesText}>{notes}</Text>
+              </View>
+            )} */}
             <Text style={styles.termsTitle}>Terms & Conditions</Text>
             <Text style={styles.termsText}>
               Payment is due within 15 days{'\n'}
