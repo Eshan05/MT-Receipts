@@ -1,0 +1,51 @@
+import { Document } from '@react-pdf/renderer'
+
+export interface TemplateConfig {
+  primaryColor: string
+  secondaryColor?: string
+  logoUrl?: string
+  showQrCode: boolean
+  footerText?: string
+  organizationName?: string
+}
+
+export interface TemplateCustomer {
+  name: string
+  email: string
+  phone?: string
+  address?: string
+}
+
+export interface TemplateEvent {
+  name: string
+  code: string
+  type: string
+}
+
+export interface TemplateItem {
+  name: string
+  description?: string
+  quantity: number
+  price: number
+  total: number
+}
+
+export interface TemplateProps {
+  receiptNumber: string
+  customer: TemplateCustomer
+  event: TemplateEvent
+  items: TemplateItem[]
+  totalAmount: number
+  paymentMethod?: string
+  date: string
+  config: TemplateConfig
+}
+
+export type TemplateComponent = (props: TemplateProps) => React.ReactElement
+
+export interface TemplateInfo {
+  slug: string
+  name: string
+  description: string
+  category: 'minimal' | 'professional' | 'modern' | 'classic' | 'themed'
+}

@@ -1,8 +1,11 @@
 import nodemailer from 'nodemailer'
 import { render } from '@react-email/components'
-import { renderToStream } from '@react-pdf/renderer'
 import ReceiptEmail from '@/lib/emails/receipt-email'
-import ReceiptPDF from '@/lib/emails/receipt-pdf'
+import {
+  renderReceiptPDF,
+  streamToBuffer,
+  type RenderReceiptOptions,
+} from '@/lib/pdf/template-renderer'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -24,8 +27,12 @@ export interface SendReceiptOptions {
   to: string
   receiptNumber: string
   customerName: string
+  customerPhone?: string
+  customerAddress?: string
   eventName: string
   eventCode: string
+  eventType: string
+  eventTemplateId?: string
   items: ReceiptItem[]
   totalAmount: number
   paymentMethod?: string
@@ -36,8 +43,12 @@ export async function sendReceiptEmail({
   to,
   receiptNumber,
   customerName,
+  customerPhone,
+  customerAddress,
   eventName,
   eventCode,
+  eventType,
+  eventTemplateId,
   items,
   totalAmount,
   paymentMethod,
@@ -67,26 +78,29 @@ export async function sendReceiptEmail({
       })
     )
 
-    const pdfStream = await renderToStream(
-      ReceiptPDF({
-        receiptNumber,
-        customerName,
-        customerEmail: to,
-        eventName,
-        eventCode,
-        items,
-        totalAmount,
-        paymentMethod,
-        date,
-        organizationName,
-      })
-    )
-
-    const chunks: Buffer[] = []
-    for await (const chunk of pdfStream) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    const renderOptions: RenderReceiptOptions = {
+      receiptNumber,
+      customer: {
+        name: customerName,
+        email: to,
+        phone: customerPhone,
+        address: customerAddress,
+      },
+      event: {
+        _id: '',
+        name: eventName,
+        code: eventCode,
+        type: eventType,
+        templateId: eventTemplateId,
+      },
+      items,
+      totalAmount,
+      paymentMethod,
+      date,
     }
-    const pdfBuffer = Buffer.concat(chunks)
+
+    const { stream } = await renderReceiptPDF(renderOptions)
+    const pdfBuffer = await streamToBuffer(stream)
 
     const info = await transporter.sendMail({
       from: `"${organizationName} Receipts" <${process.env.GMAIL_EMAIL}>`,
