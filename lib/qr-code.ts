@@ -79,9 +79,12 @@ export async function generateReceiptQRCode(
 
   return generateQRCodeBase64({
     data: qrData,
-    width: 240,
-    height: 240,
+    width: 400,
+    height: 400,
     dotsType: 'rounded',
     cornersType: 'extra-rounded',
+    backgroundColor: '#ffffff',
+    dotsColor: '#444',
+    cornersColor: '#444',
   })
 }

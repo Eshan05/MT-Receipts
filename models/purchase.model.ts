@@ -31,7 +31,7 @@ interface IPurchaseModel extends Model<IPurchase> {}
 
 const purchaseSchema = new Schema<IPurchase, IPurchaseModel>(
   {
-    purchaseId: { type: String, required: true, unique: true },
+    purchaseId: { type: String, required: true, unique: true, index: true },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
@@ -62,12 +62,10 @@ const purchaseSchema = new Schema<IPurchase, IPurchaseModel>(
     refundedAt: { type: Date },
     receiptId: { type: mongoose.Schema.Types.ObjectId, ref: 'Receipt' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 )
 
-purchaseSchema.index({ purchaseId: 1 }, { unique: true })
 purchaseSchema.index({ event: 1 })
 purchaseSchema.index({ 'customer.email': 1 })
 purchaseSchema.index({ status: 1 })

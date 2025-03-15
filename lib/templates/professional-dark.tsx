@@ -23,10 +23,10 @@ Font.register({
 const createStyles = (primaryColor: string) =>
   StyleSheet.create({
     page: {
-      padding: 30, // Reduced padding to ensure single page
-      fontSize: 9, // Reduced base font size
-      backgroundColor: '#FFFFFF',
-      color: '#1F2937',
+      padding: 30,
+      fontSize: 9,
+      backgroundColor: '#181818',
+      color: '#e4e4e7',
       fontFamily: 'Geist',
     },
     header: {
@@ -37,9 +37,9 @@ const createStyles = (primaryColor: string) =>
       marginBottom: 20,
     },
     receiptTitle: {
-      fontSize: 48, // Reduced from 64
+      fontSize: 48,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#fafafa',
       letterSpacing: 0.5,
       marginBottom: 15,
     },
@@ -50,23 +50,23 @@ const createStyles = (primaryColor: string) =>
       fontSize: 12,
       fontWeight: 'bold',
       marginBottom: 2,
-      color: '#000000',
+      color: '#fafafa',
     },
     orgAddress: {
       fontSize: 9,
-      color: '#374151',
+      color: '#a1a1aa',
       lineHeight: 1.2,
     },
     logoCircle: {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: '#AFB4BD',
+      backgroundColor: '#272727',
       justifyContent: 'center',
       alignItems: 'center',
     },
     logoText: {
-      color: '#FFFFFF',
+      color: '#fafafa',
       fontSize: 20,
       fontWeight: 'bold',
     },
@@ -82,14 +82,14 @@ const createStyles = (primaryColor: string) =>
     infoLabel: {
       fontSize: 12,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#7dd3fc',
       marginBottom: 5,
       textTransform: 'uppercase',
     },
     infoValue: {
       fontFamily: 'Geist',
       fontSize: 9,
-      color: '#222',
+      color: '#d4d4d8',
       lineHeight: 1.2,
     },
     infoRow: {
@@ -101,21 +101,21 @@ const createStyles = (primaryColor: string) =>
     infoRowLabel: {
       fontSize: 10,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#7dd3fc',
       textTransform: 'uppercase',
       marginRight: 10,
     },
     infoRowValue: {
       fontSize: 9,
-      color: '#374151',
+      color: '#a1a1aa',
       textAlign: 'right',
     },
     tableHeader: {
       flexDirection: 'row',
       borderTopWidth: 1.5,
-      borderTopColor: '#25345b',
+      borderTopColor: '#7dd3fc',
       borderBottomWidth: 1.5,
-      borderBottomColor: '#d65147',
+      borderBottomColor: '#3f3f46',
       paddingVertical: 4,
       marginTop: 10,
       fontFamily: 'Fjalla One',
@@ -123,7 +123,7 @@ const createStyles = (primaryColor: string) =>
     tableHeaderText: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#fafafa',
       textTransform: 'uppercase',
     },
     colQty: { width: '8%', textAlign: 'center' },
@@ -138,7 +138,7 @@ const createStyles = (primaryColor: string) =>
     tableRowText: {
       fontWeight: '900',
       fontSize: 9,
-      color: '#222',
+      color: '#e4e4e7',
     },
     totalsSection: {
       marginTop: 20,
@@ -153,10 +153,13 @@ const createStyles = (primaryColor: string) =>
     qrCodeSection: {
       width: 80,
       height: 80,
+      backgroundColor: '#ffffff',
+      borderRadius: 4,
+      padding: 4,
     },
     qrCode: {
-      width: 80,
-      height: 80,
+      width: 72,
+      height: 72,
     },
     totalRow: {
       flexDirection: 'row',
@@ -168,11 +171,11 @@ const createStyles = (primaryColor: string) =>
     totalLabel: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#fafafa',
     },
     totalValue: {
       fontSize: 9,
-      color: '#374151',
+      color: '#a1a1aa',
     },
     grandTotalRow: {
       flexDirection: 'row',
@@ -185,27 +188,27 @@ const createStyles = (primaryColor: string) =>
     grandTotalLabel: {
       fontSize: 13,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#fafafa',
     },
     grandTotalValue: {
       fontSize: 18,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: '#7dd3fc',
     },
     signatureContainer: {
-      marginTop: 30, // Reduced space
+      marginTop: 30,
       marginBottom: 20,
       alignItems: 'flex-end',
       paddingRight: 30,
     },
     signature: {
-      fontSize: 42, // Reduced from 70
+      fontSize: 42,
       fontFamily: 'Dancing Script',
-      color: '#444',
+      color: '#52525b',
     },
     footerLine: {
       borderTopWidth: 1,
-      borderTopColor: '#E5E7EB',
+      borderTopColor: '#3f3f46',
       width: '100%',
       marginBottom: 20,
     },
@@ -216,27 +219,27 @@ const createStyles = (primaryColor: string) =>
       marginTop: 'auto',
     },
     thankYou: {
-      fontSize: 48, // Reduced from 64
+      fontSize: 48,
       fontFamily: 'Dancing Script',
-      color: '#25345b',
+      color: '#7dd3fc',
     },
     termsSection: {
       width: '45%',
       paddingLeft: 20,
       borderLeftWidth: 0,
       marginLeft: 'auto',
-      borderLeftColor: '#25345b',
+      borderLeftColor: '#3f3f46',
     },
     termsTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#d65147',
+      color: '#7dd3fc',
       marginBottom: 6,
       textTransform: 'uppercase',
     },
     termsText: {
       fontSize: 8,
-      color: '#374151',
+      color: '#717171',
       lineHeight: 1.5,
     },
     notesSection: {
@@ -245,18 +248,18 @@ const createStyles = (primaryColor: string) =>
     notesTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#d65147',
+      color: '#7dd3fc',
       marginBottom: 6,
       textTransform: 'uppercase',
     },
     notesText: {
       fontSize: 8,
-      color: '#374151',
+      color: '#717171',
       lineHeight: 1.5,
     },
   })
 
-export default function ProfessionalTemplate({
+export default function ProfessionalDarkTemplate({
   receiptNumber,
   customer,
   event,
@@ -285,8 +288,19 @@ export default function ProfessionalTemplate({
               <Text style={styles.orgAddress}>
                 Association of Computer Engineers{'\n'}
                 RMDSSOE, Pune, MH, India{'\n'}
-                <Link src='https://aces-rmdssoe.in'>Website</Link> |{' '}
-                <Link src='mailto:aces.rmdssoe@sinhgad.edu'>Email</Link>
+                <Link
+                  style={{ color: '#7dd3fc' }}
+                  src='https://aces-rmdssoe.in'
+                >
+                  Website
+                </Link>{' '}
+                |{' '}
+                <Link
+                  style={{ color: '#7dd3fc' }}
+                  src='mailto:aces.rmdssoe@sinhgad.edu'
+                >
+                  Email
+                </Link>
               </Text>
             </View>
           </View>
@@ -419,12 +433,12 @@ export default function ProfessionalTemplate({
             <Text style={styles.thankYou}>Thank you</Text>
           </View>
           <View style={styles.termsSection}>
-            {/* {notes && (
+            {notes && (
               <View style={styles.notesSection}>
                 <Text style={styles.notesTitle}>Notes</Text>
                 <Text style={styles.notesText}>{notes}</Text>
               </View>
-            )} */}
+            )}
             <Text style={styles.termsTitle}>Terms & Conditions</Text>
             <Text style={styles.termsText}>
               Payment is due within 15 days{'\n'}
