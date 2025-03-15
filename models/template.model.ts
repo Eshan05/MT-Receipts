@@ -31,7 +31,7 @@ interface ITemplateModel extends Model<ITemplate> {
 const templateSchema = new Schema<ITemplate, ITemplateModel>(
   {
     name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
+    slug: { type: String, required: true, unique: true, index: true },
     description: { type: String },
     isDefault: { type: Boolean, default: false },
     config: {
@@ -52,7 +52,6 @@ const templateSchema = new Schema<ITemplate, ITemplateModel>(
 )
 
 templateSchema.index({ name: 1 })
-templateSchema.index({ slug: 1 }, { unique: true })
 templateSchema.index({ isDefault: 1 })
 templateSchema.index({ category: 1 })
 

@@ -1,5 +1,3 @@
-import { Document } from '@react-pdf/renderer'
-
 export interface TemplateConfig {
   primaryColor: string
   secondaryColor?: string

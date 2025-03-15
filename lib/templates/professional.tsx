@@ -9,15 +9,24 @@ import {
   Link,
 } from '@react-pdf/renderer'
 import type { TemplateProps } from './types'
+import path from 'path'
+
+const isServer = typeof window === 'undefined'
+const getFontPath = (fontFile: string) => {
+  if (isServer) {
+    return path.join(process.cwd(), 'public', 'fonts', fontFile)
+  }
+  return `/fonts/${fontFile}`
+}
 
 Font.register({
   family: 'Fjalla One',
-  src: './public/fonts/FjallaOne-Regular.ttf',
+  src: getFontPath('FjallaOne-Regular.ttf'),
 })
-Font.register({ family: 'Geist', src: './public/fonts/Geist-Variable.ttf' })
+Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
 Font.register({
   family: 'Dancing Script',
-  src: './public/fonts/ImperialScript-Regular.ttf',
+  src: getFontPath('ImperialScript-Regular.ttf'),
 })
 
 const createStyles = (primaryColor: string) =>
