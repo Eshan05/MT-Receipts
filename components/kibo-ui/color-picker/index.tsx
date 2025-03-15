@@ -53,10 +53,37 @@ export const useColorPicker = () => {
   return context
 }
 
-export type ColorPickerProps = HTMLAttributes<HTMLDivElement> & {
-  value?: Parameters<typeof Color>[0]
-  defaultValue?: Parameters<typeof Color>[0]
-  onChange?: (value: Parameters<typeof Color.rgb>[0]) => void
+export type RgbaValue = [number, number, number, number]
+
+export type ColorPickerProps = Omit<
+  HTMLAttributes<HTMLDivElement>,
+  'onChange'
+> & {
+  value?: string
+  defaultValue?: string
+  onChange?: (value: RgbaValue) => void
+}
+
+function parseColorToHsl(colorValue: string | undefined, fallback: string) {
+  try {
+    const color = Color(colorValue || fallback)
+    const [h, s, l] = color.hsl().array()
+    return {
+      hue: h || 0,
+      saturation: s || 0,
+      lightness: l || 50,
+      alpha: color.alpha() * 100,
+    }
+  } catch {
+    const color = Color(fallback)
+    const [h, s, l] = color.hsl().array()
+    return {
+      hue: h || 0,
+      saturation: s || 0,
+      lightness: l || 50,
+      alpha: color.alpha() * 100,
+    }
+  }
 }
 
 export const ColorPicker = ({
@@ -66,42 +93,59 @@ export const ColorPicker = ({
   className,
   ...props
 }: ColorPickerProps) => {
-  const selectedColor = Color(value)
-  const defaultColor = Color(defaultValue)
+  const initial = useMemo(() => parseColorToHsl(value, defaultValue), [])
 
-  const [hue, setHue] = useState(selectedColor.hue() || defaultColor.hue() || 0)
-  const [saturation, setSaturation] = useState(
-    selectedColor.saturationl() || defaultColor.saturationl() || 100
-  )
-  const [lightness, setLightness] = useState(
-    selectedColor.lightness() || defaultColor.lightness() || 50
-  )
-  const [alpha, setAlpha] = useState(
-    selectedColor.alpha() * 100 || defaultColor.alpha() * 100
-  )
+  const [hue, setHue] = useState(initial.hue)
+  const [saturation, setSaturation] = useState(initial.saturation)
+  const [lightness, setLightness] = useState(initial.lightness)
+  const [alpha, setAlpha] = useState(initial.alpha)
   const [mode, setMode] = useState('hex')
 
-  // Update color when controlled value changes
-  useEffect(() => {
-    if (value) {
-      const color = Color.rgb(value).rgb().object()
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
-      setHue(color.r)
-      setSaturation(color.g)
-      setLightness(color.b)
-      setAlpha(color.a)
+  const isUserInteraction = useRef(false)
+  const prevValueRef = useRef(value)
+
+  useEffect(() => {
+    if (value !== undefined && prevValueRef.current !== value) {
+      prevValueRef.current = value
+      isUserInteraction.current = false
+      const parsed = parseColorToHsl(value, defaultValue)
+      setHue(parsed.hue)
+      setSaturation(parsed.saturation)
+      setLightness(parsed.lightness)
+      setAlpha(parsed.alpha)
     }
-  }, [value])
+  }, [value, defaultValue])
 
-  // Notify parent of changes
   useEffect(() => {
-    if (onChange) {
+    if (isUserInteraction.current && onChangeRef.current) {
       const color = Color.hsl(hue, saturation, lightness).alpha(alpha / 100)
       const rgba = color.rgb().array()
-
-      onChange([rgba[0], rgba[1], rgba[2], alpha / 100])
+      onChangeRef.current([rgba[0], rgba[1], rgba[2], alpha / 100])
     }
-  }, [hue, saturation, lightness, alpha, onChange])
+  }, [hue, saturation, lightness, alpha])
+
+  const handleHueChange = useCallback((h: number) => {
+    isUserInteraction.current = true
+    setHue(h)
+  }, [])
+
+  const handleSaturationChange = useCallback((s: number) => {
+    isUserInteraction.current = true
+    setSaturation(s)
+  }, [])
+
+  const handleLightnessChange = useCallback((l: number) => {
+    isUserInteraction.current = true
+    setLightness(l)
+  }, [])
+
+  const handleAlphaChange = useCallback((a: number) => {
+    isUserInteraction.current = true
+    setAlpha(a)
+  }, [])
 
   return (
     <ColorPickerContext.Provider
@@ -111,10 +155,10 @@ export const ColorPicker = ({
         lightness,
         alpha,
         mode,
-        setHue,
-        setSaturation,
-        setLightness,
-        setAlpha,
+        setHue: handleHueChange,
+        setSaturation: handleSaturationChange,
+        setLightness: handleLightnessChange,
+        setAlpha: handleAlphaChange,
         setMode,
       }}
     >

@@ -33,6 +33,7 @@ import {
   ColorPickerHue,
   ColorPickerAlpha,
   ColorPickerFormat,
+  type RgbaValue,
 } from '@/components/kibo-ui/color-picker'
 import {
   receiptSchema,
@@ -544,13 +545,11 @@ export function ReceiptForm({ templates }: ReceiptFormProps) {
                                 align='start'
                               >
                                 <ColorPicker
-                                  value={config.primaryColor}
-                                  onChange={(rgba) => {
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    const values = rgba as any
-                                    const r = Math.round(values[0])
-                                    const g = Math.round(values[1])
-                                    const b = Math.round(values[2])
+                                  value={config.primaryColor || '#25345b'}
+                                  onChange={(rgba: RgbaValue) => {
+                                    const r = Math.round(rgba[0])
+                                    const g = Math.round(rgba[1])
+                                    const b = Math.round(rgba[2])
                                     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
                                     setConfig((prev) => ({
                                       ...prev,
@@ -595,12 +594,10 @@ export function ReceiptForm({ templates }: ReceiptFormProps) {
                               >
                                 <ColorPicker
                                   value={config.secondaryColor || '#000000'}
-                                  onChange={(rgba) => {
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    const values = rgba as any
-                                    const r = Math.round(values[0])
-                                    const g = Math.round(values[1])
-                                    const b = Math.round(values[2])
+                                  onChange={(rgba: RgbaValue) => {
+                                    const r = Math.round(rgba[0])
+                                    const g = Math.round(rgba[1])
+                                    const b = Math.round(rgba[2])
                                     const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
                                     setConfig((prev) => ({
                                       ...prev,
