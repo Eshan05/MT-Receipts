@@ -33,6 +33,7 @@ export interface RenderReceiptOptions {
   date?: string
   notes?: string
   qrCodeData?: string
+  customConfig?: TemplateConfig
 }
 
 export interface RenderResult {
@@ -40,6 +41,8 @@ export interface RenderResult {
   templateSlug: string
   config: TemplateConfig
 }
+
+import mongoose from 'mongoose'
 
 async function getTemplateConfig(
   templateId?: string | null,
@@ -50,7 +53,14 @@ async function getTemplateConfig(
   let template: ITemplate | null = null
 
   if (templateId) {
-    template = await Template.findById(templateId).lean()
+    if (
+      mongoose.Types.ObjectId.isValid(templateId) &&
+      templateId.length === 24
+    ) {
+      template = await Template.findById(templateId).lean()
+    } else {
+      template = await Template.findBySlug(templateId)
+    }
   } else if (slug) {
     template = await Template.findBySlug(slug)
   }
@@ -107,6 +117,7 @@ export async function renderReceiptPDF(
     paymentMethod,
     notes,
     qrCodeData,
+    customConfig,
   } = options
 
   const date =
@@ -118,7 +129,8 @@ export async function renderReceiptPDF(
     })
 
   const { template, slug } = await getTemplateConfig(event.templateId)
-  const config = buildConfig(template)
+  const dbConfig = buildConfig(template)
+  const config = customConfig || dbConfig
   const TemplateComponent = getTemplateComponent(slug)
 
   const props: TemplateProps = {
