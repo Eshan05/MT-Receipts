@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator'
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>
   title?: string
+  buttonClasses?: string
   options: {
     label: string
     value: string
@@ -34,6 +35,7 @@ interface DataTableFacetedFilterProps<TData, TValue> {
 export function DataTableFacetedFilter<TData, TValue>({
   column,
   title,
+  buttonClasses,
   options,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues()
@@ -51,7 +53,7 @@ export function DataTableFacetedFilter<TData, TValue>({
         <Button
           variant='outline'
           size='sm'
-          className='h-8 border-dashed flex items-center space-x-2'
+          className={`h-8 border-dashed flex items-center space-x-2 ${cn(buttonClasses)}`}
         >
           <PlusCircle className='h-4 w-4' />
           <span>{title}</span>
@@ -90,7 +92,7 @@ export function DataTableFacetedFilter<TData, TValue>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-3xs p-0' align='start'>
+      <PopoverContent className='w-[200px] p-0' align='start'>
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
