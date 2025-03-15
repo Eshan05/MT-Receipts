@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   reactCompiler: true,
   allowedDevOrigins: ['*'],
-  // compiler: { removeConsole: process.env.NODE_ENV === "production" },
   compiler: {
     removeConsole:
       process.env.NODE_ENV === 'production' ? { exclude: ['error'] } : false,
@@ -20,6 +19,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverExternalPackages: ['skia-canvas', '@loskir/styled-qr-code-node'],
 }
 
 export default nextConfig
