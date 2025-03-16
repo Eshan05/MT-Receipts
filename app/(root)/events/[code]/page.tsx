@@ -338,6 +338,7 @@ export default function EventEntriesPage() {
             data={entries}
             event={event}
             onUpdate={fetchEntries}
+            eventCode={event.eventCode}
           />
         </CardContent>
       </Card>

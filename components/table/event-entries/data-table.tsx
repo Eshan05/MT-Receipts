@@ -25,14 +25,17 @@ import {
 } from '@/components/ui/table'
 import { DataTablePagination } from '../data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
+import { DataTableBulkActions } from './data-table-bulk-actions'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { IEvent } from '@/models/event.model'
+import { EventEntry } from './schema'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   event: IEvent
   onUpdate?: () => void
+  eventCode: string
 }
 
 export function DataTable<TData, TValue>({
@@ -40,6 +43,7 @@ export function DataTable<TData, TValue>({
   data,
   event,
   onUpdate,
+  eventCode,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -79,63 +83,76 @@ export function DataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  const selectedEntries = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original as EventEntry)
+
   return (
-    <div className='space-y-4'>
-      <DataTableToolbar table={table} />
-      <div className='rounded-md'>
-        <ScrollArea className='w-full'>
-          <Table>
-            <TableHeader className=''>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className=''>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
+    <>
+      <div className='space-y-4'>
+        <DataTableToolbar table={table} />
+        <div className='rounded-md'>
+          <ScrollArea className='w-full'>
+            <Table>
+              <TableHeader className=''>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className=''>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className='h-24 text-center'
-                  >
-                    No entries found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <ScrollBar orientation='horizontal' />
-        </ScrollArea>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className='h-24 text-center'
+                    >
+                      No entries found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation='horizontal' />
+          </ScrollArea>
+        </div>
+        <DataTablePagination table={table} />
       </div>
-      <DataTablePagination table={table} />
-    </div>
+
+      <DataTableBulkActions
+        selectedEntries={selectedEntries}
+        onClearSelection={() => setRowSelection({})}
+        onUpdate={onUpdate || (() => {})}
+        eventCode={eventCode}
+      />
+    </>
   )
 }
