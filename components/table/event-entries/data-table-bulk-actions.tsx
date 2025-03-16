@@ -1,0 +1,359 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  Mail,
+  CheckCircle,
+  RotateCcw,
+  CreditCard,
+  Download,
+  Trash2,
+  X,
+  Loader2,
+  Banknote,
+  Smartphone,
+  Wallet,
+  FileJson,
+  FileSpreadsheet,
+} from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { EventEntry } from './schema'
+
+interface DataTableBulkActionsProps {
+  selectedEntries: EventEntry[]
+  onClearSelection: () => void
+  onUpdate: () => void
+  eventCode: string
+}
+
+export function DataTableBulkActions({
+  selectedEntries,
+  onClearSelection,
+  onUpdate,
+  eventCode,
+}: DataTableBulkActionsProps) {
+  const [isProcessing, setIsProcessing] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+  const selectedCount = selectedEntries.length
+  const receiptNumbers = selectedEntries.map((e) => e.receiptNumber)
+
+  const hasPendingEmails = selectedEntries.some(
+    (e) => !e.emailSent && !e.emailError
+  )
+  const hasUnsent = selectedEntries.some((e) => !e.emailSent)
+  const hasNonRefunded = selectedEntries.some((e) => !e.refunded)
+
+  const handleBulkAction = async (
+    action: string,
+    endpoint: string,
+    method: string = 'POST',
+    body?: Record<string, unknown>
+  ) => {
+    setIsProcessing(action)
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || { receiptNumbers }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || `Failed to ${action}`)
+      }
+
+      const result = await response.json()
+      toast.success(result.message || `${action} completed`)
+      onUpdate()
+      onClearSelection()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : `Failed to ${action}`
+      )
+    } finally {
+      setIsProcessing(null)
+    }
+  }
+
+  const handleSendEmails = () =>
+    handleBulkAction('send emails', '/api/receipts/bulk/send-email')
+
+  const handleMarkSent = () =>
+    handleBulkAction('mark as sent', '/api/receipts/bulk/mark-sent')
+
+  const handleMarkRefunded = () =>
+    handleBulkAction('mark as refunded', '/api/receipts/bulk/mark-refunded')
+
+  const handleDelete = () =>
+    handleBulkAction('delete', '/api/receipts/bulk/delete', 'DELETE')
+
+  const handleChangePayment = (method: string) =>
+    handleBulkAction(
+      'change payment method',
+      '/api/receipts/bulk/payment',
+      'PATCH',
+      {
+        receiptNumbers,
+        paymentMethod: method,
+      }
+    )
+
+  const exportSelectedToCSV = () => {
+    const csvData = selectedEntries.map((entry) => ({
+      receiptNumber: entry.receiptNumber,
+      customerName: entry.customer.name,
+      customerEmail: entry.customer.email,
+      customerPhone: entry.customer.phone || '',
+      items: entry.items.map((i) => `${i.name} x${i.quantity}`).join('; '),
+      totalAmount: entry.totalAmount,
+      paymentMethod: entry.paymentMethod,
+      emailSent: entry.emailSent,
+      refunded: entry.refunded || false,
+      createdAt: new Date(entry.createdAt).toISOString(),
+    }))
+
+    const csv = [
+      Object.keys(csvData[0] || {}).join(','),
+      ...csvData.map((row) =>
+        Object.values(row)
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(',')
+      ),
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${eventCode}-selected-${selectedCount}-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Exported ${selectedCount} entries to CSV`)
+  }
+
+  const exportSelectedToJSON = () => {
+    const jsonData = selectedEntries.map((entry) => ({
+      receiptNumber: entry.receiptNumber,
+      customer: entry.customer,
+      items: entry.items.map((i) => ({
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+        total: i.quantity * i.price,
+      })),
+      totalAmount: entry.totalAmount,
+      paymentMethod: entry.paymentMethod,
+      emailSent: entry.emailSent,
+      refunded: entry.refunded || false,
+      createdAt: entry.createdAt,
+    }))
+
+    const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${eventCode}-selected-${selectedCount}-${new Date().toISOString().split('T')[0]}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Exported ${selectedCount} entries to JSON`)
+  }
+
+  if (selectedCount === 0) return null
+
+  return (
+    <>
+      <div className='fixed bottom-4 left-1/2 -translate-x-1/2 z-50'>
+        <div className='flex items-center gap-2 px-4 py-2.5 bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg'>
+          <Badge variant='secondary' className='gap-1'>
+            {selectedCount} selected
+          </Badge>
+          <Button
+            size='sm'
+            variant='ghost'
+            className='h-7 px-2'
+            onClick={onClearSelection}
+          >
+            <X className='w-3 h-3 mr-1' />
+            <span className='max-md:hidden'>Clear</span>
+          </Button>
+
+          <div className='w-px h-5 bg-border mx-1' />
+
+          <Button
+            size='sm'
+            variant='outline'
+            className='h-7 gap-1'
+            onClick={handleSendEmails}
+            disabled={!hasPendingEmails || isProcessing !== null}
+          >
+            {isProcessing === 'send emails' ? (
+              <Loader2 className='w-3 h-3 animate-spin' />
+            ) : (
+              <Mail className='w-3 h-3' />
+            )}
+            <span className='max-md:hidden'>Send Email</span>
+          </Button>
+
+          <Button
+            size='sm'
+            variant='outline'
+            className='h-7 gap-1'
+            onClick={handleMarkSent}
+            disabled={!hasUnsent || isProcessing !== null}
+          >
+            {isProcessing === 'mark as sent' ? (
+              <Loader2 className='w-3 h-3 animate-spin' />
+            ) : (
+              <CheckCircle className='w-3 h-3' />
+            )}
+            <span className='max-md:hidden'>Mark Sent</span>
+          </Button>
+
+          <Button
+            size='sm'
+            variant='outline'
+            className='h-7 gap-1'
+            onClick={handleMarkRefunded}
+            disabled={!hasNonRefunded || isProcessing !== null}
+          >
+            {isProcessing === 'mark as refunded' ? (
+              <Loader2 className='w-3 h-3 animate-spin' />
+            ) : (
+              <RotateCcw className='w-3 h-3' />
+            )}
+            <span className='max-md:hidden'>Mark Refunded</span>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size='sm'
+                variant='outline'
+                className='h-7 gap-1'
+                disabled={isProcessing !== null}
+              >
+                <CreditCard className='w-3 h-3' />
+                <span className='max-md:hidden'>Payment</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                onClick={() => handleChangePayment('cash')}
+                disabled={isProcessing === 'change payment method'}
+              >
+                <Banknote className='w-3 h-3 mr-2' />
+                Cash
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleChangePayment('upi')}
+                disabled={isProcessing === 'change payment method'}
+              >
+                <Smartphone className='w-3 h-3 mr-2' />
+                UPI
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleChangePayment('card')}
+                disabled={isProcessing === 'change payment method'}
+              >
+                <CreditCard className='w-3 h-3 mr-2' />
+                Card
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleChangePayment('other')}
+                disabled={isProcessing === 'change payment method'}
+              >
+                <Wallet className='w-3 h-3 mr-2' />
+                Other
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size='sm'
+                variant='outline'
+                className='h-7 gap-1'
+                disabled={isProcessing !== null}
+              >
+                <Download className='w-3 h-3' />
+                <span className='max-md:hidden'>Export</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={exportSelectedToCSV}>
+                <FileSpreadsheet className='w-3 h-3 mr-2' />
+                Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportSelectedToJSON}>
+                <FileJson className='w-3 h-3 mr-2' />
+                Export JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            size='sm'
+            variant='destructive'
+            className='h-7 gap-1'
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={isProcessing !== null}
+          >
+            {isProcessing === 'delete' ? (
+              <Loader2 className='w-3 h-3 animate-spin' />
+            ) : (
+              <Trash2 className='w-3 h-3' />
+            )}
+            <span className='max-md:hidden'>Delete</span>
+          </Button>
+        </div>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} Entries</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete {selectedCount}{' '}
+              receipt{selectedCount > 1 ? 's' : ''}? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing === 'delete'}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-white hover:bg-destructive/90'
+              onClick={handleDelete}
+              disabled={isProcessing === 'delete'}
+            >
+              {isProcessing === 'delete' ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
