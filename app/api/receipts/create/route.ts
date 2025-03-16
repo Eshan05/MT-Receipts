@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import Receipt from '@/models/receipt.model'
-import Event from '@/models/event.model'
+import Sequence from '@/models/sequence.model'
+
+async function generateReceiptNumber(): Promise<string> {
+  const now = new Date()
+  const year = now.getFullYear().toString().slice(-2)
+  const month = (now.getMonth() + 1).toString().padStart(2, '0')
+
+  const sequence = await Sequence.findOneAndUpdate(
+    { name: 'receipt' },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true }
+  )
+
+  const sequenceNumber = sequence.value.toString().padStart(4, '0')
+  return `RCP-${year}${month}-${sequenceNumber}`
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,30 +24,23 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      receiptNumber,
       eventId,
-      event,
       customer,
       items,
       totalAmount,
       paymentMethod,
+      emailSent,
       notes,
     } = body
 
-    if (!receiptNumber || !eventId || !customer || !items) {
+    if (!eventId || !customer || !items) {
       return NextResponse.json(
         { message: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    const existingReceipt = await Receipt.findOne({ receiptNumber })
-    if (existingReceipt) {
-      return NextResponse.json(
-        { message: 'Receipt number already exists' },
-        { status: 400 }
-      )
-    }
+    const receiptNumber = await generateReceiptNumber()
 
     const processedItems = items.map(
       (item: {
@@ -40,12 +48,13 @@ export async function POST(request: NextRequest) {
         description?: string
         quantity: number
         price: number
+        total?: number
       }) => ({
         name: item.name,
         description: item.description,
         quantity: item.quantity,
         price: item.price,
-        total: item.quantity * item.price,
+        total: item.total || item.quantity * item.price,
       })
     )
 
@@ -61,8 +70,9 @@ export async function POST(request: NextRequest) {
       items: processedItems,
       totalAmount,
       paymentMethod,
+      emailSent: emailSent || false,
+      emailSentAt: emailSent ? new Date() : undefined,
       notes,
-      emailSent: false,
     })
 
     return NextResponse.json({

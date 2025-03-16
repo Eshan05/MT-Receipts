@@ -1,5 +1,5 @@
 import dbConnect from '@/lib/db-conn'
-import Purchase from '@/models/purchase.model'
+import Receipt from '@/models/receipt.model'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
 
     await dbConnect()
 
-    const counts = await Purchase.aggregate([
+    const counts = await Receipt.aggregate([
       {
         $match: {
           event: { $in: eventIdArray.map((id) => id) },
-          status: { $ne: 'cancelled' },
+          refunded: { $ne: true },
         },
       },
       {
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         $group: {
           _id: {
             event: '$event',
-            itemName: '$items.itemName',
+            itemName: '$items.name',
           },
           count: { $sum: '$items.quantity' },
         },
