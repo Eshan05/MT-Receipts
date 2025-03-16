@@ -1,22 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import {
-  Credenza,
-  CredenzaBody,
-  CredenzaContent,
-  CredenzaHeader,
-  CredenzaTitle,
-} from '@/components/ui/credenza'
 import { getAllTemplateInfo } from '@/lib/templates'
 import type { TemplateInfo } from '@/lib/templates/types'
-import {
-  CalendarDays,
-  FileText,
-  Loader2,
-  Newspaper,
-  PlusCircle,
-} from 'lucide-react'
+import { CalendarDays, FileText, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ReceiptForm } from './_components/receipt-form'

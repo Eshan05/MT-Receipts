@@ -76,6 +76,7 @@ import { toast } from 'sonner'
 
 interface ReceiptFormProps {
   templates: TemplateInfo[]
+  preselectedEventId?: string | null
 }
 
 const defaultConfig: TemplateConfig = {
@@ -117,7 +118,10 @@ const defaultTemplateProps: TemplateProps = {
   notes: '',
 }
 
-export function ReceiptForm({ templates }: ReceiptFormProps) {
+export function ReceiptForm({
+  templates,
+  preselectedEventId,
+}: ReceiptFormProps) {
   const [events, setEvents] = useState<IEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -128,7 +132,7 @@ export function ReceiptForm({ templates }: ReceiptFormProps) {
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(receiptSchema),
     defaultValues: {
-      eventId: '',
+      eventId: preselectedEventId || '',
       templateSlug: 'professional',
       customer: {
         name: '',
