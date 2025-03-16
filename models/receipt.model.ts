@@ -1,5 +1,12 @@
 import mongoose, { Document, Schema, model, Model } from 'mongoose'
 
+export interface IEmailLog {
+  sentTo: string
+  status: 'sent' | 'failed'
+  sentAt: Date
+  error?: string
+}
+
 export interface IReceiptItem {
   name: string
   description?: string
@@ -11,7 +18,6 @@ export interface IReceiptItem {
 export interface IReceipt extends Document {
   receiptNumber: string
   event: mongoose.Schema.Types.ObjectId
-  purchase?: mongoose.Schema.Types.ObjectId
   customer: {
     name: string
     email: string
@@ -21,13 +27,17 @@ export interface IReceipt extends Document {
   items: IReceiptItem[]
   totalAmount: number
   paymentMethod?: 'cash' | 'upi' | 'card' | 'other'
-  templateId?: mongoose.Schema.Types.ObjectId
+  templateSlug?: string
   qrCodeData?: string
   pdfUrl?: string
   notes?: string
   emailSent: boolean
   emailSentAt?: Date
   emailError?: string
+  emailLog: IEmailLog[]
+  refunded: boolean
+  refundReason?: string
+  refundedAt?: Date
   createdBy?: mongoose.Schema.Types.ObjectId
   createdAt: Date
 }
@@ -42,7 +52,6 @@ const receiptSchema = new Schema<IReceipt, IReceiptModel>(
       ref: 'Event',
       required: true,
     },
-    purchase: { type: mongoose.Schema.Types.ObjectId, ref: 'Purchase' },
     customer: {
       name: { type: String, required: true },
       email: { type: String, required: true },
@@ -60,13 +69,24 @@ const receiptSchema = new Schema<IReceipt, IReceiptModel>(
     ],
     totalAmount: { type: Number, required: true },
     paymentMethod: { type: String, enum: ['cash', 'upi', 'card', 'other'] },
-    templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'Template' },
+    templateSlug: { type: String, default: 'professional' },
     qrCodeData: { type: String },
     pdfUrl: { type: String },
     notes: { type: String },
     emailSent: { type: Boolean, default: false },
     emailSentAt: { type: Date },
     emailError: { type: String },
+    emailLog: [
+      {
+        sentTo: { type: String, required: true },
+        status: { type: String, enum: ['sent', 'failed'], required: true },
+        sentAt: { type: Date, default: Date.now },
+        error: { type: String },
+      },
+    ],
+    refunded: { type: Boolean, default: false },
+    refundReason: { type: String },
+    refundedAt: { type: Date },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     createdAt: { type: Date, default: Date.now },
   },
@@ -78,6 +98,7 @@ receiptSchema.index({ event: 1 })
 receiptSchema.index({ 'customer.email': 1 })
 receiptSchema.index({ createdAt: -1 })
 receiptSchema.index({ emailSent: 1 })
+receiptSchema.index({ refunded: 1 })
 
 const Receipt: IReceiptModel =
   (mongoose.models.Receipt as IReceiptModel) ||
