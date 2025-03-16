@@ -15,13 +15,24 @@ import { Switch } from '@/components/ui/switch'
 import { IEvent } from '@/models/event.model'
 import { defaultIcons, iconMap } from '@/utils/mappings'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Mail, Package, Plus, Trash2 } from 'lucide-react'
+import {
+  Loader2,
+  Mail,
+  Package,
+  Plus,
+  Trash2,
+  User,
+  Phone,
+  MapPin,
+  Hash,
+  FileText,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { createElement } from 'react'
+import { FaDollarSign } from 'react-icons/fa'
 
 const entryItemSchema = z.object({
   id: z.string(),
@@ -186,102 +197,99 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-      <div className='grid grid-cols-2 gap-4'>
-        <Field>
-          <FieldLabel>Customer Name</FieldLabel>
-          <Input {...form.register('customer.name')} placeholder='John Doe' />
-          <FieldError errors={[form.formState.errors.customer?.name]} />
-        </Field>
-        <Field>
-          <FieldLabel>Email</FieldLabel>
-          <Input
-            {...form.register('customer.email')}
-            type='email'
-            placeholder='john@example.com'
-          />
-          <FieldError errors={[form.formState.errors.customer?.email]} />
-        </Field>
-      </div>
-
-      <div className='grid grid-cols-2 gap-4'>
-        <Field>
-          <FieldLabel>Phone (Optional)</FieldLabel>
-          <Input
-            {...form.register('customer.phone')}
-            placeholder='+91 9876543210'
-          />
-        </Field>
-        <Field>
-          <FieldLabel>Address (Optional)</FieldLabel>
-          <Input
-            {...form.register('customer.address')}
-            placeholder='City, Country'
-          />
-        </Field>
-      </div>
-
-      <Field>
-        <FieldLabel className='flex items-center gap-1.5'>
-          <Package className='w-3.5 h-3.5' />
-          Items
-        </FieldLabel>
-        <div className='space-y-2'>
-          {fields.map((field, index) => {
-            const ItemIcon = itemIcons[field.id] || Package
-            return (
-              <div
-                key={field.id}
-                className='flex items-center gap-2 p-2 rounded-lg border bg-muted/30'
-              >
-                <div className='p-1.5 rounded bg-background'>
-                  {createElement(ItemIcon, {
-                    className: 'w-4 h-4 text-muted-foreground',
-                  })}
+    <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-3'>
+      <div className='grid grid-cols-2 gap-2'>
+        <Controller
+          name='customer.name'
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel className='sr-only'>Customer Name</FieldLabel>
+              <div className='relative'>
+                <Input
+                  {...field}
+                  placeholder='Customer name'
+                  className='peer ps-7'
+                  aria-invalid={fieldState.invalid}
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                  <User size={12} />
                 </div>
-                <div className='flex-1 grid grid-cols-4 gap-2'>
-                  <Input
-                    {...form.register(`items.${index}.name`)}
-                    placeholder='Item name'
-                    className='col-span-2 h-8'
-                  />
-                  <Input
-                    {...form.register(`items.${index}.quantity`, {
-                      valueAsNumber: true,
-                    })}
-                    type='number'
-                    min={1}
-                    placeholder='Qty'
-                    className='h-8'
-                  />
-                  <Input
-                    {...form.register(`items.${index}.price`, {
-                      valueAsNumber: true,
-                    })}
-                    type='number'
-                    min={0}
-                    placeholder='Price'
-                    className='h-8'
-                  />
-                </div>
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='sm'
-                  className='h-8 w-8 p-0'
-                  onClick={() => remove(index)}
-                  disabled={fields.length === 1}
-                >
-                  <Trash2 className='w-4 h-4' />
-                </Button>
               </div>
-            )
-          })}
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+        <Controller
+          name='customer.email'
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel className='sr-only'>Email</FieldLabel>
+              <div className='relative'>
+                <Input
+                  {...field}
+                  type='email'
+                  placeholder='Email'
+                  className='peer ps-7'
+                  aria-invalid={fieldState.invalid}
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                  <Mail size={12} />
+                </div>
+              </div>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </div>
+
+      <div className='grid grid-cols-2 gap-2'>
+        <Controller
+          name='customer.phone'
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className='sr-only'>Phone</FieldLabel>
+              <div className='relative'>
+                <Input
+                  {...field}
+                  placeholder='Phone (optional)'
+                  className='peer ps-7'
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                  <Phone size={12} />
+                </div>
+              </div>
+            </Field>
+          )}
+        />
+        <Controller
+          name='customer.address'
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className='sr-only'>Address</FieldLabel>
+              <div className='relative'>
+                <Input
+                  {...field}
+                  placeholder='Address (optional)'
+                  className='peer ps-7'
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                  <MapPin size={12} />
+                </div>
+              </div>
+            </Field>
+          )}
+        />
+      </div>
+
+      <div className='space-y-1.5'>
+        <div className='flex items-center justify-between'>
+          <span className='text-sm font-medium'>Items</span>
           <Button
             type='button'
-            variant='outline'
-            size='sm'
-            className='w-full'
             onClick={() =>
               append({
                 id: crypto.randomUUID(),
@@ -291,33 +299,157 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
                 price: 0,
               })
             }
+            variant='outline'
+            size='sm'
+            className='gap-1 h-7 text-xs'
           >
-            <Plus className='w-4 h-4 mr-1' />
-            Add Item
+            <Plus className='w-3 h-3' />
+            Add
           </Button>
         </div>
-        <FieldError errors={[form.formState.errors.items]} />
-      </Field>
+        <div className='space-y-1'>
+          {fields.map((item, index) => {
+            const ItemIcon = itemIcons[item.id] || Package
+            return (
+              <div
+                key={item.id}
+                className='group flex items-center gap-1.5 p-1.5 rounded-md bg-muted/40'
+              >
+                <Controller
+                  name={`items.${index}.name`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid} className='flex-1'>
+                      <div className='relative'>
+                        <Input
+                          {...field}
+                          placeholder='Item name'
+                          className='peer ps-6'
+                          aria-invalid={fieldState.invalid}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            if (e.target.value && item.id) {
+                              setItemIcons((prev) => ({
+                                ...prev,
+                                [item.id]: getIconForName(e.target.value),
+                              }))
+                            }
+                          }}
+                        />
+                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                          <ItemIcon size={11} />
+                        </div>
+                      </div>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
 
-      <div className='grid grid-cols-2 gap-4'>
-        <Field>
-          <FieldLabel>Total Amount</FieldLabel>
-          <div className='flex items-center gap-2'>
-            <span className='text-muted-foreground'>₹</span>
-            <Input
-              {...form.register('totalAmount', { valueAsNumber: true })}
-              type='number'
-              readOnly
-              className='bg-muted'
-            />
-          </div>
-        </Field>
-        <Field>
-          <FieldLabel>Payment Method</FieldLabel>
-          <Controller
-            name='paymentMethod'
-            control={form.control}
-            render={({ field }) => (
+                <Controller
+                  name={`items.${index}.quantity`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid} className='w-20'>
+                      <div className='relative'>
+                        <Input
+                          {...field}
+                          type='number'
+                          min={1}
+                          placeholder='Qty'
+                          className='peer ps-6'
+                          aria-invalid={fieldState.invalid}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value)
+                            field.onChange(isNaN(value) ? 1 : value)
+                          }}
+                        />
+                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                          <Hash size={11} />
+                        </div>
+                      </div>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name={`items.${index}.price`}
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid} className='w-24'>
+                      <div className='relative'>
+                        <Input
+                          {...field}
+                          type='number'
+                          min={0}
+                          placeholder='Price'
+                          className='peer ps-6'
+                          aria-invalid={fieldState.invalid}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value)
+                            field.onChange(isNaN(value) ? 0 : value)
+                          }}
+                        />
+                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                          <FaDollarSign size={11} />
+                        </div>
+                      </div>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => {
+                    if (fields.length > 1) remove(index)
+                    else toast.error('At least one item required')
+                  }}
+                  className='w-6 h-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
+                >
+                  <Trash2 className='w-3 h-3' />
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className='grid grid-cols-2 gap-2'>
+        <Controller
+          name='totalAmount'
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className='sr-only'>Total Amount</FieldLabel>
+              <div className='relative'>
+                <Input
+                  {...field}
+                  type='number'
+                  readOnly
+                  className='peer ps-6 bg-muted'
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                  <FaDollarSign size={11} />
+                </div>
+              </div>
+            </Field>
+          )}
+        />
+        <Controller
+          name='paymentMethod'
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className='sr-only'>Payment Method</FieldLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
                   <SelectValue />
@@ -329,9 +461,9 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
                   <SelectItem value='other'>Other</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-          />
-        </Field>
+            </Field>
+          )}
+        />
       </div>
 
       <div className='flex items-center justify-between p-3 rounded-lg border bg-muted/30'>
@@ -356,22 +488,38 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
         />
       </div>
 
-      <Field>
-        <FieldLabel>Notes (Optional)</FieldLabel>
-        <AutosizeTextarea
-          {...form.register('notes')}
-          placeholder='Any additional notes...'
-          className='resize-none'
-        />
-      </Field>
+      <Controller
+        name='notes'
+        control={form.control}
+        render={({ field }) => (
+          <Field>
+            <FieldLabel className='sr-only'>Notes</FieldLabel>
+            <div className='relative'>
+              <AutosizeTextarea
+                {...field}
+                placeholder='Any additional notes...'
+                className='peer ps-7 resize-none'
+              />
+              <div className='pointer-events-none absolute top-2.5 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                <FileText size={12} />
+              </div>
+            </div>
+          </Field>
+        )}
+      />
 
-      <div className='flex justify-end gap-2 pt-4'>
-        <Button type='button' variant='outline' onClick={onCancel}>
+      <div className='flex justify-end gap-2 pt-1 pb-3'>
+        <Button type='button' variant='outline' size='sm' onClick={onCancel}>
           Cancel
         </Button>
-        <Button type='submit' disabled={submitting}>
+        <Button
+          type='submit'
+          size='sm'
+          disabled={submitting}
+          className='min-w-20'
+        >
           {submitting && <Loader2 className='w-4 h-4 mr-1 animate-spin' />}
-          Create Receipt
+          {submitting ? 'Creating...' : 'Create Receipt'}
         </Button>
       </div>
     </form>
