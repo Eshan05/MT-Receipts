@@ -39,8 +39,7 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
-      entryId: false,
-      emailSentAt: false,
+      receiptNumber: true,
       createdBy: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -78,12 +77,12 @@ export function DataTable<TData, TValue>({
   return (
     <div className='space-y-4'>
       <DataTableToolbar table={table} />
-      <div className='rounded-md border'>
-        <ScrollArea className='w-full whitespace-nowrap'>
+      <div className='rounded-md'>
+        <ScrollArea className='w-full'>
           <Table>
-            <TableHeader>
+            <TableHeader className=''>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className=''>
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id} colSpan={header.colSpan}>

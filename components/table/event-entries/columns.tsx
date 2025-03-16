@@ -6,7 +6,7 @@ import { DataTableColumnHeader } from '../data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 import { EventEntry } from './schema'
 import { ColumnDef } from '@tanstack/react-table'
-import { formatDistanceToNow } from 'date-fns'
+import { formatTime } from '@/utils/formatters'
 import {
   Mail,
   Phone,
@@ -25,6 +25,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 function getIconForName(name: string): IconType {
   const normalizedName = name.toLowerCase().trim()
@@ -86,43 +91,40 @@ export const columns: ColumnDef<EventEntry>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: 'receiptNumber',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Receipt #' />
-    ),
-    cell: ({ row }) => {
-      const receiptNumber = row.original.receiptNumber
-      return (
-        <div className='flex items-center gap-1.5'>
-          <Receipt className='size-3.5 text-muted-foreground' />
-          <span className='font-mono text-xs'>{receiptNumber || '-'}</span>
-        </div>
-      )
-    },
-    enableSorting: true,
-    enableHiding: true,
-  },
-  {
     accessorKey: 'customer',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='Customer' />
     ),
     cell: ({ row }) => {
       const customer = row.original.customer
+      const avatarUrl = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(customer.name)}`
       return (
-        <div className='flex flex-col gap-0.5 min-w-[150px]'>
-          <span className='font-medium truncate'>{customer.name}</span>
-          <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-            <span className='truncate max-w-[120px]'>{customer.email}</span>
+        <div className='flex items-center gap-2 min-w-0 max-w-50'>
+          <img
+            src={avatarUrl}
+            alt={customer.name}
+            className='size-7 rounded-full shrink-0 bg-muted'
+          />
+          <div className='flex flex-col min-w-0 flex-1'>
+            <div className='flex items-center gap-1 min-w-0'>
+              <User className='size-3 text-muted-foreground shrink-0' />
+              <span className='truncate text-sm font-medium'>
+                {customer.name}
+              </span>
+            </div>
+            <div className='flex items-center gap-1 min-w-0'>
+              <Mail className='size-3 text-muted-foreground shrink-0' />
+              <span className='truncate text-xs text-muted-foreground'>
+                {customer.email}
+              </span>
+            </div>
             {customer.phone && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Phone className='size-3 shrink-0' />
-                  </TooltipTrigger>
-                  <TooltipContent>{customer.phone}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className='flex items-center gap-1 min-w-0'>
+                <Phone className='size-3 text-muted-foreground shrink-0' />
+                <span className='truncate text-xs text-muted-foreground'>
+                  {customer.phone}
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -133,28 +135,132 @@ export const columns: ColumnDef<EventEntry>[] = [
     accessorFn: (row) => row.customer.name,
   },
   {
+    accessorKey: 'receiptNumber',
+    header: ({ column }) => (
+      <DataTableColumnHeader
+        column={column}
+        title='Receipt #'
+        className='ml-2'
+      />
+    ),
+    cell: ({ row }) => {
+      const receiptNumber = row.original.receiptNumber
+      const date = row.original.createdAt
+      const formatted = formatTime(
+        typeof date === 'string' ? date : date?.toISOString() || '',
+        true
+      )
+      return (
+        <div className='flex flex-col gap-0.5'>
+          <div className='flex items-center gap-1'>
+            <Receipt className='size-3 text-muted-foreground' />
+            <span className='font-mono text-xs'>{receiptNumber || '-'}</span>
+          </div>
+          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+            <Clock className='size-3' />
+            <span>{formatted.date}</span>
+          </div>
+        </div>
+      )
+    },
+    enableSorting: true,
+    enableHiding: false,
+  },
+  {
     accessorKey: 'items',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='Items' />
     ),
     cell: ({ row }) => {
       const items = row.original.items
+      const visibleItems = items.slice(0, 2)
+      const remainingItems = items.slice(2)
+
+      if (items.length <= 2) {
+        return (
+          <div className='flex flex-wrap gap-1 max-w-50'>
+            {items.map((item, index) => {
+              const Icon = getIconForName(item.name)
+              return (
+                <Badge
+                  key={`${item.name}-${index}`}
+                  variant='secondary'
+                  className='gap-1 text-xs font-normal whitespace-nowrap'
+                >
+                  {createElement(Icon, { className: 'size-3' })}
+                  <span className='truncate max-w-14'>{item.name}</span>
+                  <span className='text-muted-foreground'>
+                    x{item.quantity}
+                  </span>
+                </Badge>
+              )
+            })}
+          </div>
+        )
+      }
+
       return (
-        <div className='flex flex-wrap gap-1 max-w-[200px]'>
-          {items.map((item, index) => {
+        <div className='flex flex-wrap gap-1 max-w-50'>
+          {visibleItems.map((item, index) => {
             const Icon = getIconForName(item.name)
             return (
               <Badge
                 key={`${item.name}-${index}`}
                 variant='secondary'
-                className='gap-1 text-xs font-normal'
+                className='gap-1 text-xs font-normal whitespace-nowrap'
               >
                 {createElement(Icon, { className: 'size-3' })}
-                <span className='truncate max-w-[60px]'>{item.name}</span>
+                <span className='truncate max-w-14'>{item.name}</span>
                 <span className='text-muted-foreground'>x{item.quantity}</span>
               </Badge>
             )
           })}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Badge
+                variant='outline'
+                className='gap-1 text-xs font-normal cursor-pointer hover:bg-muted whitespace-nowrap'
+              >
+                +{remainingItems.length}
+                {remainingItems.slice(0, 2).map((item, index) => {
+                  const Icon = getIconForName(item.name)
+                  return createElement(Icon, {
+                    key: index,
+                    className: 'size-3',
+                  })
+                })}
+              </Badge>
+            </PopoverTrigger>
+            <PopoverContent className='w-56 p-1.5'>
+              <div className='px-2 py-1.5 border-b border-border/50'>
+                <p className='text-xs font-medium'>All Items</p>
+              </div>
+              <div>
+                {items.map((item, idx) => {
+                  const Icon = getIconForName(item.name)
+                  return (
+                    <div
+                      key={idx}
+                      className='px-2 py-1 flex items-center gap-1.5 rounded hover:bg-muted/50'
+                    >
+                      {createElement(Icon, {
+                        className: 'size-3 text-muted-foreground shrink-0',
+                      })}
+                      <span className='text-xs flex-1 truncate'>
+                        {item.name}
+                      </span>
+                      <span className='text-xs text-muted-foreground font-mono'>
+                        ${item.price}
+                      </span>
+                      <span className='text-xs text-muted-foreground'>
+                        x{item.quantity}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       )
     },
@@ -206,6 +312,12 @@ export const columns: ColumnDef<EventEntry>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='Status' />
     ),
+    accessorFn: (row) => {
+      if (row.refunded) return 'refunded'
+      if (row.emailSent) return 'sent'
+      if (row.emailError) return 'failed'
+      return 'pending'
+    },
     cell: ({ row }) => {
       const entry = row.original
 
@@ -279,10 +391,22 @@ export const columns: ColumnDef<EventEntry>[] = [
     ),
     cell: ({ row }) => {
       const date = row.original.createdAt
+      const isRelative = false
+      const formatted = formatTime(
+        typeof date === 'string' ? date : date?.toISOString() || '',
+        isRelative
+      )
       return (
-        <div className='flex items-center gap-1 text-sm text-muted-foreground'>
-          <Clock className='size-3' />
-          <span>{formatDistanceToNow(date, { addSuffix: true })}</span>
+        <div className='flex items-center gap-1 text-xs'>
+          <div className='flex flex-col text-muted-foreground!'>
+            <span className='font-mono'>
+              {formatted.date}
+              {!isRelative ? ',' : ''}
+            </span>
+            {!isRelative && date && (
+              <span className='opacity-70'>{formatted.time}</span>
+            )}
+          </div>
         </div>
       )
     },
@@ -297,10 +421,23 @@ export const columns: ColumnDef<EventEntry>[] = [
     cell: ({ row }) => {
       const date = row.original.emailSentAt
       if (!date) return <span className='text-muted-foreground'>-</span>
+      const isRelative = false
+      const formatted = formatTime(
+        typeof date === 'string' ? date : date?.toISOString() || '',
+        isRelative
+      )
       return (
-        <span className='text-sm text-muted-foreground'>
-          {formatDistanceToNow(date, { addSuffix: true })}
-        </span>
+        <div className='flex items-center gap-1 text-xs'>
+          <div className='flex flex-col text-muted-foreground!'>
+            <span className='font-mono'>
+              {formatted.date}
+              {!isRelative ? ',' : ''}
+            </span>
+            {!isRelative && date && (
+              <span className='opacity-70'>{formatted.time}</span>
+            )}
+          </div>
+        </div>
       )
     },
     enableSorting: true,

@@ -37,6 +37,7 @@ export const eventEntrySchema = z.object({
   refunded: z.boolean().optional(),
   refundReason: z.string().optional(),
   refundedAt: z.coerce.date().optional(),
+  notes: z.string().optional(),
   createdAt: z.coerce.date(),
   createdBy: z.string().optional(),
 })

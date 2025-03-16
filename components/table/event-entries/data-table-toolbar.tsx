@@ -1,12 +1,12 @@
 'use client'
+'use no memo'
 
-import { Table } from '@tanstack/react-table'
-import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Table } from '@tanstack/react-table'
+import { X } from 'lucide-react'
 import { DataTableFacetedFilter } from '../data-table-faceted-filter'
 import { DataTableViewOptions } from '../data-table-view-options'
-import { EventEntry } from './schema'
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
@@ -19,20 +19,15 @@ const paymentMethodOptions = [
   { label: 'Other', value: 'other' },
 ]
 
-const emailStatusOptions = [
+const statusOptions = [
   { label: 'Sent', value: 'sent' },
   { label: 'Pending', value: 'pending' },
   { label: 'Failed', value: 'failed' },
-]
-
-const purchaseStatusOptions = [
-  { label: 'Pending', value: 'pending' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Refunded', value: 'refunded' },
 ]
 
 const idToName: Record<string, string> = {
-  entryId: 'Entry ID',
+  receiptNumber: 'Receipt #',
   customer: 'Customer',
   items: 'Items',
   totalAmount: 'Total',
@@ -59,7 +54,7 @@ export function DataTableToolbar<TData>({
           onChange={(event) =>
             table.getColumn('customer')?.setFilterValue(event.target.value)
           }
-          className='h-8 w-[150px] lg:w-[200px]'
+          className='h-7 w-[150px] lg:w-[200px]'
         />
         {table.getColumn('paymentMethod') && (
           <DataTableFacetedFilter
@@ -72,7 +67,7 @@ export function DataTableToolbar<TData>({
           <DataTableFacetedFilter
             column={table.getColumn('status')}
             title='Status'
-            options={[...emailStatusOptions, ...purchaseStatusOptions]}
+            options={statusOptions}
           />
         )}
         {isFiltered && (

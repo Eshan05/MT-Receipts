@@ -19,6 +19,10 @@ import {
 } from '@/components/ui/dialog'
 import { EventEntry } from './schema'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { PDFViewer } from '@react-pdf/renderer'
+import { getTemplateComponent } from '@/lib/templates'
+import { useMemo } from 'react'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -27,7 +31,7 @@ interface DataTableRowActionsProps<TData> {
 export function DataTableRowActions<TData>({
   row,
 }: DataTableRowActionsProps<TData>) {
-  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const entry = row.original as EventEntry
 
   const handleSendEmail = async () => {
@@ -40,20 +44,65 @@ export function DataTableRowActions<TData>({
         }
       )
       if (!response.ok) throw new Error('Failed to send email')
+      toast.success('Email sent successfully')
     } catch (error) {
-      console.error('Failed to send email:', error)
+      toast.error('Failed to send email')
     }
   }
 
   const handleDownloadPdf = async () => {
-    if (!entry.pdfUrl && !entry.receiptNumber) return
+    if (!entry.receiptNumber) return
     try {
-      const url = entry.pdfUrl || `/api/receipts/${entry.receiptNumber}/pdf`
-      window.open(url, '_blank')
+      const response = await fetch(`/api/receipts/${entry.receiptNumber}/pdf`)
+      if (!response.ok) throw new Error('Failed to download PDF')
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `receipt-${entry.receiptNumber}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Failed to download PDF:', error)
+      toast.error('Failed to download PDF')
     }
   }
+
+  const TemplateComponent = useMemo(() => {
+    return getTemplateComponent('professional')
+  }, [])
+
+  const templateProps = useMemo(() => {
+    return {
+      receiptNumber: entry.receiptNumber,
+      customer: entry.customer,
+      event: {
+        _id: '',
+        name: '',
+        code: '',
+        type: 'other' as const,
+      },
+      items: entry.items.map((item) => ({
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total ?? item.quantity * item.price,
+      })),
+      totalAmount: entry.totalAmount,
+      paymentMethod: entry.paymentMethod,
+      date:
+        typeof entry.createdAt === 'string'
+          ? entry.createdAt
+          : entry.createdAt?.toISOString(),
+      notes: entry.notes,
+      config: {
+        primaryColor: '#25345b',
+        showQrCode: true,
+        organizationName: 'ACES',
+      },
+    }
+  }, [entry])
 
   return (
     <>
@@ -68,7 +117,7 @@ export function DataTableRowActions<TData>({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
-          <DropdownMenuItem onClick={() => setIsPdfPreviewOpen(true)}>
+          <DropdownMenuItem onClick={() => setIsPreviewOpen(true)}>
             <Eye className='size-4 mr-2' />
             View Receipt
           </DropdownMenuItem>
@@ -92,28 +141,19 @@ export function DataTableRowActions<TData>({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={isPdfPreviewOpen} onOpenChange={setIsPdfPreviewOpen}>
-        <DialogContent className='max-w-4xl max-h-[80vh]'>
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className='max-w-4xl max-h-[90vh]'>
           <DialogHeader>
             <DialogTitle>Receipt Preview</DialogTitle>
             <DialogDescription>
               Receipt {entry.receiptNumber} for {entry.customer.name}
             </DialogDescription>
           </DialogHeader>
-          {entry.pdfUrl ? (
-            <iframe
-              src={entry.pdfUrl}
-              className='w-full h-[60vh] rounded border'
-              title='Receipt PDF Preview'
-            />
-          ) : (
-            <div className='flex items-center justify-center h-[40vh] text-muted-foreground'>
-              <div className='text-center'>
-                <p>PDF not available for preview</p>
-                <p className='text-sm'>Generate the receipt first</p>
-              </div>
-            </div>
-          )}
+          <div className='w-full aspect-[1/1.414] bg-gray-100 rounded'>
+            <PDFViewer width='100%' height='100%' showToolbar={false}>
+              <TemplateComponent {...templateProps} />
+            </PDFViewer>
+          </div>
         </DialogContent>
       </Dialog>
     </>
