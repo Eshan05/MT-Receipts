@@ -26,15 +26,20 @@ import {
 import { DataTablePagination } from '../data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
+import { IEvent } from '@/models/event.model'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  event: IEvent
+  onUpdate?: () => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  event,
+  onUpdate,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =

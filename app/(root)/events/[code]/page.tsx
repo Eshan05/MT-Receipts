@@ -2,7 +2,7 @@
 
 import {
   DataTable,
-  columns,
+  createColumns,
   type EventEntry,
 } from '@/components/table/event-entries'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +32,9 @@ import {
   Users,
   PlusCircle,
   Pencil,
+  RefreshCw,
+  FileJson,
+  FileSpreadsheet,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -42,6 +45,68 @@ import { cn } from '@/lib/utils'
 import { EntryForm } from './_components/entry-form'
 import { EventForm } from '../_components/event-form'
 import { toast } from 'sonner'
+
+function exportToCSV(entries: EventEntry[], eventCode: string) {
+  const csvData = entries.map((entry) => ({
+    receiptNumber: entry.receiptNumber,
+    customerName: entry.customer.name,
+    customerEmail: entry.customer.email,
+    customerPhone: entry.customer.phone || '',
+    items: entry.items.map((i) => `${i.name} x${i.quantity}`).join('; '),
+    totalAmount: entry.totalAmount,
+    paymentMethod: entry.paymentMethod,
+    emailSent: entry.emailSent,
+    refunded: entry.refunded || false,
+    createdAt: new Date(entry.createdAt).toISOString(),
+  }))
+
+  const csv = [
+    Object.keys(csvData[0] || {}).join(','),
+    ...csvData.map((row) =>
+      Object.values(row)
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(',')
+    ),
+  ].join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${eventCode}-entries-${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`Exported ${entries.length} entries to CSV`)
+}
+
+function exportToJSON(entries: EventEntry[], eventCode: string) {
+  const jsonData = entries.map((entry) => ({
+    receiptNumber: entry.receiptNumber,
+    customer: entry.customer,
+    items: entry.items.map((i) => ({
+      name: i.name,
+      quantity: i.quantity,
+      price: i.price,
+      total: i.quantity * i.price,
+    })),
+    totalAmount: entry.totalAmount,
+    paymentMethod: entry.paymentMethod,
+    emailSent: entry.emailSent,
+    refunded: entry.refunded || false,
+    createdAt: entry.createdAt,
+  }))
+
+  const blob = new Blob([JSON.stringify(jsonData, null, 2)], {
+    type: 'application/json',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${eventCode}-entries-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`Exported ${entries.length} entries to JSON`)
+}
 
 export default function EventEntriesPage() {
   const params = useParams()
@@ -268,9 +333,44 @@ export default function EventEntriesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className=''>
-          <DataTable columns={columns} data={entries} />
+          <DataTable
+            columns={createColumns({ event, onUpdate: fetchEntries })}
+            data={entries}
+            event={event}
+            onUpdate={fetchEntries}
+          />
         </CardContent>
       </Card>
+
+      <div className='flex items-center gap-2 justify-end mt-4'>
+        <Button
+          size='sm'
+          variant='outline'
+          className='gap-1.5'
+          onClick={fetchEntries}
+        >
+          <RefreshCw className='w-4 h-4' />
+          Refresh
+        </Button>
+        <Button
+          size='sm'
+          variant='outline'
+          className='gap-1.5'
+          onClick={() => exportToCSV(entries, event.eventCode)}
+        >
+          <FileSpreadsheet className='w-4 h-4' />
+          Export CSV
+        </Button>
+        <Button
+          size='sm'
+          variant='outline'
+          className='gap-1.5'
+          onClick={() => exportToJSON(entries, event.eventCode)}
+        >
+          <FileJson className='w-4 h-4' />
+          Export JSON
+        </Button>
+      </div>
 
       <Credenza open={entryFormOpen} onOpenChange={setEntryFormOpen}>
         <CredenzaContent>

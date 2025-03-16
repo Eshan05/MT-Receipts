@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { IEvent } from '@/models/event.model'
+import { EventEntry } from '@/components/table/event-entries/schema'
 import { defaultIcons, iconMap } from '@/utils/mappings'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -62,6 +63,7 @@ type EntryFormValues = z.infer<typeof entryFormSchema>
 
 interface EntryFormProps {
   event: IEvent
+  editEntry?: EventEntry
   onSuccess: () => void
   onCancel: () => void
 }
@@ -91,42 +93,68 @@ function getIconForName(name: string): IconType {
   ]
 }
 
-export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
+export function EntryForm({
+  event,
+  editEntry,
+  onSuccess,
+  onCancel,
+}: EntryFormProps) {
   const [submitting, setSubmitting] = useState(false)
   const [itemIcons, setItemIcons] = useState<Record<string, IconType>>({})
+  const isEditing = !!editEntry
 
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entryFormSchema),
-    defaultValues: {
-      customer: {
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-      },
-      items:
-        event.items.length > 0
-          ? event.items.map((item) => ({
-              id: crypto.randomUUID(),
-              name: item.name,
-              description: item.description || '',
-              quantity: 1,
-              price: item.price,
-            }))
-          : [
-              {
-                id: crypto.randomUUID(),
-                name: '',
-                description: '',
-                quantity: 1,
-                price: 0,
-              },
-            ],
-      totalAmount: 0,
-      paymentMethod: 'cash',
-      emailSent: false,
-      notes: '',
-    },
+    defaultValues: editEntry
+      ? {
+          customer: {
+            name: editEntry.customer.name,
+            email: editEntry.customer.email,
+            phone: editEntry.customer.phone || '',
+            address: editEntry.customer.address || '',
+          },
+          items: editEntry.items.map((item) => ({
+            id: crypto.randomUUID(),
+            name: item.name,
+            description: item.description || '',
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          totalAmount: editEntry.totalAmount,
+          paymentMethod: editEntry.paymentMethod || 'cash',
+          emailSent: editEntry.emailSent,
+          notes: editEntry.notes || '',
+        }
+      : {
+          customer: {
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
+          },
+          items:
+            event.items.length > 0
+              ? event.items.map((item) => ({
+                  id: crypto.randomUUID(),
+                  name: item.name,
+                  description: item.description || '',
+                  quantity: 1,
+                  price: item.price,
+                }))
+              : [
+                  {
+                    id: crypto.randomUUID(),
+                    name: '',
+                    description: '',
+                    quantity: 1,
+                    price: 0,
+                  },
+                ],
+          totalAmount: 0,
+          paymentMethod: 'cash',
+          emailSent: false,
+          notes: '',
+        },
     mode: 'onChange',
   })
 
@@ -174,22 +202,42 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
         notes: data.notes,
       }
 
-      const response = await fetch('/api/receipts/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(receiptData),
-      })
+      if (isEditing && editEntry) {
+        const response = await fetch(
+          `/api/receipts/${editEntry.receiptNumber}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(receiptData),
+          }
+        )
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to create receipt')
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Failed to update receipt')
+        }
+
+        toast.success('Receipt updated successfully')
+      } else {
+        const response = await fetch('/api/receipts/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(receiptData),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Failed to create receipt')
+        }
+
+        toast.success('Receipt created successfully')
       }
-
-      toast.success('Receipt created successfully')
       onSuccess()
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create receipt'
+        error instanceof Error
+          ? error.message
+          : `Failed to ${isEditing ? 'update' : 'create'} receipt`
       )
     } finally {
       setSubmitting(false)
@@ -519,7 +567,13 @@ export function EntryForm({ event, onSuccess, onCancel }: EntryFormProps) {
           className='min-w-20'
         >
           {submitting && <Loader2 className='w-4 h-4 mr-1 animate-spin' />}
-          {submitting ? 'Creating...' : 'Create Receipt'}
+          {submitting
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+              ? 'Save'
+              : 'Create Receipt'}
         </Button>
       </div>
     </form>
