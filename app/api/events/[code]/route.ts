@@ -4,15 +4,15 @@ import { NextRequest, NextResponse } from 'next/server'
 
 interface Context {
   params: {
-    eventCode: string
+    code: string
   }
 }
 
 export async function GET(req: NextRequest, { params }: Context) {
   try {
-    const { eventCode } = await params
+    const { code } = await params
 
-    if (!eventCode) {
+    if (!code) {
       return NextResponse.json(
         { message: 'Event code is required' },
         { status: 400 }
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 
     await dbConnect()
 
-    const event = await AEvent.findByEventCode(eventCode)
+    const event = await AEvent.findByEventCode(code)
 
     if (!event) {
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
@@ -39,9 +39,9 @@ export async function GET(req: NextRequest, { params }: Context) {
 
 export async function PUT(req: NextRequest, { params }: Context) {
   try {
-    const { eventCode } = await params
+    const { code } = await params
 
-    if (!eventCode) {
+    if (!code) {
       return NextResponse.json(
         { message: 'Event code is required' },
         { status: 400 }
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
     const { name, type, desc, items, tags } = body
 
     const event = await AEvent.findOneAndUpdate(
-      { eventCode },
+      { code },
       { name, type, desc, items, tags },
       { new: true }
     )
@@ -75,9 +75,9 @@ export async function PUT(req: NextRequest, { params }: Context) {
 
 export async function DELETE(req: NextRequest, { params }: Context) {
   try {
-    const { eventCode } = await params
+    const { code } = await params
 
-    if (!eventCode) {
+    if (!code) {
       return NextResponse.json(
         { message: 'Event code is required' },
         { status: 400 }
@@ -87,7 +87,7 @@ export async function DELETE(req: NextRequest, { params }: Context) {
     await dbConnect()
 
     const event = await AEvent.findOneAndUpdate(
-      { eventCode },
+      { code },
       { isActive: false },
       { new: true }
     )
@@ -108,9 +108,9 @@ export async function DELETE(req: NextRequest, { params }: Context) {
 
 export async function PATCH(req: NextRequest, { params }: Context) {
   try {
-    const { eventCode } = await params
+    const { code } = await params
 
-    if (!eventCode) {
+    if (!code) {
       return NextResponse.json(
         { message: 'Event code is required' },
         { status: 400 }
@@ -123,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: Context) {
     const { isActive } = body
 
     const event = await AEvent.findOneAndUpdate(
-      { eventCode },
+      { code },
       { isActive },
       { new: true }
     )

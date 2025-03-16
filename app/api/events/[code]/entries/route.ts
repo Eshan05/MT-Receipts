@@ -2,19 +2,18 @@ import dbConnect from '@/lib/db-conn'
 import Event from '@/models/event.model'
 import Receipt from '@/models/receipt.model'
 import { NextRequest, NextResponse } from 'next/server'
-import { EventEntry } from '@/components/table/event-entries/schema'
 
 interface Context {
   params: {
-    eventCode: string
+    code: string
   }
 }
 
 export async function GET(req: NextRequest, { params }: Context) {
   try {
-    const { eventCode } = await params
+    const { code } = await params
 
-    if (!eventCode) {
+    if (!code) {
       return NextResponse.json(
         { message: 'Event code is required' },
         { status: 400 }
@@ -23,7 +22,7 @@ export async function GET(req: NextRequest, { params }: Context) {
 
     await dbConnect()
 
-    const event = await Event.findByEventCode(eventCode)
+    const event = await Event.findByEventCode(code)
     if (!event) {
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
     }
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest, { params }: Context) {
       .sort({ createdAt: -1 })
       .lean()
 
-    const entries: EventEntry[] = receipts.map((r) => ({
+    const entries = receipts.map((r) => ({
       _id: r._id.toString(),
       receiptNumber: r.receiptNumber,
       customer: {
@@ -65,7 +64,8 @@ export async function GET(req: NextRequest, { params }: Context) {
       refunded: r.refunded,
       refundReason: r.refundReason,
       refundedAt: r.refundedAt,
-      createdAt: r.createdAt,
+      notes: r.notes,
+      createdAt: r.createdAt?.toISOString() ?? new Date().toISOString(),
       createdBy: r.createdBy?.toString(),
     }))
 

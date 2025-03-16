@@ -31,6 +31,7 @@ import {
   Package,
   Users,
   PlusCircle,
+  PencilIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -42,7 +43,7 @@ import { EntryForm } from './_components/entry-form'
 
 export default function EventEntriesPage() {
   const params = useParams()
-  const eventCode = params.eventCode as string
+  const code = params.code as string
 
   const [event, setEvent] = useState<IEvent | null>(null)
   const [entries, setEntries] = useState<EventEntry[]>([])
@@ -52,7 +53,7 @@ export default function EventEntriesPage() {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const response = await fetch(`/api/events/${eventCode}/entries`)
+      const response = await fetch(`/api/events/${code}/entries`)
       if (response.ok) {
         const data = await response.json()
         setEntries(data.entries || [])
@@ -60,15 +61,15 @@ export default function EventEntriesPage() {
     } catch (err) {
       console.error('Failed to fetch entries:', err)
     }
-  }, [eventCode])
+  }, [code])
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
         const [eventRes, entriesRes] = await Promise.all([
-          fetch(`/api/events/${eventCode}`),
-          fetch(`/api/events/${eventCode}/entries`),
+          fetch(`/api/events/${code}`),
+          fetch(`/api/events/${code}/entries`),
         ])
 
         if (!eventRes.ok) {
@@ -89,10 +90,10 @@ export default function EventEntriesPage() {
       }
     }
 
-    if (eventCode) {
+    if (code) {
       fetchData()
     }
-  }, [eventCode])
+  }, [code])
 
   const handleEntryCreated = async () => {
     setEntryFormOpen(false)
@@ -146,49 +147,60 @@ export default function EventEntriesPage() {
     <div className='container py-2 pb-24'>
       <header className='mb-6'>
         <div className='flex justify-between items-center gap-4 my-2'>
-          <div className='flex items-center gap-3'>
-            <Button variant='ghost' size='sm' asChild>
+          <div className='flex items-center gap-2'>
+            <Button variant='ghost' size='icon' asChild>
               <Link href='/events'>
                 <ArrowLeft className='w-4 h-4' />
               </Link>
             </Button>
-            <div>
-              <div className='flex items-center gap-2'>
-                <div className={cn('p-1.5 rounded-lg', style.bg)}>
-                  <TypeIcon className={cn('w-4 h-4', style.text)} />
-                </div>
-                <h1 className='text-2xl font-semibold'>{event.name}</h1>
-              </div>
-              <div className='flex items-center gap-3 text-sm text-muted-foreground mt-1'>
-                <Badge
-                  variant='outline'
-                  className={cn('capitalize text-xs', style.text, style.bg)}
-                >
-                  {event.type}
-                </Badge>
-                <span className='font-mono text-xs'>{event.eventCode}</span>
-              </div>
+            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+              <Badge
+                variant='outline'
+                className={cn('capitalize text-xs', style.text, style.bg)}
+              >
+                {event.type}
+              </Badge>
+              <span className='font-mono text-xs'>{event.eventCode}</span>
             </div>
           </div>
-          <Button
-            size='sm'
-            className='gap-1.5'
-            onClick={() => setEntryFormOpen(true)}
-          >
-            <PlusCircle className='w-4 h-4' />
-            Add Entry
-          </Button>
+          <div className='flex items-center gap-1 flex-wrap'>
+            <Button
+              size='sm'
+              variant={'secondary'}
+              className='gap-1.5'
+              onClick={() => setEntryFormOpen(true)}
+            >
+              <PencilIcon className='w-4 h-4' />
+              Edit
+            </Button>
+            <Button
+              size='sm'
+              className='gap-1.5'
+              onClick={() => setEntryFormOpen(true)}
+            >
+              <PlusCircle className='w-4 h-4' />
+              Entry
+            </Button>
+          </div>
+        </div>
+        <div>
+          <div className='flex items-center gap-2'>
+            <div className={cn('p-1.5 rounded-lg', style.bg)}>
+              <TypeIcon className={cn('w-4 h-4', style.text)} />
+            </div>
+            <h1 className='text-2xl font-semibold shadow-heading'>
+              {event.name}
+            </h1>
+          </div>
         </div>
         {event.desc && (
-          <p className='text-muted-foreground text-sm max-w-xl ml-12'>
-            {event.desc}
-          </p>
+          <p className='text-muted-foreground text-sm max-w-md'>{event.desc}</p>
         )}
       </header>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>
-        <Card>
-          <CardHeader className='pb-2'>
+        <Card className=''>
+          <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Package className='w-3.5 h-3.5' />
               Items
@@ -199,7 +211,7 @@ export default function EventEntriesPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className='pb-2'>
+          <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Users className='w-3.5 h-3.5' />
               Entries
@@ -210,7 +222,7 @@ export default function EventEntriesPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className='pb-2'>
+          <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Calendar className='w-3.5 h-3.5' />
               Date
@@ -225,7 +237,7 @@ export default function EventEntriesPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className='pb-2'>
+          <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <MapPin className='w-3.5 h-3.5' />
               Location
@@ -239,14 +251,14 @@ export default function EventEntriesPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card className='border-0 ring-0 shadow-none'>
         <CardHeader>
           <CardTitle className='text-lg'>Event Entries</CardTitle>
           <CardDescription>
             View all purchases and receipts for this event
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className=''>
           <DataTable columns={columns} data={entries} />
         </CardContent>
       </Card>
