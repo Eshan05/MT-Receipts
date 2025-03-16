@@ -200,7 +200,7 @@ export const columns: ColumnDef<EventEntry>[] = [
       }
 
       return (
-        <div className='flex flex-wrap gap-1 max-w-50'>
+        <div className='flex flex-wrap gap-1 max-w-50 max-sm:max-60'>
           {visibleItems.map((item, index) => {
             const Icon = getIconForName(item.name)
             return (
@@ -299,7 +299,7 @@ export const columns: ColumnDef<EventEntry>[] = [
       }
       return (
         <Badge variant='outline' className={methodStyles[method] || ''}>
-          <CreditCard className='size-3 mr-1' />
+          <CreditCard className='size-3 mr-0.5' />
           {method.toUpperCase()}
         </Badge>
       )
@@ -346,7 +346,7 @@ export const columns: ColumnDef<EventEntry>[] = [
         return (
           <Badge
             variant='outline'
-            className='bg-green-500/10 text-green-600 border-green-500/30'
+            className='bg-green-500/30 text-green-600 border-green-500/30'
           >
             <Mail className='size-3 mr-1' />
             Sent
@@ -360,7 +360,7 @@ export const columns: ColumnDef<EventEntry>[] = [
               <TooltipTrigger>
                 <Badge
                   variant='outline'
-                  className='bg-red-500/10 text-red-600 border-red-500/30'
+                  className='bg-red-500/30 text-red-600 border-red-500/30'
                 >
                   <Mail className='size-3 mr-1' />
                   Failed
@@ -376,7 +376,7 @@ export const columns: ColumnDef<EventEntry>[] = [
           variant='outline'
           className='bg-yellow-500/10 text-yellow-600 border-yellow-500/30'
         >
-          <Mail className='size-3 mr-1' />
+          <Mail className='size-3 mr-0.5' />
           Pending
         </Badge>
       )

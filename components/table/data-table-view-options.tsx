@@ -18,11 +18,13 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 interface DataTableViewOptionsProps<TData> {
   table: Table<TData>
   idToName: { [key: string]: string }
+  scrollHeight?: string
 }
 
 export function DataTableViewOptions<TData>({
   table,
   idToName,
+  scrollHeight,
 }: DataTableViewOptionsProps<TData>) {
   const columns = table
     .getAllColumns()
@@ -44,7 +46,7 @@ export function DataTableViewOptions<TData>({
         </Button>
       </DDM.DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-40'>
-        <ScrollArea className='h-60'>
+        <ScrollArea className={scrollHeight || 'h-60'}>
           <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {table

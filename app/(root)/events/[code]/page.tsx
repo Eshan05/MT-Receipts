@@ -31,7 +31,7 @@ import {
   Package,
   Users,
   PlusCircle,
-  PencilIcon,
+  Pencil,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -40,6 +40,8 @@ import { format } from 'date-fns'
 import type { IconType } from 'react-icons'
 import { cn } from '@/lib/utils'
 import { EntryForm } from './_components/entry-form'
+import { EventForm } from '../_components/event-form'
+import { toast } from 'sonner'
 
 export default function EventEntriesPage() {
   const params = useParams()
@@ -50,6 +52,7 @@ export default function EventEntriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [entryFormOpen, setEntryFormOpen] = useState(false)
+  const [editFormOpen, setEditFormOpen] = useState(false)
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -98,6 +101,12 @@ export default function EventEntriesPage() {
   const handleEntryCreated = async () => {
     setEntryFormOpen(false)
     await fetchEntries()
+  }
+
+  const handleEventUpdated = async (updatedEvent: IEvent) => {
+    setEditFormOpen(false)
+    setEvent(updatedEvent)
+    toast.success(`Event "${updatedEvent.name}" updated successfully!`)
   }
 
   if (loading) {
@@ -168,9 +177,9 @@ export default function EventEntriesPage() {
               size='sm'
               variant={'secondary'}
               className='gap-1.5'
-              onClick={() => setEntryFormOpen(true)}
+              onClick={() => setEditFormOpen(true)}
             >
-              <PencilIcon className='w-4 h-4' />
+              <Pencil className='w-4 h-4' />
               Edit
             </Button>
             <Button
@@ -274,6 +283,23 @@ export default function EventEntriesPage() {
                 event={event}
                 onSuccess={handleEntryCreated}
                 onCancel={() => setEntryFormOpen(false)}
+              />
+            )}
+          </CredenzaBody>
+        </CredenzaContent>
+      </Credenza>
+
+      <Credenza open={editFormOpen} onOpenChange={setEditFormOpen}>
+        <CredenzaContent>
+          <CredenzaHeader>
+            <CredenzaTitle>Edit Event</CredenzaTitle>
+          </CredenzaHeader>
+          <CredenzaBody>
+            {event && (
+              <EventForm
+                event={event}
+                onSuccess={handleEventUpdated}
+                onCancel={() => setEditFormOpen(false)}
               />
             )}
           </CredenzaBody>

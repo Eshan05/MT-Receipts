@@ -81,7 +81,11 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <DataTableViewOptions table={table} idToName={idToName} />
+      <DataTableViewOptions
+        table={table}
+        idToName={idToName}
+        scrollHeight='h-fit'
+      />
     </div>
   )
 }
