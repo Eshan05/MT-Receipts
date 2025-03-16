@@ -122,6 +122,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                   }, 0)
                 return (
                   <CommandItem
+                    disableCheckmark
                     className='bg-transparent! hover:bg-secondary!'
                     key={option.value}
                     onSelect={() => {
@@ -144,21 +145,19 @@ export function DataTableFacetedFilter<TData, TValue>({
                           : 'opacity-50 [&_svg]:invisible'
                       )}
                     >
-                      <Check className='size-2!' />
+                      <Check className='size-2.5!' />
                     </div>
                     {option.icon && (
-                      <option.icon className='mr-2 h-3 w-4 text-muted-foreground' />
+                      <option.icon className='size-3 ml-1 -mr-0.5 text-muted-foreground' />
                     )}
-                    <span className='text-xs mr-auto! w-full'>
-                      {option.label}
-                    </span>
+                    <span className='text-xs w-full!'>{option.label}</span>
                     {/* {facets?.get(option.value) && (
                       <span className='ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs'>
                         {facets.get(option.value)}
                       </span>
                     )} */}
                     {count !== undefined && count > 0 && (
-                      <span className='ml-auto inline-flex h-3 w-3 items-center justify-end font-mono text-2xs'>
+                      <span className='font-mono text-right w-full ml-auto text-2xs'>
                         {count}
                       </span>
                     )}
