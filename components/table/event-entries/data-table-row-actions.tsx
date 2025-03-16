@@ -1,7 +1,15 @@
 'use client'
 
 import { Row } from '@tanstack/react-table'
-import { MoreHorizontal, Eye, Mail, Download, RotateCcw } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Eye,
+  Mail,
+  Download,
+  RotateCcw,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,21 +25,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Credenza,
+  CredenzaBody,
+  CredenzaContent,
+  CredenzaHeader,
+  CredenzaTitle,
+} from '@/components/ui/credenza'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { EventEntry } from './schema'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { PDFViewer } from '@react-pdf/renderer'
 import { getTemplateComponent } from '@/lib/templates'
 import { useMemo } from 'react'
+import { IEvent } from '@/models/event.model'
+import { EntryForm } from '@/app/(root)/events/[code]/_components/entry-form'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
+  event: IEvent
+  onUpdate?: () => void
 }
 
 export function DataTableRowActions<TData>({
   row,
+  event,
+  onUpdate,
 }: DataTableRowActionsProps<TData>) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const entry = row.original as EventEntry
 
   const handleSendEmail = async () => {
@@ -66,6 +100,29 @@ export function DataTableRowActions<TData>({
     } catch (error) {
       toast.error('Failed to download PDF')
     }
+  }
+
+  const handleDelete = async () => {
+    if (!entry.receiptNumber) return
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/receipts/${entry.receiptNumber}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete receipt')
+      toast.success('Receipt deleted successfully')
+      setIsDeleteOpen(false)
+      onUpdate?.()
+    } catch (error) {
+      toast.error('Failed to delete receipt')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleEditSuccess = () => {
+    setIsEditOpen(false)
+    onUpdate?.()
   }
 
   const TemplateComponent = useMemo(() => {
@@ -118,23 +175,57 @@ export function DataTableRowActions<TData>({
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem onClick={() => setIsPreviewOpen(true)}>
-            <Eye className='size-4 mr-2' />
+            <Eye className='mr-1' />
             View Receipt
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleSendEmail}>
-            <Mail className='size-4 mr-2' />
+            <Mail className='mr-1' />
             {entry.emailSent ? 'Resend Email' : 'Send Email'}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleDownloadPdf}>
-            <Download className='size-4 mr-2' />
+            <Download className='mr-1' />
             Download PDF
           </DropdownMenuItem>
           {!entry.refunded && (
             <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className='text-orange-600'>
-                <RotateCcw className='size-4 mr-2' />
+              <DropdownMenuSeparator className='my-0.5' />
+              <DropdownMenuItem
+                onClick={() => setIsEditOpen(true)}
+                className=''
+              >
+                <Pencil className='mr-1' />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsDeleteOpen(true)}
+                className='text-destructive'
+              >
+                <Trash2 className='mr-1' />
+                Delete
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className='my-0.5' />
+              <DropdownMenuItem className='text-yellow-500'>
+                <RotateCcw className='mr-1' />
                 Mark Refunded
+              </DropdownMenuItem>
+            </>
+          )}
+          {entry.refunded && (
+            <>
+              <DropdownMenuSeparator className='my-0.5' />
+              <DropdownMenuItem
+                onClick={() => setIsEditOpen(true)}
+                className='text-blue-600'
+              >
+                <Pencil className='mr-1' />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsDeleteOpen(true)}
+                className='text-destructive'
+              >
+                <Trash2 className='mr-1' />
+                Delete
               </DropdownMenuItem>
             </>
           )}
@@ -156,6 +247,47 @@ export function DataTableRowActions<TData>({
           </div>
         </DialogContent>
       </Dialog>
+
+      <Credenza open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <CredenzaContent>
+          <CredenzaHeader>
+            <CredenzaTitle>Edit Entry</CredenzaTitle>
+          </CredenzaHeader>
+          <CredenzaBody>
+            <EntryForm
+              event={event}
+              editEntry={entry}
+              onSuccess={handleEditSuccess}
+              onCancel={() => setIsEditOpen(false)}
+            />
+          </CredenzaBody>
+        </CredenzaContent>
+      </Credenza>
+
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Receipt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete receipt{' '}
+              <span className='font-mono font-medium'>
+                {entry.receiptNumber}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-white hover:bg-destructive/90'
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
