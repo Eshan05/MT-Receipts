@@ -1,3 +1,5 @@
+'use no memo'
+
 import * as React from 'react'
 import { Column } from '@tanstack/react-table'
 import { Check, PlusCircle } from 'lucide-react'
@@ -38,7 +40,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   buttonClasses,
   options,
 }: DataTableFacetedFilterProps<TData, TValue>) {
-  const facets = column?.getFacetedUniqueValues()
+  const facets = column?.getFacetedUniqueValues() // Keep
   const selectedValues = new Set(
     Array.isArray(column?.getFilterValue())
       ? (column?.getFilterValue() as string[])
@@ -53,13 +55,13 @@ export function DataTableFacetedFilter<TData, TValue>({
         <Button
           variant='outline'
           size='sm'
-          className={`h-8 border-dashed flex items-center space-x-2 ${cn(buttonClasses)}`}
+          className={`h-7 border-dashed flex items-center space-x-2 ${cn(buttonClasses)}`}
         >
           <PlusCircle className='h-4 w-4' />
           <span>{title}</span>
           {selectedValues?.size > 0 && (
             <>
-              <Separator orientation='vertical' className='mx-2 h-4' />
+              <Separator orientation='vertical' className='mx-1 h-4' />
               <Badge
                 variant='secondary'
                 className='rounded-sm px-1 font-normal lg:hidden'
@@ -92,12 +94,12 @@ export function DataTableFacetedFilter<TData, TValue>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-[200px] p-0' align='start'>
+      <PopoverContent className='w-50 p-0' align='start'>
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup>
+            <CommandGroup className=''>
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value)
                 const count = column
@@ -120,6 +122,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                   }, 0)
                 return (
                   <CommandItem
+                    className='bg-transparent! hover:bg-secondary!'
                     key={option.value}
                     onSelect={() => {
                       if (isSelected) {
@@ -135,25 +138,27 @@ export function DataTableFacetedFilter<TData, TValue>({
                   >
                     <div
                       className={cn(
-                        'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                        'flex size-3! aspect-square items-center justify-center rounded-sm border border-primary',
                         isSelected
                           ? 'bg-primary text-primary-foreground'
                           : 'opacity-50 [&_svg]:invisible'
                       )}
                     >
-                      <Check />
+                      <Check className='size-2!' />
                     </div>
                     {option.icon && (
-                      <option.icon className='mr-2 h-4 w-4 text-muted-foreground' />
+                      <option.icon className='mr-2 h-3 w-4 text-muted-foreground' />
                     )}
-                    <span>{option.label}</span>
+                    <span className='text-xs mr-auto! w-full'>
+                      {option.label}
+                    </span>
                     {/* {facets?.get(option.value) && (
                       <span className='ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs'>
                         {facets.get(option.value)}
                       </span>
                     )} */}
                     {count !== undefined && count > 0 && (
-                      <span className='ml-auto flex h-4 w-4 items-center justify-center font-mono text-xs'>
+                      <span className='ml-auto inline-flex h-3 w-3 items-center justify-end font-mono text-2xs'>
                         {count}
                       </span>
                     )}
@@ -163,8 +168,8 @@ export function DataTableFacetedFilter<TData, TValue>({
             </CommandGroup>
             {selectedValues.size > 0 && (
               <>
-                <CommandSeparator />
-                <CommandGroup>
+                <CommandSeparator className='-mt-px' />
+                <CommandGroup className=''>
                   <CommandItem
                     onSelect={() => column?.setFilterValue(undefined)}
                     className='justify-center text-center'

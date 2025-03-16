@@ -1,8 +1,9 @@
 'use client'
+'use no memo'
 
-import { DropdownMenu as DDM } from 'radix-ui'
 import { Table } from '@tanstack/react-table'
 import { Settings2 } from 'lucide-react'
+import { DropdownMenu as DDM } from 'radix-ui'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -23,20 +24,27 @@ export function DataTableViewOptions<TData>({
   table,
   idToName,
 }: DataTableViewOptionsProps<TData>) {
+  const columns = table
+    .getAllColumns()
+    .filter(
+      (column) =>
+        typeof column.accessorFn !== 'undefined' && column.getCanHide()
+    )
+
   return (
     <DropdownMenu>
       <DDM.DropdownMenuTrigger asChild>
         <Button
           variant='outline'
           size='sm'
-          className='ml-auto hidden h-8 lg:flex'
+          className='ml-auto hidden h-7 lg:flex'
         >
-          <Settings2 className='mr-2 h-3.5 w-3.5' />
+          <Settings2 className='mr-1' />
           View
         </Button>
       </DDM.DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-[150px]'>
-        <ScrollArea className='h-72'>
+      <DropdownMenuContent align='end' className='w-40'>
+        <ScrollArea className='h-60'>
           <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {table
