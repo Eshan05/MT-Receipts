@@ -303,7 +303,7 @@ export function DataTableRowActions<TData>({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className='bg-destructive text-white hover:bg-destructive/90'
+              className='bg-destructive! text-white hover:bg-destructive/90'
               onClick={handleDelete}
               disabled={isDeleting}
             >
