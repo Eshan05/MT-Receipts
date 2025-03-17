@@ -192,49 +192,53 @@ export function EventForm({ onSuccess, onCancel, event }: EventFormProps) {
   }
 
   const onSubmit = async (data: EventFormValues) => {
-    setLoading(true)
-    try {
-      const cleanedData = {
-        ...data,
-        items: data.items.map(({ id, ...rest }) => rest),
-      }
-
-      if (isEditing) {
-        const response = await fetch(`/api/events/${event.eventCode}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cleanedData),
-        })
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Failed to update event')
-        }
-        const responseData = await response.json()
-        onSuccess(responseData.event)
-      } else {
-        const response = await fetch('/api/events/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cleanedData),
-        })
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Failed to create event')
-        }
-        const responseData = await response.json()
-        onSuccess(responseData.event)
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(
-          error.message || `Failed to ${isEditing ? 'update' : 'create'} event`
-        )
-      } else {
-        toast.error(`Failed to ${isEditing ? 'update' : 'create'} event`)
-      }
-    } finally {
-      setLoading(false)
+    const cleanedData = {
+      ...data,
+      items: data.items.map(({ id, ...rest }) => rest),
     }
+
+    toast.promise(
+      (async () => {
+        if (isEditing) {
+          const response = await fetch(`/api/events/${event.eventCode}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanedData),
+          })
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.message || 'Failed to update event')
+          }
+          const responseData = await response.json()
+          onSuccess(responseData.event)
+          return responseData.event
+        } else {
+          const response = await fetch('/api/events/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanedData),
+          })
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.message || 'Failed to create event')
+          }
+          const responseData = await response.json()
+          onSuccess(responseData.event)
+          return responseData.event
+        }
+      })(),
+      {
+        loading: isEditing ? 'Updating event...' : 'Creating event...',
+        success: (event) =>
+          isEditing
+            ? `Event "${event.name}" updated`
+            : `Event "${event.name}" created`,
+        error: (err) =>
+          err instanceof Error
+            ? err.message
+            : `Failed to ${isEditing ? 'update' : 'create'} event`,
+      }
+    )
   }
 
   return (

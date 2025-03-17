@@ -231,41 +231,46 @@ export default function EventsPage() {
 
   const handleDeleteEvent = async () => {
     if (!deleteEvent) return
-    setDeleting(true)
-    try {
-      const response = await fetch(`/api/events/${deleteEvent.eventCode}`, {
+    toast.promise(
+      fetch(`/api/events/${deleteEvent.eventCode}`, {
         method: 'DELETE',
-      })
-      if (!response.ok) {
-        throw new Error('Failed to delete event')
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to delete event')
+        return response.json()
+      }),
+      {
+        loading: `Deleting "${deleteEvent.name}"...`,
+        success: () => {
+          setDeleteEvent(null)
+          mutateEvents()
+          return `Event "${deleteEvent.name}" deleted`
+        },
+        error: 'Failed to delete event',
       }
-      setDeleteEvent(null)
-      mutateEvents()
-      toast.success(`Event "${deleteEvent.name}" deleted`)
-    } catch (error) {
-      toast.error('Failed to delete event')
-    } finally {
-      setDeleting(false)
-    }
+    )
   }
 
   const handleRestoreEvent = async (e: React.MouseEvent, event: IEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    try {
-      const response = await fetch(`/api/events/${event.eventCode}`, {
+    toast.promise(
+      fetch(`/api/events/${event.eventCode}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: true }),
-      })
-      if (!response.ok) {
-        throw new Error('Failed to restore event')
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to restore event')
+        return response.json()
+      }),
+      {
+        loading: `Restoring "${event.name}"...`,
+        success: () => {
+          mutateEvents()
+          return `Event "${event.name}" restored`
+        },
+        error: 'Failed to restore event',
       }
-      mutateEvents()
-      toast.success(`Event "${event.name}" restored`)
-    } catch (error) {
-      toast.error('Failed to restore event')
-    }
+    )
   }
 
   const handleShareEvent = (e: React.MouseEvent, event: IEvent) => {
@@ -415,10 +420,9 @@ export default function EventsPage() {
   const hasActiveSelected = selectedEvents.some((e) => e.isActive)
 
   const bulkDelete = async () => {
-    setBulkOperating(true)
-    try {
-      const ids = Array.from(selectedIds)
-      await Promise.all(
+    const ids = Array.from(selectedIds)
+    toast.promise(
+      Promise.all(
         ids.map((id) => {
           const event = events.find((e) => e._id?.toString() === id)
           if (event && event.isActive) {
@@ -426,22 +430,23 @@ export default function EventsPage() {
           }
           return Promise.resolve()
         })
-      )
-      toast.success(`${ids.length} event(s) deleted`)
-      clearSelection()
-      mutateEvents()
-    } catch {
-      toast.error('Failed to delete events')
-    } finally {
-      setBulkOperating(false)
-    }
+      ),
+      {
+        loading: `Deleting ${ids.length} event(s)...`,
+        success: () => {
+          clearSelection()
+          mutateEvents()
+          return `${ids.length} event(s) deleted`
+        },
+        error: 'Failed to delete events',
+      }
+    )
   }
 
   const bulkRestore = async () => {
-    setBulkOperating(true)
-    try {
-      const ids = Array.from(selectedIds)
-      await Promise.all(
+    const ids = Array.from(selectedIds)
+    toast.promise(
+      Promise.all(
         ids.map((id) => {
           const event = events.find((e) => e._id?.toString() === id)
           if (event && !event.isActive) {
@@ -453,22 +458,23 @@ export default function EventsPage() {
           }
           return Promise.resolve()
         })
-      )
-      toast.success(`${ids.length} event(s) restored`)
-      clearSelection()
-      mutateEvents()
-    } catch {
-      toast.error('Failed to restore events')
-    } finally {
-      setBulkOperating(false)
-    }
+      ),
+      {
+        loading: `Restoring ${ids.length} event(s)...`,
+        success: () => {
+          clearSelection()
+          mutateEvents()
+          return `${ids.length} event(s) restored`
+        },
+        error: 'Failed to restore events',
+      }
+    )
   }
 
   const bulkChangeType = async (newType: string) => {
-    setBulkOperating(true)
-    try {
-      const ids = Array.from(selectedIds)
-      await Promise.all(
+    const ids = Array.from(selectedIds)
+    toast.promise(
+      Promise.all(
         ids.map((id) => {
           const event = events.find((e) => e._id?.toString() === id)
           if (event) {
@@ -485,15 +491,17 @@ export default function EventsPage() {
           }
           return Promise.resolve()
         })
-      )
-      toast.success(`Changed type to "${newType}" for ${ids.length} event(s)`)
-      clearSelection()
-      mutateEvents()
-    } catch {
-      toast.error('Failed to change event types')
-    } finally {
-      setBulkOperating(false)
-    }
+      ),
+      {
+        loading: `Changing type to "${newType}"...`,
+        success: () => {
+          clearSelection()
+          mutateEvents()
+          return `Changed type to "${newType}" for ${ids.length} event(s)`
+        },
+        error: 'Failed to change event types',
+      }
+    )
   }
 
   const bulkAddTag = async () => {

@@ -184,64 +184,63 @@ export function EntryForm({
   }, [watchedItems, form])
 
   const onSubmit = async (data: EntryFormValues) => {
-    setSubmitting(true)
-    try {
-      const receiptData = {
-        eventId: event._id,
-        customer: data.customer,
-        items: data.items.map((item) => ({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.quantity * item.price,
-        })),
-        totalAmount: data.totalAmount,
-        paymentMethod: data.paymentMethod,
-        emailSent: data.emailSent || false,
-        notes: data.notes,
-      }
+    const receiptData = {
+      eventId: event._id,
+      customer: data.customer,
+      items: data.items.map((item) => ({
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.quantity * item.price,
+      })),
+      totalAmount: data.totalAmount,
+      paymentMethod: data.paymentMethod,
+      emailSent: data.emailSent || false,
+      notes: data.notes,
+    }
 
-      if (isEditing && editEntry) {
-        const response = await fetch(
-          `/api/receipts/${editEntry.receiptNumber}`,
-          {
-            method: 'PUT',
+    toast.promise(
+      (async () => {
+        if (isEditing && editEntry) {
+          const response = await fetch(
+            `/api/receipts/${editEntry.receiptNumber}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(receiptData),
+            }
+          )
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.message || 'Failed to update receipt')
+          }
+          return response.json()
+        } else {
+          const response = await fetch('/api/receipts/create', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(receiptData),
+          })
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.message || 'Failed to create receipt')
           }
-        )
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.message || 'Failed to update receipt')
+          return response.json()
         }
-
-        toast.success('Receipt updated successfully')
-      } else {
-        const response = await fetch('/api/receipts/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(receiptData),
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.message || 'Failed to create receipt')
-        }
-
-        toast.success('Receipt created successfully')
+      })(),
+      {
+        loading: isEditing ? 'Updating receipt...' : 'Creating receipt...',
+        success: () => {
+          onSuccess()
+          return isEditing ? 'Receipt updated' : 'Receipt created'
+        },
+        error: (err) =>
+          err instanceof Error
+            ? err.message
+            : `Failed to ${isEditing ? 'update' : 'create'} receipt`,
       }
-      onSuccess()
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : `Failed to ${isEditing ? 'update' : 'create'} receipt`
-      )
-    } finally {
-      setSubmitting(false)
-    }
+    )
   }
 
   return (

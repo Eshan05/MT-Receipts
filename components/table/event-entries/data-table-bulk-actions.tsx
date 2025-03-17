@@ -74,29 +74,30 @@ export function DataTableBulkActions({
     body?: Record<string, unknown>
   ) => {
     setIsProcessing(action)
-    try {
-      const response = await fetch(endpoint, {
+    toast.promise(
+      fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || { receiptNumbers }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || `Failed to ${action}`)
+      }).then(async (response) => {
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || `Failed to ${action}`)
+        }
+        return response.json()
+      }),
+      {
+        loading: `${action}...`,
+        success: (result) => {
+          onUpdate()
+          onClearSelection()
+          return result.message || `${action} completed`
+        },
+        error: (err) =>
+          err instanceof Error ? err.message : `Failed to ${action}`,
+        finally: () => setIsProcessing(null),
       }
-
-      const result = await response.json()
-      toast.success(result.message || `${action} completed`)
-      onUpdate()
-      onClearSelection()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : `Failed to ${action}`
-      )
-    } finally {
-      setIsProcessing(null)
-    }
+    )
   }
 
   const handleSendEmails = (templateSlug?: string) =>

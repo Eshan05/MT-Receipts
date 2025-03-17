@@ -74,38 +74,44 @@ export function DataTableRowActions<TData>({
 
   const handleSendEmail = async (templateSlug?: string) => {
     if (!entry.receiptNumber) return
-    try {
-      const response = await fetch(
-        `/api/receipts/${entry.receiptNumber}/send-email`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ templateSlug }),
-        }
-      )
-      if (!response.ok) throw new Error('Failed to send email')
-      toast.success('Email sent successfully')
-    } catch (error) {
-      toast.error('Failed to send email')
-    }
+    toast.promise(
+      fetch(`/api/receipts/${entry.receiptNumber}/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateSlug }),
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to send email')
+        return response.json()
+      }),
+      {
+        loading: 'Sending email...',
+        success: 'Email sent successfully',
+        error: 'Failed to send email',
+      }
+    )
   }
 
   const handleDownloadPdf = async () => {
     if (!entry.receiptNumber) return
-    try {
-      const response = await fetch(`/api/receipts/${entry.receiptNumber}/pdf`)
-      if (!response.ok) throw new Error('Failed to download PDF')
-
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `receipt-${entry.receiptNumber}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      toast.error('Failed to download PDF')
-    }
+    toast.promise(
+      fetch(`/api/receipts/${entry.receiptNumber}/pdf`).then(
+        async (response) => {
+          if (!response.ok) throw new Error('Failed to download PDF')
+          const blob = await response.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `receipt-${entry.receiptNumber}.pdf`
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+      ),
+      {
+        loading: 'Generating PDF...',
+        success: 'PDF downloaded',
+        error: 'Failed to download PDF',
+      }
+    )
   }
 
   const handleDelete = async () => {

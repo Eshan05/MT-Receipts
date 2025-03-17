@@ -317,36 +317,30 @@ export function ReceiptForm({
   }, [selectedTemplate])
 
   const generatePdf = useCallback(async () => {
-    setGeneratingPdf(true)
-    try {
-      const response = await fetch('/api/receipts/generate', {
+    toast.promise(
+      fetch('/api/receipts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...templateProps,
           templateSlug: selectedTemplate,
         }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF')
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to generate PDF')
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `receipt-${templateProps.receiptNumber}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      }),
+      {
+        loading: 'Generating PDF...',
+        success: 'PDF downloaded',
+        error: 'Failed to generate PDF',
       }
-
-      const blob = await response.blob()
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `receipt-${templateProps.receiptNumber}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-
-      toast.success('PDF generated successfully!')
-    } catch (error) {
-      toast.error('Failed to generate PDF')
-    } finally {
-      setGeneratingPdf(false)
-    }
+    )
   }, [templateProps, selectedTemplate])
 
   const onSubmit = async (data: ReceiptFormValues) => {
@@ -355,11 +349,10 @@ export function ReceiptForm({
       return
     }
 
-    setSubmitting(true)
-    try {
-      const receiptNumber = generateReceiptNumber()
+    const receiptNumber = generateReceiptNumber()
 
-      const response = await fetch('/api/receipts/create', {
+    toast.promise(
+      fetch('/api/receipts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -375,44 +368,42 @@ export function ReceiptForm({
             endDate: selectedEvent.endDate,
           },
         }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create receipt')
+      }).then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to create receipt')
+        }
+        return response.json()
+      }),
+      {
+        loading: 'Creating receipt...',
+        success: () => {
+          form.reset({
+            eventId: '',
+            templateSlug: 'professional',
+            customer: { name: '', email: '', phone: '', address: '' },
+            items: [
+              {
+                id: crypto.randomUUID(),
+                name: '',
+                description: '',
+                quantity: 1,
+                price: 0,
+                total: 0,
+              },
+            ],
+            totalAmount: 0,
+            paymentMethod: 'cash',
+            notes: '',
+            config: defaultConfig,
+          })
+          setConfig(defaultConfig)
+          return 'Receipt created'
+        },
+        error: (err) =>
+          err instanceof Error ? err.message : 'Failed to create receipt',
       }
-
-      toast.success('Receipt created successfully!')
-
-      form.reset({
-        eventId: '',
-        templateSlug: 'professional',
-        customer: { name: '', email: '', phone: '', address: '' },
-        items: [
-          {
-            id: crypto.randomUUID(),
-            name: '',
-            description: '',
-            quantity: 1,
-            price: 0,
-            total: 0,
-          },
-        ],
-        totalAmount: 0,
-        paymentMethod: 'cash',
-        notes: '',
-        config: defaultConfig,
-      })
-      setConfig(defaultConfig)
-    } catch (error) {
-      if (error instanceof Error) {
-        toast.error(error.message)
-      } else {
-        toast.error('Failed to create receipt')
-      }
-    } finally {
-      setSubmitting(false)
-    }
+    )
   }
 
   return (
