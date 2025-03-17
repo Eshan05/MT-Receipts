@@ -40,8 +40,19 @@ export async function PUT(
     const { receiptNumber } = await params
     const body = await request.json()
 
-    const { customer, items, totalAmount, paymentMethod, emailSent, notes } =
-      body
+    const {
+      customer,
+      items,
+      totalAmount,
+      paymentMethod,
+      emailSent,
+      notes,
+      refunded,
+      refundReason,
+      status,
+      createdAt,
+      emailSentAt,
+    } = body
 
     const processedItems = items.map(
       (item: {
@@ -59,22 +70,56 @@ export async function PUT(
       })
     )
 
+    const updateData: Record<string, unknown> = {
+      customer: {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+      },
+      items: processedItems,
+      totalAmount,
+      paymentMethod,
+      emailSent,
+      notes,
+    }
+
+    if (emailSent !== undefined) {
+      updateData.emailSent = emailSent
+    }
+
+    if (refunded !== undefined) {
+      updateData.refunded = refunded
+      updateData.refundedAt = refunded ? new Date() : undefined
+    }
+    if (refundReason !== undefined) {
+      updateData.refundReason = refundReason
+    }
+
+    if (status === 'refunded') {
+      updateData.refunded = true
+      updateData.refundedAt = new Date()
+    } else if (status === 'sent') {
+      updateData.emailSent = true
+      updateData.emailSentAt = emailSentAt ? new Date(emailSentAt) : new Date()
+    } else if (status === 'failed') {
+      updateData.emailSent = false
+      updateData.emailError = 'Marked as failed manually'
+    } else if (status === 'pending') {
+      updateData.emailSent = false
+      updateData.emailError = undefined
+    }
+
+    if (createdAt) {
+      updateData.createdAt = new Date(createdAt)
+    }
+    if (emailSentAt !== undefined) {
+      updateData.emailSentAt = emailSentAt ? new Date(emailSentAt) : undefined
+    }
+
     const receipt = await Receipt.findOneAndUpdate(
       { receiptNumber },
-      {
-        customer: {
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          address: customer.address,
-        },
-        items: processedItems,
-        totalAmount,
-        paymentMethod,
-        emailSent,
-        emailSentAt: emailSent ? new Date() : undefined,
-        notes,
-      },
+      updateData,
       { new: true }
     )
 

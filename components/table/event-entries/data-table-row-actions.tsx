@@ -277,7 +277,7 @@ export function DataTableRowActions<TData>({
           <CredenzaHeader>
             <CredenzaTitle>Edit Entry</CredenzaTitle>
           </CredenzaHeader>
-          <CredenzaBody>
+          <CredenzaBody className='overflow-y-auto no-scrollbar'>
             <EntryForm
               event={event}
               editEntry={entry}

@@ -423,7 +423,7 @@ export default function EventEntriesPage() {
           <CredenzaHeader>
             <CredenzaTitle>Add Entry</CredenzaTitle>
           </CredenzaHeader>
-          <CredenzaBody>
+          <CredenzaBody className='overflow-y-auto no-scrollbar'>
             {event && (
               <EntryForm
                 event={event}
@@ -440,7 +440,7 @@ export default function EventEntriesPage() {
           <CredenzaHeader>
             <CredenzaTitle>Edit Event</CredenzaTitle>
           </CredenzaHeader>
-          <CredenzaBody>
+          <CredenzaBody className='overflow-y-auto no-scrollbar'>
             {event && (
               <EventForm
                 event={event}

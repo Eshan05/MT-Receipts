@@ -2,7 +2,11 @@ import { renderToStream } from '@react-pdf/renderer'
 import Template, { ITemplate } from '@/models/template.model'
 import Event from '@/models/event.model'
 import dbConnect from '@/lib/db-conn'
-import { getTemplateComponent, DEFAULT_TEMPLATE } from '@/lib/templates'
+import {
+  getTemplateComponent,
+  DEFAULT_TEMPLATE,
+  templateRegistry,
+} from '@/lib/templates'
 import type {
   TemplateProps,
   TemplateConfig,
@@ -48,21 +52,21 @@ async function getTemplateConfig(
   templateId?: string | null,
   slug?: string
 ): Promise<{ template: ITemplate | null; slug: string }> {
+  const requestedSlug = templateId || slug
+
+  if (requestedSlug && requestedSlug in templateRegistry) {
+    return {
+      template: null,
+      slug: requestedSlug,
+    }
+  }
+
   await dbConnect()
 
   let template: ITemplate | null = null
 
-  if (templateId) {
-    if (
-      mongoose.Types.ObjectId.isValid(templateId) &&
-      templateId.length === 24
-    ) {
-      template = await Template.findById(templateId).lean()
-    } else {
-      template = await Template.findBySlug(templateId)
-    }
-  } else if (slug) {
-    template = await Template.findBySlug(slug)
+  if (requestedSlug) {
+    template = await Template.findBySlug(requestedSlug)
   }
 
   if (!template) {
@@ -78,7 +82,7 @@ async function getTemplateConfig(
 
   return {
     template: null,
-    slug: DEFAULT_TEMPLATE,
+    slug: 'professional',
   }
 }
 

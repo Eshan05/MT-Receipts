@@ -25,8 +25,12 @@ import {
   User,
   Phone,
   MapPin,
-  Hash,
   FileText,
+  Calendar as CalendarIcon,
+  RotateCcw,
+  CircleCheck,
+  CircleDot,
+  CircleSlash,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
@@ -34,6 +38,14 @@ import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { FaDollarSign } from 'react-icons/fa'
+import { format } from 'date-fns'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
 const entryItemSchema = z.object({
   id: z.string(),
@@ -57,6 +69,11 @@ const entryFormSchema = z.object({
   paymentMethod: z.enum(['cash', 'upi', 'card', 'other']),
   emailSent: z.boolean().optional(),
   notes: z.string().optional(),
+  refunded: z.boolean().optional(),
+  refundReason: z.string().optional(),
+  status: z.enum(['pending', 'sent', 'failed', 'refunded']).optional(),
+  createdAt: z.date().optional(),
+  emailSentAt: z.date().optional().nullable(),
 })
 
 type EntryFormValues = z.infer<typeof entryFormSchema>
@@ -124,6 +141,21 @@ export function EntryForm({
           paymentMethod: editEntry.paymentMethod || 'cash',
           emailSent: editEntry.emailSent,
           notes: editEntry.notes || '',
+          refunded: editEntry.refunded || false,
+          refundReason: editEntry.refundReason || '',
+          status: editEntry.refunded
+            ? 'refunded'
+            : editEntry.emailSent
+              ? 'sent'
+              : editEntry.emailError
+                ? 'failed'
+                : 'pending',
+          createdAt: editEntry.createdAt
+            ? new Date(editEntry.createdAt)
+            : undefined,
+          emailSentAt: editEntry.emailSentAt
+            ? new Date(editEntry.emailSentAt)
+            : null,
         }
       : {
           customer: {
@@ -154,6 +186,11 @@ export function EntryForm({
           paymentMethod: 'cash',
           emailSent: false,
           notes: '',
+          refunded: false,
+          refundReason: '',
+          status: 'pending',
+          createdAt: undefined,
+          emailSentAt: null,
         },
     mode: 'onChange',
   })
@@ -198,6 +235,11 @@ export function EntryForm({
       paymentMethod: data.paymentMethod,
       emailSent: data.emailSent || false,
       notes: data.notes,
+      refunded: data.refunded || false,
+      refundReason: data.refundReason,
+      status: data.status,
+      createdAt: data.createdAt?.toISOString(),
+      emailSentAt: data.emailSentAt?.toISOString(),
     }
 
     toast.promise(
@@ -244,7 +286,10 @@ export function EntryForm({
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-3'>
+    <form
+      onSubmit={form.handleSubmit(onSubmit)}
+      className='space-y-3 overflow-y-auto no-scrollbar'
+    >
       <div className='grid grid-cols-2 gap-2'>
         <Controller
           name='customer.name'
@@ -360,110 +405,123 @@ export function EntryForm({
             return (
               <div
                 key={item.id}
-                className='group flex items-center gap-1.5 p-1.5 rounded-md bg-muted/40'
+                className='group p-2 rounded-md bg-muted/40 space-y-1.5'
               >
-                <Controller
-                  name={`items.${index}.name`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid} className='flex-1'>
-                      <div className='relative'>
-                        <Input
-                          {...field}
-                          placeholder='Item name'
-                          className='peer ps-6'
-                          aria-invalid={fieldState.invalid}
-                          onChange={(e) => {
-                            field.onChange(e)
-                            if (e.target.value && item.id) {
-                              setItemIcons((prev) => ({
-                                ...prev,
-                                [item.id]: getIconForName(e.target.value),
-                              }))
-                            }
-                          }}
-                        />
-                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
-                          <ItemIcon size={11} />
+                <div className='flex items-center gap-1.5'>
+                  <Controller
+                    name={`items.${index}.name`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        data-invalid={fieldState.invalid}
+                        className='flex-1'
+                      >
+                        <div className='relative'>
+                          <Input
+                            {...field}
+                            placeholder='Item name'
+                            className='peer ps-6'
+                            aria-invalid={fieldState.invalid}
+                            onChange={(e) => {
+                              field.onChange(e)
+                              if (e.target.value && item.id) {
+                                setItemIcons((prev) => ({
+                                  ...prev,
+                                  [item.id]: getIconForName(e.target.value),
+                                }))
+                              }
+                            }}
+                          />
+                          <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                            <ItemIcon size={11} />
+                          </div>
                         </div>
-                      </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name={`items.${index}.quantity`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid} className='w-16'>
+                        <div className='relative'>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={1}
+                            placeholder='Qty'
+                            className='peer ps-5 text-center'
+                            aria-invalid={fieldState.invalid}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value)
+                              field.onChange(isNaN(value) ? 1 : value)
+                            }}
+                          />
+                        </div>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name={`items.${index}.price`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid} className='w-20'>
+                        <div className='relative'>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={0}
+                            placeholder='Price'
+                            className='peer ps-5'
+                            aria-invalid={fieldState.invalid}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value)
+                              field.onChange(isNaN(value) ? 0 : value)
+                            }}
+                          />
+                          <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
+                            <FaDollarSign size={10} />
+                          </div>
+                        </div>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => {
+                      if (fields.length > 1) remove(index)
+                      else toast.error('At least one item required')
+                    }}
+                    className='w-6 h-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
+                  >
+                    <Trash2 className='w-3 h-3' />
+                  </Button>
+                </div>
+                <Controller
+                  name={`items.${index}.description`}
+                  control={form.control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      placeholder='Description (optional)'
+                      className='text-xs h-7'
+                    />
                   )}
                 />
-
-                <Controller
-                  name={`items.${index}.quantity`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid} className='w-20'>
-                      <div className='relative'>
-                        <Input
-                          {...field}
-                          type='number'
-                          min={1}
-                          placeholder='Qty'
-                          className='peer ps-6'
-                          aria-invalid={fieldState.invalid}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value)
-                            field.onChange(isNaN(value) ? 1 : value)
-                          }}
-                        />
-                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
-                          <Hash size={11} />
-                        </div>
-                      </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name={`items.${index}.price`}
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid} className='w-24'>
-                      <div className='relative'>
-                        <Input
-                          {...field}
-                          type='number'
-                          min={0}
-                          placeholder='Price'
-                          className='peer ps-6'
-                          aria-invalid={fieldState.invalid}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value)
-                            field.onChange(isNaN(value) ? 0 : value)
-                          }}
-                        />
-                        <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
-                          <FaDollarSign size={11} />
-                        </div>
-                      </div>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Button
-                  type='button'
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => {
-                    if (fields.length > 1) remove(index)
-                    else toast.error('At least one item required')
-                  }}
-                  className='w-6 h-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
-                >
-                  <Trash2 className='w-3 h-3' />
-                </Button>
               </div>
             )
           })}
@@ -554,6 +612,164 @@ export function EntryForm({
           </Field>
         )}
       />
+
+      {isEditing && (
+        <>
+          <Controller
+            name='status'
+            control={form.control}
+            render={({ field }) => (
+              <Field>
+                <FieldLabel className='text-xs'>Status</FieldLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className='h-7'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='pending'>
+                      <div className='flex items-center gap-2'>
+                        <CircleDot className='w-3 h-3 text-yellow-500' />
+                        Pending
+                      </div>
+                    </SelectItem>
+                    <SelectItem value='sent'>
+                      <div className='flex items-center gap-2'>
+                        <CircleCheck className='w-3 h-3 text-green-500' />
+                        Sent
+                      </div>
+                    </SelectItem>
+                    <SelectItem value='failed'>
+                      <div className='flex items-center gap-2'>
+                        <CircleSlash className='w-3 h-3 text-red-500' />
+                        Failed
+                      </div>
+                    </SelectItem>
+                    <SelectItem value='refunded'>
+                      <div className='flex items-center gap-2'>
+                        <RotateCcw className='w-3 h-3 text-orange-500' />
+                        Refunded
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
+          />
+
+          <div className='grid grid-cols-2 gap-2'>
+            <Controller
+              name='createdAt'
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className='text-xs'>Created At</FieldLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-9 text-xs',
+                          !field.value && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className='w-3.5 h-3.5 mr-1.5' />
+                        {field.value ? (
+                          format(field.value, 'MMM d, yyyy h:mm a')
+                        ) : (
+                          <span>Pick date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0' align='start'>
+                      <Calendar
+                        mode='single'
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='emailSentAt'
+              control={form.control}
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel className='text-xs'>Email Sent At</FieldLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-9 text-xs',
+                          !field.value && 'text-muted-foreground'
+                        )}
+                      >
+                        <Mail className='w-3.5 h-3.5 mr-1.5' />
+                        {field.value ? (
+                          format(field.value, 'MMM d, yyyy h:mm a')
+                        ) : (
+                          <span>Not sent</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0' align='start'>
+                      <Calendar
+                        mode='single'
+                        selected={field.value || undefined}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+              )}
+            />
+          </div>
+        </>
+      )}
+
+      <div className='flex items-center justify-between p-3 rounded-lg border bg-muted/30'>
+        <div className='flex items-center gap-2 mr-2'>
+          <RotateCcw className='w-4 h-4 text-muted-foreground' />
+          <div>
+            <p className='text-xs font-medium'>Refunded</p>
+            <p className='text-2xs text-muted-foreground'>
+              Mark if this receipt was refunded
+            </p>
+          </div>
+        </div>
+        <Controller
+          name='refunded'
+          control={form.control}
+          render={({ field }) => (
+            <Switch
+              checked={field.value || false}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
+      </div>
+
+      {form.watch('refunded') && (
+        <Controller
+          name='refundReason'
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel className='text-xs'>Refund Reason</FieldLabel>
+              <Input
+                {...field}
+                placeholder='Reason for refund...'
+                className='text-sm'
+              />
+            </Field>
+          )}
+        />
+      )}
 
       <div className='flex justify-end gap-2 pt-1 pb-3'>
         <Button type='button' variant='outline' size='sm' onClick={onCancel}>

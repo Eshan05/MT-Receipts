@@ -83,6 +83,7 @@ function DatePicker({
         <Calendar
           mode='single'
           selected={date}
+          captionLayout='dropdown'
           onSelect={onDateChange}
           initialFocus
         />
