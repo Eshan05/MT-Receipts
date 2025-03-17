@@ -515,12 +515,12 @@ export function EntryForm({
       </div>
 
       <div className='flex items-center justify-between p-3 rounded-lg border bg-muted/30'>
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-2 mr-2'>
           <Mail className='w-4 h-4 text-muted-foreground' />
           <div>
-            <p className='text-sm font-medium'>Email Already Sent</p>
-            <p className='text-xs text-muted-foreground'>
-              Mark if receipt was already emailed to customer
+            <p className='text-xs font-medium'>Email Already Sent</p>
+            <p className='text-2xs text-muted-foreground'>
+              Mark if receipt was already emailed
             </p>
           </div>
         </div>

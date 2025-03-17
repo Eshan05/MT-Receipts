@@ -273,7 +273,7 @@ export default function EventEntriesPage() {
       </header>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>
-        <Card className=''>
+        <Card className='gap-2'>
           <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Package className='w-3.5 h-3.5' />
@@ -284,7 +284,7 @@ export default function EventEntriesPage() {
             <p className='text-2xl font-semibold'>{event.items.length}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='gap-2'>
           <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Users className='w-3.5 h-3.5' />
@@ -295,7 +295,7 @@ export default function EventEntriesPage() {
             <p className='text-2xl font-semibold'>{entries.length}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='gap-2'>
           <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <Calendar className='w-3.5 h-3.5' />
@@ -310,7 +310,7 @@ export default function EventEntriesPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className='gap-2'>
           <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
               <MapPin className='w-3.5 h-3.5' />
@@ -326,9 +326,9 @@ export default function EventEntriesPage() {
       </div>
 
       <Card className='border-0 ring-0 shadow-none'>
-        <CardHeader>
+        <CardHeader className='gap-0'>
           <CardTitle className='text-lg'>Event Entries</CardTitle>
-          <CardDescription>
+          <CardDescription className='-mt-1'>
             View all purchases and receipts for this event
           </CardDescription>
         </CardHeader>

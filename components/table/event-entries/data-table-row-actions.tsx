@@ -215,7 +215,7 @@ export function DataTableRowActions<TData>({
               <DropdownMenuSeparator className='my-0.5' />
               <DropdownMenuItem
                 onClick={() => setIsEditOpen(true)}
-                className='text-blue-600'
+                className=''
               >
                 <Pencil className='mr-1' />
                 Edit

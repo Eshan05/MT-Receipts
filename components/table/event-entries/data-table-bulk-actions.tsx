@@ -184,9 +184,9 @@ export function DataTableBulkActions({
   return (
     <>
       <div className='fixed bottom-4 left-1/2 -translate-x-1/2 z-50'>
-        <div className='flex items-center gap-2 px-4 py-2.5 bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg'>
+        <div className='flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg'>
           <Badge variant='secondary' className='gap-1'>
-            {selectedCount} selected
+            {selectedCount} <span className='max-md:hidden'>selected</span>
           </Badge>
           <Button
             size='sm'
@@ -194,7 +194,7 @@ export function DataTableBulkActions({
             className='h-7 px-2'
             onClick={onClearSelection}
           >
-            <X className='w-3 h-3 mr-1' />
+            <X className='w-3 h-3' />
             <span className='max-md:hidden'>Clear</span>
           </Button>
 
@@ -212,7 +212,7 @@ export function DataTableBulkActions({
             ) : (
               <Mail className='w-3 h-3' />
             )}
-            <span className='max-md:hidden'>Send Email</span>
+            <span className='max-md:hidden'>Email</span>
           </Button>
 
           <Button
