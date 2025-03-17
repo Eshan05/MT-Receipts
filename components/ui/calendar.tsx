@@ -88,7 +88,7 @@ function Calendar({
           'select-none font-medium',
           captionLayout === 'label'
             ? 'text-sm'
-            : 'rounded-(--cell-radius) flex items-center gap-1 text-sm [&>svg]:text-muted-foreground [&>svg]:size-3.5',
+            : 'rounded-(--cell-radius) flex items-center gap-1 text-sm [&>svg]:text-muted-foreground [&>svg]:hidden bg-muted dark:bg-muted/50 py-1 px-2',
           defaultClassNames.caption_label
         ),
         table: 'w-full border-collapse',
