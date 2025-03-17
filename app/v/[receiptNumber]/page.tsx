@@ -1,19 +1,12 @@
-'use client'
-
-import { use, Suspense } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Suspense } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   CheckCircle,
   XCircle,
-  Receipt,
   Calendar,
   MapPin,
   User,
-  Mail,
-  Phone,
-  MapPinned,
   CreditCard,
   RotateCcw,
   ArrowLeft,
@@ -63,7 +56,7 @@ async function getReceipt(receiptNumber: string): Promise<ReceiptData> {
   const response = await fetch(
     `${baseUrl}/api/receipts/${receiptNumber}/public`,
     {
-      cache: 'no-store',
+      next: { revalidate: 300 },
     }
   )
   return response.json()
@@ -88,237 +81,224 @@ function formatPaymentMethod(method: string): string {
   return labels[method] || method
 }
 
-function ReceiptContent({ receiptNumber }: { receiptNumber: string }) {
-  const data = use(getReceipt(receiptNumber))
+function InvalidReceipt({
+  receiptNumber,
+  message,
+}: {
+  receiptNumber: string
+  message?: string
+}) {
+  return (
+    <div className='min-h-screen flex items-center justify-center p-4 bg-black'>
+      <div className='text-center max-w-sm'>
+        <div className='inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 mb-3'>
+          <XCircle className='w-6 h-6 text-red-400' />
+        </div>
+        <h1 className='text-base font-medium text-white mb-1.5'>
+          Invalid Receipt
+        </h1>
+        <p className='text-xs text-zinc-500 mb-2'>
+          {message || 'This receipt could not be verified.'}
+        </p>
+        <p className='font-mono text-[10px] text-zinc-600'>{receiptNumber}</p>
+      </div>
+    </div>
+  )
+}
+
+async function ReceiptContent({ receiptNumber }: { receiptNumber: string }) {
+  const data = await getReceipt(receiptNumber)
 
   if (!data.valid || !data.receipt) {
     return (
-      <div className='min-h-screen flex items-center justify-center p-4'>
-        <Card className='w-full max-w-md'>
-          <CardContent className='pt-6 text-center'>
-            <XCircle className='w-16 h-16 text-destructive mx-auto mb-4' />
-            <h1 className='text-2xl font-bold mb-2'>Invalid Receipt</h1>
-            <p className='text-muted-foreground mb-4'>
-              {data.message || 'This receipt could not be verified.'}
-            </p>
-            <p className='font-mono text-sm text-muted-foreground'>
-              Receipt #{receiptNumber}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <InvalidReceipt receiptNumber={receiptNumber} message={data.message} />
     )
   }
 
   const { receipt, event } = data
 
   return (
-    <div className='min-h-screen p-4 py-8'>
-      <div className='max-w-2xl mx-auto space-y-4'>
-        <div className='flex items-center justify-between'>
+    <div className='min-h-screen bg-[#000000] text-white p-4 py-6'>
+      <div className='max-w-md mx-auto space-y-2'>
+        <div className='mb-3'>
           <Link href='/'>
-            <Button variant='ghost' size='sm' className='gap-1'>
-              <ArrowLeft className='w-4 h-4' />
+            <Button
+              variant='ghost'
+              size='sm'
+              className='text-zinc-500 hover:text-white hover:bg-zinc-900 h-6 text-[11px] px-2'
+            >
+              <ArrowLeft className='w-3 h-3 mr-1' />
               Back
             </Button>
           </Link>
         </div>
 
-        <Card>
-          <CardHeader className='text-center border-b'>
-            <div className='flex justify-center mb-4'>
-              <Image
-                src='https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
-                alt='ACES Logo'
-                width={64}
-                height={64}
-                className='rounded-full'
-              />
-            </div>
-            <div className='flex items-center justify-center gap-2 mb-2'>
-              <CheckCircle className='w-5 h-5 text-green-500' />
-              <Badge
-                variant='outline'
-                className='bg-green-500/10 text-green-600 border-green-500/30'
-              >
-                Verified Receipt
-              </Badge>
-            </div>
-            <CardTitle className='text-xl font-mono'>
-              #{receipt.receiptNumber}
-            </CardTitle>
-            {receipt.refunded && (
-              <Badge
-                variant='outline'
-                className='bg-orange-500/10 text-orange-600 border-orange-500/30 mt-2'
-              >
-                <RotateCcw className='w-3 h-3 mr-1' />
-                Refunded
-              </Badge>
-            )}
-          </CardHeader>
-
-          <CardContent className='pt-6 space-y-6'>
-            {event && (
-              <div className='bg-muted/50 rounded-lg p-4'>
-                <h3 className='font-semibold text-sm text-muted-foreground mb-2'>
-                  Event Details
-                </h3>
-                <div className='font-medium text-lg'>{event.name}</div>
-                <div className='flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground'>
-                  <div className='flex items-center gap-1'>
-                    <Receipt className='w-3.5 h-3.5' />
-                    <span className='font-mono'>{event.eventCode}</span>
+        <div className='border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950'>
+          <div className='px-4 py-3 border-b border-zinc-800'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <Image
+                  src='https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
+                  alt='ACES'
+                  width={20}
+                  height={20}
+                  className='rounded-full'
+                />
+                <div>
+                  <div className='font-medium text-xs'>ACES</div>
+                  <div className='text-[10px] text-zinc-500'>
+                    Receipt Verification
                   </div>
+                </div>
+              </div>
+              <div className='flex items-center gap-1'>
+                <CheckCircle className='w-3 h-3 text-emerald-400' />
+                <span className='text-[11px] text-emerald-400 font-medium'>
+                  Verified
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className='px-4 py-3 space-y-3'>
+            <div className='flex items-center justify-between'>
+              <div className='font-mono text-[11px] text-zinc-500'>
+                {receipt.receiptNumber}
+              </div>
+              {receipt.refunded && (
+                <Badge className='bg-orange-500/10 text-orange-400 border-orange-500/20 hover:bg-orange-500/20 text-[10px] px-1.5 py-0 h-4'>
+                  <RotateCcw className='w-2 h-2 mr-0.5' />
+                  Refunded
+                </Badge>
+              )}
+            </div>
+
+            {event && (
+              <div className='px-2.5 py-2 rounded bg-zinc-900/50 border border-zinc-800 flex items-center justify-between'>
+                <div className='font-medium text-xs'>{event.name}</div>
+                <div className='flex flex-wrap gap-2 text-[10px] text-zinc-500'>
                   {event.location && (
-                    <div className='flex items-center gap-1'>
-                      <MapPin className='w-3.5 h-3.5' />
-                      <span>{event.location}</span>
-                    </div>
+                    <span className='flex items-center gap-0.5'>
+                      <MapPin className='w-2.5 h-2.5' />
+                      {event.location}
+                    </span>
                   )}
                   {event.startDate && (
-                    <div className='flex items-center gap-1'>
-                      <Calendar className='w-3.5 h-3.5' />
-                      <span>
-                        {format(new Date(event.startDate), 'MMM d, yyyy')}
-                      </span>
-                    </div>
+                    <span className='flex items-center gap-0.5'>
+                      <Calendar className='w-2.5 h-2.5' />
+                      {format(new Date(event.startDate), 'MMM d, yyyy')}
+                    </span>
                   )}
                 </div>
               </div>
             )}
 
-            <div>
-              <h3 className='font-semibold text-sm text-muted-foreground mb-3'>
-                Customer Information
-              </h3>
-              <div className='grid gap-2 text-sm'>
-                <div className='flex items-center gap-2'>
-                  <User className='w-4 h-4 text-muted-foreground' />
-                  <span className='font-medium'>{receipt.customer.name}</span>
+            <div className='grid grid-cols-2 gap-3'>
+              <div>
+                <div className='flex items-center gap-1 text-[9px] text-zinc-500 uppercase tracking-wider mb-1'>
+                  <User className='w-2.5 h-2.5' />
+                  Customer
                 </div>
-                <div className='flex items-center gap-2'>
-                  <Mail className='w-4 h-4 text-muted-foreground' />
-                  <span className='text-muted-foreground'>
-                    {receipt.customer.email}
-                  </span>
+                <div className='text-xs font-medium'>
+                  {receipt.customer.name}
+                </div>
+                <div className='text-[10px] text-zinc-400'>
+                  {receipt.customer.email}
                 </div>
                 {receipt.customer.phone && (
-                  <div className='flex items-center gap-2'>
-                    <Phone className='w-4 h-4 text-muted-foreground' />
-                    <span className='text-muted-foreground'>
-                      {receipt.customer.phone}
-                    </span>
-                  </div>
-                )}
-                {receipt.customer.address && (
-                  <div className='flex items-start gap-2'>
-                    <MapPinned className='w-4 h-4 text-muted-foreground mt-0.5' />
-                    <span className='text-muted-foreground'>
-                      {receipt.customer.address}
-                    </span>
+                  <div className='text-[10px] text-zinc-500'>
+                    {receipt.customer.phone}
                   </div>
                 )}
               </div>
+              <div className='text-right'>
+                <div className='flex items-center justify-end gap-1 text-[9px] text-zinc-500 uppercase tracking-wider mb-1'>
+                  <Calendar className='w-2.5 h-2.5' />
+                  Issued
+                </div>
+                <div className='text-[10px]'>
+                  {format(new Date(receipt.createdAt), 'MMM d, yyyy')}
+                </div>
+                <div className='text-[10px] text-zinc-500'>
+                  {format(new Date(receipt.createdAt), 'h:mm a')}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <h3 className='font-semibold text-sm text-muted-foreground mb-3'>
-                Items Purchased
-              </h3>
-              <div className='border rounded-lg overflow-hidden'>
-                <div className='bg-muted/50 grid grid-cols-12 gap-2 p-2 text-xs font-medium text-muted-foreground'>
-                  <div className='col-span-5'>Item</div>
-                  <div className='col-span-2 text-center'>Qty</div>
-                  <div className='col-span-2 text-right'>Price</div>
-                  <div className='col-span-3 text-right'>Total</div>
-                </div>
-                {receipt.items.map((item, index) => (
-                  <div
-                    key={index}
-                    className='grid grid-cols-12 gap-2 p-2 text-sm border-t'
-                  >
-                    <div className='col-span-5'>
-                      <div className='font-medium'>{item.name}</div>
-                      {item.description && (
-                        <div className='text-xs text-muted-foreground'>
-                          {item.description}
-                        </div>
-                      )}
+            <div className='border-t border-zinc-800 pt-3'>
+              <div className='text-[9px] text-zinc-500 uppercase tracking-wider mb-1.5'>
+                Items
+              </div>
+              <div className='space-y-1'>
+                {receipt.items.map((item, idx) => (
+                  <div key={idx} className='flex items-center justify-between'>
+                    <div className='flex items-center gap-1.5'>
+                      <span className='text-zinc-500 tabular-nums text-[10px] w-4'>
+                        {item.quantity}x
+                      </span>
+                      <div>
+                        <div className='text-xs'>{item.name}</div>
+                        {item.description && (
+                          <div className='text-[10px] text-zinc-500'>
+                            {item.description}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className='col-span-2 text-center'>
-                      {item.quantity}
-                    </div>
-                    <div className='col-span-2 text-right font-mono'>
-                      {formatCurrency(item.price)}
-                    </div>
-                    <div className='col-span-3 text-right font-mono font-medium'>
+                    <div className='font-mono text-[10px] text-zinc-400'>
                       {formatCurrency(item.total)}
                     </div>
                   </div>
                 ))}
-                <div className='bg-muted/50 grid grid-cols-12 gap-2 p-2 text-sm border-t font-medium'>
-                  <div className='col-span-5'>Total</div>
-                  <div className='col-span-2' />
-                  <div className='col-span-2' />
-                  <div className='col-span-3 text-right font-mono text-base'>
-                    {formatCurrency(receipt.totalAmount)}
-                  </div>
-                </div>
+              </div>
+              <div className='flex items-center justify-between pt-2 mt-2 border-t border-zinc-800'>
+                <span className='text-[10px] text-zinc-500'>Total</span>
+                <span className='text-base font-semibold font-mono'>
+                  {formatCurrency(receipt.totalAmount)}
+                </span>
               </div>
             </div>
 
-            <div className='grid grid-cols-2 gap-4'>
-              {receipt.paymentMethod && (
-                <div>
-                  <h3 className='font-semibold text-sm text-muted-foreground mb-1'>
-                    Payment Method
-                  </h3>
-                  <div className='flex items-center gap-2'>
-                    <CreditCard className='w-4 h-4 text-muted-foreground' />
-                    <span>{formatPaymentMethod(receipt.paymentMethod)}</span>
-                  </div>
-                </div>
-              )}
-              <div>
-                <h3 className='font-semibold text-sm text-muted-foreground mb-1'>
-                  Purchase Date
-                </h3>
-                <div className='flex items-center gap-2'>
-                  <Calendar className='w-4 h-4 text-muted-foreground' />
-                  <span>
-                    {format(new Date(receipt.createdAt), 'MMM d, yyyy h:mm a')}
-                  </span>
-                </div>
-              </div>
+            <div className='flex items-center justify-between pt-3 border-t border-zinc-800 text-[10px]'>
+              <span className='flex items-center gap-1 text-zinc-500'>
+                <CreditCard className='w-2.5 h-2.5' />
+                Payment Method
+              </span>
+              <span>
+                {receipt.paymentMethod
+                  ? formatPaymentMethod(receipt.paymentMethod)
+                  : '-'}
+              </span>
             </div>
-
-            {receipt.notes && (
-              <div>
-                <h3 className='font-semibold text-sm text-muted-foreground mb-1'>
-                  Notes
-                </h3>
-                <p className='text-sm text-muted-foreground'>{receipt.notes}</p>
-              </div>
-            )}
 
             {receipt.refunded && receipt.refundReason && (
-              <div className='bg-orange-500/10 border border-orange-500/30 rounded-lg p-3'>
-                <h3 className='font-semibold text-sm text-orange-600 mb-1'>
+              <div className='px-2.5 py-2 rounded bg-orange-500/5 border border-orange-500/20'>
+                <div className='text-[9px] text-orange-400 uppercase tracking-wider mb-0.5'>
                   Refund Reason
-                </h3>
-                <p className='text-sm text-muted-foreground'>
+                </div>
+                <div className='text-[10px] text-zinc-300'>
                   {receipt.refundReason}
-                </p>
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        <p className='text-center text-xs text-muted-foreground'>
-          This receipt was verified on{' '}
-          {format(new Date(), 'MMM d, yyyy h:mm a')}
-        </p>
+            {receipt.notes && (
+              <div className='pt-2 border-t border-zinc-800'>
+                <div className='text-[9px] text-zinc-500 uppercase tracking-wider mb-0.5'>
+                  Notes
+                </div>
+                <div className='text-[10px] text-zinc-400'>{receipt.notes}</div>
+              </div>
+            )}
+          </div>
+
+          <div className='px-4 py-2 bg-zinc-900/50 border-t border-zinc-800'>
+            <div className='flex items-center justify-center gap-1 text-[10px] text-zinc-600'>
+              <CheckCircle className='w-2 h-2 text-emerald-400' />
+              Verified on {format(new Date(), 'MMM d, yyyy h:mm a')}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -326,27 +306,27 @@ function ReceiptContent({ receiptNumber }: { receiptNumber: string }) {
 
 function LoadingSkeleton() {
   return (
-    <div className='min-h-screen flex items-center justify-center p-4'>
-      <Card className='w-full max-w-2xl'>
-        <CardContent className='pt-6'>
-          <div className='animate-pulse space-y-4'>
-            <div className='h-16 bg-muted rounded-lg' />
-            <div className='h-24 bg-muted rounded-lg' />
-            <div className='h-32 bg-muted rounded-lg' />
-            <div className='h-16 bg-muted rounded-lg' />
+    <div className='min-h-screen bg-black p-4 py-6'>
+      <div className='max-w-md mx-auto'>
+        <div className='border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950 p-4'>
+          <div className='animate-pulse space-y-3'>
+            <div className='h-3 bg-zinc-800 rounded w-1/4' />
+            <div className='h-6 bg-zinc-800 rounded w-1/2' />
+            <div className='h-16 bg-zinc-800 rounded' />
+            <div className='h-20 bg-zinc-800 rounded' />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
 
-export default function ReceiptVerificationPage({
+export default async function ReceiptVerificationPage({
   params,
 }: {
   params: Promise<{ receiptNumber: string }>
 }) {
-  const { receiptNumber } = use(params)
+  const { receiptNumber } = await params
 
   return (
     <Suspense fallback={<LoadingSkeleton />}>

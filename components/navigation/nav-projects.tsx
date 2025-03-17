@@ -1,6 +1,11 @@
 'use client'
 
-import { Folder, MoreHorizontal, type LucideIcon } from 'lucide-react'
+import {
+  CalendarDays,
+  Folder,
+  MoreHorizontal,
+  type LucideIcon,
+} from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -25,20 +30,20 @@ export function NavProjects({
   projects: {
     name: string
     url: string
-    icon: LucideIcon
+    icon?: LucideIcon
   }[]
 }) {
   const { isMobile } = useSidebar()
 
   return (
     <SidebarGroup className='group-data-[collapsible=icon]:hidden'>
-      <SidebarGroupLabel>Extra</SidebarGroupLabel>
+      <SidebarGroupLabel>Recent Events</SidebarGroupLabel>
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
               <a href={item.url}>
-                <item.icon />
+                {item.icon ? <item.icon /> : <CalendarDays />}
                 <span>{item.name}</span>
               </a>
             </SidebarMenuButton>
@@ -62,12 +67,6 @@ export function NavProjects({
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
-        <SidebarMenuItem>
-          <SidebarMenuButton className='text-sidebar-foreground/70'>
-            <MoreHorizontal className='text-sidebar-foreground/70' />
-            <span>More</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroup>
   )

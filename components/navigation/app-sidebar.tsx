@@ -5,10 +5,7 @@ import {
   CalendarDaysIcon,
   ChartArea,
   FileTextIcon,
-  Frame,
   Newspaper,
-  PieChart,
-  PlusCircleIcon,
 } from 'lucide-react'
 import * as React from 'react'
 
@@ -46,29 +43,42 @@ const data = {
       icon: Newspaper,
     },
   ],
-  projects: [
-    {
-      name: 'ACES Merchandise',
-      url: '#',
-      icon: Frame,
-    },
-    {
-      name: 'BE Farewell',
-      url: '#',
-      icon: PieChart,
-    },
-  ],
 }
 
 export default function AdminSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const { user, isAuthenticated } = useAuth()
+  const { user } = useAuth()
+  const [recentEvents, setRecentEvents] = React.useState<
+    { name: string; url: string; eventCode: string }[]
+  >([])
+
+  React.useEffect(() => {
+    async function fetchRecentEvents() {
+      try {
+        const res = await fetch('/api/events?limit=5')
+        const data = await res.json()
+        if (data.events) {
+          setRecentEvents(
+            data.events.map((event: { name: string; eventCode: string }) => ({
+              name: event.name,
+              url: `/events/${event.eventCode}`,
+              eventCode: event.eventCode,
+            }))
+          )
+        }
+      } catch (e) {
+        console.error('Failed to fetch recent events:', e)
+      }
+    }
+    fetchRecentEvents()
+  }, [])
+
   return (
     <Sidebar collapsible='icon' {...props}>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavProjects projects={recentEvents} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

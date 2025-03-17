@@ -71,14 +71,11 @@ export async function generateReceiptQRCode(
   receiptNumber: string,
   organizationName?: string
 ): Promise<string> {
-  const qrData = JSON.stringify({
-    receipt: receiptNumber,
-    org: organizationName || 'ACES',
-    timestamp: Date.now(),
-  })
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  const verifyUrl = `${baseUrl}/v/${receiptNumber}`
 
   return generateQRCodeBase64({
-    data: qrData,
+    data: verifyUrl,
     width: 400,
     height: 400,
     dotsType: 'rounded',

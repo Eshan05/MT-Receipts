@@ -1,0 +1,35 @@
+Task: Extract every transaction/receipt found in the provided document and output a CSV with this exact header:
+Customer Name,Customer Email,Customer Phone,Customer Address,Items,Payment Method,Notes,Email Sent
+
+Output rules (must follow exactly):
+- RETURN ONLY CSV (header + rows). No explanations, no markdown, no extra text.
+- One CSV row per transaction/receipt found.
+- If no transactions are found, output only the header row.
+- Use standard CSV quoting for fields that contain commas or special characters.
+
+Field extraction & normalization rules:
+- Customer Name: prefer 'Bill To' / 'Customer' labels or the first full-name-like string. If missing use "Unknown" and add "MISSING_CUSTOMER" to Notes.
+- Customer Email: keep as-extracted. If format is invalid, keep it but append "INVALID_EMAIL" to Notes.
+- Customer Phone: remove non-digit characters except leading '+'. If country code present keep it; otherwise keep digits only. If missing leave blank.
+- Customer Address: join multi-line addresses into one comma-separated line. If missing leave blank.
+- Items: produce a semicolon-separated list in this exact pattern:
+    ItemName xQuantity @UnitPrice
+  Examples: `T-Shirt x2 @500; Cap x1 @200`
+  - Quantity: integer (default 1 if absent). If fractional, round and add "PARSE_WARN:QUANTITY_ROUNDED" to Notes.
+  - UnitPrice: numeric only, no currency symbol. If only a line-total is present and quantity is known, compute unit price = total/qty. If price cannot be determined use `@0` and add "PRICE_UNKNOWN" to Notes.
+  - If item name is unknown, keep the literal description.
+- Payment Method: normalize to one of `cash`, `upi`, `card`, `other`. Map common synonyms (e.g., "credit card", "visa" -> `card`; "gpay", "phonepe", "paytm", "upi" -> `upi`). Default `other` if not found.
+- Notes: collect parsing warnings and contextual notes (e.g., "DUPLICATE", "NO_ITEMS", "INVALID_EMAIL", "PRICE_UNKNOWN", "PARSE_WARN:..."). Separate multiple notes with `; `.
+- Email Sent: set to `yes` only if document explicitly states the receipt/email/invoice was emailed; otherwise `no`.
+
+Behavioral rules:
+- If multiple receipts/rows exist produce multiple CSV rows.
+- Ignore document headers/footers and visual formatting — extract semantic data.
+- Preserve duplicates as separate rows but add "DUPLICATE" in Notes if identical transaction appears more than once.
+- If uncertain or multiple candidate values exist, choose the most explicit label ("Bill To", "Customer", "Email", etc.) and add a short parser warning to Notes (e.g., "PARSE_WARN:ambiguous_name").
+- Always keep original textual fragments when unsure (don’t invent data).
+
+Input: (replace with the extracted text / table / spreadsheet rows / OCR output)
+<<DOCUMENT_CONTENT_HERE>>
+
+Produce final CSV now.
