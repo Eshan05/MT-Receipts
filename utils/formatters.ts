@@ -28,3 +28,13 @@ export const formatTime = (date: string, isRelative: boolean) => {
   if (minutes > 0) return { date: `${minutes}m`, time: '' }
   return { date: 'now', time: '' }
 }
+
+export const formatPaymentMethod = (method: string): string => {
+  const labels: Record<string, string> = {
+    cash: 'Cash',
+    upi: 'UPI',
+    card: 'Card',
+    other: 'Other',
+  }
+  return labels[method] || method
+}

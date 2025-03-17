@@ -1,0 +1,14 @@
+Customer Name,Customer Email,Customer Phone,Customer Address,Items,Payment Method,Notes,Email Sent
+Rahul Sharma,rahul.sharma@gmail.com,+91 98765 43210,Mumbai,"T-Shirt x2 @500; Cap x1 @200",cash,Team captain order,no
+Priya Patel,priya.patel@gmail.com,+91 87654 32109,Delhi,"Workshop Kit x1 @750",upi,,no
+Amit Kumar,amit.kumar@yahoo.com,,"T-Shirt x1 @500; Mug x2 @150",card,Bulk order for team,no
+Sneha Reddy,sneha.reddy@outlook.com,+91 76543 21098,Hyderabad,"Cap x3 @200; Sticker Pack x5 @50",cash,,yes
+Vikram Singh,vikram.singh@gmail.com,+91 65432 10987,Bangalore,"T-Shirt x1 @500",upi,Volunteer,no
+Ananya Das,ananya.das@gmail.com,+91 54321 09876,Kolkata,"Workshop Kit x2 @750; Mug x1 @150",card,,no
+Karthik Nair,karthik.nair@gmail.com,+91 43210 98765,Chennai,"T-Shirt x1 @500; Cap x2 @200",other,Team lead,no
+Meera Iyer,meera.iyer@gmail.com,,"Sticker Pack x10 @50; Mug x1 @150",cash,Merch for sponsors,yes
+Rohit Gupta,rohit.gupta@gmail.com,+91 32109 87654,Pune,"T-Shirt x3 @500",upi,,no
+Divya Sharma,divya.sharma@gmail.com,+91 21098 76543,Ahmedabad,"Workshop Kit x1 @750; T-Shirt x1 @500; Cap x1 @200",card,Committee member,no
+Rahul Sharma,rahul.sharma@gmail.com,+91 98765 43210,Mumbai,"Mug x1 @150",cash,Duplicate test,no
+Invalid Test,not-an-email,+91 12345 67890,Test,"T-Shirt x1 @500",cash,This should error,no
+Missing Items,test@example.com,+91 11111 11111,Test,,cash,No items here,no

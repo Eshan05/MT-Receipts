@@ -35,6 +35,7 @@ import {
   RefreshCw,
   FileJson,
   FileSpreadsheet,
+  Upload,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -45,6 +46,7 @@ import { cn } from '@/lib/utils'
 import { EntryForm } from './_components/entry-form'
 import { EventForm } from '../_components/event-form'
 import { toast } from 'sonner'
+import { CSVImportModal } from '@/components/csv-import-modal'
 
 function exportToCSV(entries: EventEntry[], eventCode: string) {
   const csvData = entries.map((entry) => ({
@@ -118,6 +120,7 @@ export default function EventEntriesPage() {
   const [error, setError] = useState<string | null>(null)
   const [entryFormOpen, setEntryFormOpen] = useState(false)
   const [editFormOpen, setEditFormOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -245,7 +248,14 @@ export default function EventEntriesPage() {
               onClick={() => setEditFormOpen(true)}
             >
               <Pencil className='w-4 h-4' />
-              Edit
+            </Button>
+            <Button
+              size='sm'
+              variant='outline'
+              className='gap-1.5'
+              onClick={() => setImportModalOpen(true)}
+            >
+              <Upload className='w-4 h-4' />
             </Button>
             <Button
               size='sm'
@@ -406,6 +416,17 @@ export default function EventEntriesPage() {
           </CredenzaBody>
         </CredenzaContent>
       </Credenza>
+
+      <CSVImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        event={event}
+        existingEntries={entries.map((e) => ({
+          customerEmail: e.customer.email,
+          items: e.items,
+        }))}
+        onComplete={fetchEntries}
+      />
     </div>
   )
 }

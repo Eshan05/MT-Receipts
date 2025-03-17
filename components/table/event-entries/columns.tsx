@@ -6,7 +6,7 @@ import { DataTableColumnHeader } from '../data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 import { EventEntry } from './schema'
 import { ColumnDef } from '@tanstack/react-table'
-import { formatTime } from '@/utils/formatters'
+import { formatTime, formatPaymentMethod } from '@/utils/formatters'
 import {
   Banknote,
   CircleCheck,
@@ -335,7 +335,7 @@ export function createColumns({
         return (
           <Badge variant='outline' className={config.style}>
             <Icon className='size-3 mr-0.5' />
-            {method.toUpperCase()}
+            {formatPaymentMethod(method)}
           </Badge>
         )
       },
