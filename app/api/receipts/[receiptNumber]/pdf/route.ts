@@ -33,9 +33,8 @@ export async function GET(
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
     }
 
-    let qrCodeData: string | undefined
-    const showQrCode = true
-    if (showQrCode) {
+    let qrCodeData: string | undefined = receipt.qrCodeData
+    if (!qrCodeData) {
       const { generateReceiptQRCode } = await import('@/lib/qr-code')
       qrCodeData = await generateReceiptQRCode(receiptNumber, 'ACES')
     }

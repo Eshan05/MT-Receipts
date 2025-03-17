@@ -7,6 +7,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
@@ -36,6 +39,7 @@ import {
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { EventEntry } from './schema'
+import { getAllTemplateInfo } from '@/lib/templates'
 
 interface DataTableBulkActionsProps {
   selectedEntries: EventEntry[]
@@ -52,6 +56,7 @@ export function DataTableBulkActions({
 }: DataTableBulkActionsProps) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const templateInfo = getAllTemplateInfo()
 
   const selectedCount = selectedEntries.length
   const receiptNumbers = selectedEntries.map((e) => e.receiptNumber)
@@ -94,8 +99,11 @@ export function DataTableBulkActions({
     }
   }
 
-  const handleSendEmails = () =>
-    handleBulkAction('send emails', '/api/receipts/bulk/send-email')
+  const handleSendEmails = (templateSlug?: string) =>
+    handleBulkAction('send emails', '/api/receipts/bulk/send-email', 'POST', {
+      receiptNumbers,
+      templateSlug,
+    })
 
   const handleMarkSent = () =>
     handleBulkAction('mark as sent', '/api/receipts/bulk/mark-sent')
@@ -200,20 +208,34 @@ export function DataTableBulkActions({
 
           <div className='w-px h-5 bg-border mx-1' />
 
-          <Button
-            size='sm'
-            variant='outline'
-            className='h-7 gap-1'
-            onClick={handleSendEmails}
-            disabled={!hasPendingEmails || isProcessing !== null}
-          >
-            {isProcessing === 'send emails' ? (
-              <Loader2 className='w-3 h-3 animate-spin' />
-            ) : (
-              <Mail className='w-3 h-3' />
-            )}
-            <span className='max-md:hidden'>Email</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size='sm'
+                variant='outline'
+                className='h-7 gap-1'
+                disabled={!hasPendingEmails || isProcessing !== null}
+              >
+                {isProcessing === 'send emails' ? (
+                  <Loader2 className='w-3 h-3 animate-spin' />
+                ) : (
+                  <Mail className='w-3 h-3' />
+                )}
+                <span className='max-md:hidden'>Email</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              {templateInfo.map((template) => (
+                <DropdownMenuItem
+                  key={template.slug}
+                  onClick={() => handleSendEmails(template.slug)}
+                  disabled={isProcessing === 'send emails'}
+                >
+                  {template.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             size='sm'

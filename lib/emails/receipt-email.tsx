@@ -7,10 +7,13 @@ import {
   Text,
   Hr,
   Preview,
+  Section,
   Row,
   Column,
-  Section,
+  Img,
+  Link,
 } from '@react-email/components'
+import { Tailwind } from '@react-email/tailwind'
 import * as React from 'react'
 
 interface ReceiptItem {
@@ -47,287 +50,209 @@ export function ReceiptEmail({
   date,
   organizationName = 'ACES',
 }: ReceiptEmailProps) {
+  const paymentMethodLabels: Record<string, string> = {
+    cash: 'Cash',
+    upi: 'UPI',
+    card: 'Card',
+    other: 'Other',
+  }
+
   return (
     <Html>
-      <Head />
-      <Preview>
-        Receipt #{receiptNumber} - {eventName}
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Section style={headerSection}>
-            <Heading style={header}>{organizationName}</Heading>
-            <Text style={subHeader}>Official Receipt</Text>
-          </Section>
-
-          <Hr style={hr} />
-
-          <Section>
-            <Heading as='h2' style={receiptTitle}>
-              Receipt #{receiptNumber}
-            </Heading>
-            <Text style={dateText}>{date}</Text>
-          </Section>
-
-          <Section style={infoSection}>
-            <Row>
-              <Column style={infoColumn}>
-                <Text style={infoLabel}>Bill To:</Text>
-                <Text style={infoValue}>{customerName}</Text>
-                <Text style={infoValueSmall}>{customerEmail}</Text>
-              </Column>
-              <Column style={infoColumnRight}>
-                <Text style={infoLabel}>Event:</Text>
-                <Text style={infoValue}>{eventName}</Text>
-                <Text style={infoValueSmall}>Code: {eventCode}</Text>
-              </Column>
-            </Row>
-          </Section>
-
-          <Hr style={hr} />
-
-          <Section>
-            <Row style={tableHeader}>
-              <Column style={{ width: '40%' }}>
-                <Text style={tableHeaderText}>Item</Text>
-              </Column>
-              <Column style={{ width: '20%', textAlign: 'center' }}>
-                <Text style={tableHeaderText}>Qty</Text>
-              </Column>
-              <Column style={{ width: '20%', textAlign: 'right' }}>
-                <Text style={tableHeaderText}>Price</Text>
-              </Column>
-              <Column style={{ width: '20%', textAlign: 'right' }}>
-                <Text style={tableHeaderText}>Total</Text>
-              </Column>
-            </Row>
-
-            {items.map((item, index) => (
-              <Row key={index} style={tableRow}>
-                <Column style={{ width: '40%' }}>
-                  <Text style={tableItemName}>{item.name}</Text>
-                  {item.description && (
-                    <Text style={tableItemDesc}>{item.description}</Text>
-                  )}
+      <Tailwind>
+        <Head />
+        <Preview>
+          Your receipt #{receiptNumber} for {eventName} - {organizationName}
+        </Preview>
+        <Body className='bg-gray-50 font-sans'>
+          <Container className='bg-white my-8 mx-auto max-w-xl rounded-lg overflow-hidden shadow-sm'>
+            <Section className='bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-8'>
+              <Row>
+                <Column>
+                  <Heading className='text-white text-2xl font-bold m-0'>
+                    {organizationName}
+                  </Heading>
+                  <Text className='text-slate-400 text-sm m-0 mt-1'>
+                    Official Receipt
+                  </Text>
                 </Column>
-                <Column style={{ width: '20%', textAlign: 'center' }}>
-                  <Text style={tableValue}>{item.quantity}</Text>
-                </Column>
-                <Column style={{ width: '20%', textAlign: 'right' }}>
-                  <Text style={tableValue}>₹{item.price.toFixed(2)}</Text>
-                </Column>
-                <Column style={{ width: '20%', textAlign: 'right' }}>
-                  <Text style={tableValue}>₹{item.total.toFixed(2)}</Text>
+                <Column className='text-right'>
+                  <Section className='bg-white/10 rounded-lg px-3 py-2 inline-block'>
+                    <Text className='text-white/60 text-xs m-0 uppercase tracking-wider'>
+                      Receipt
+                    </Text>
+                    <Text className='text-white text-lg font-bold m-0 font-mono'>
+                      #{receiptNumber}
+                    </Text>
+                  </Section>
                 </Column>
               </Row>
-            ))}
-          </Section>
+            </Section>
 
-          <Hr style={hr} />
-
-          <Section style={totalSection}>
-            <Row>
-              <Column style={{ width: '60%' }}>
-                {paymentMethod && (
-                  <Text style={paymentMethodText}>
-                    Payment Method: {paymentMethod.toUpperCase()}
+            <Section className='px-8 py-6'>
+              <Row>
+                <Column className='w-1/2 pr-4'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0 mb-2'>
+                    Billed To
                   </Text>
-                )}
-              </Column>
-              <Column style={{ width: '40%', textAlign: 'right' }}>
-                <Text style={totalLabel}>Total Amount:</Text>
-                <Text style={totalValue}>₹{totalAmount.toFixed(2)}</Text>
-              </Column>
-            </Row>
-          </Section>
+                  <Text className='text-slate-900 font-semibold m-0 text-base'>
+                    {customerName}
+                  </Text>
+                  <Text className='text-slate-600 text-sm m-0 mt-1'>
+                    {customerEmail}
+                  </Text>
+                </Column>
+                <Column className='w-1/2 pl-4 text-right'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0 mb-2'>
+                    Event
+                  </Text>
+                  <Text className='text-slate-900 font-semibold m-0 text-base'>
+                    {eventName}
+                  </Text>
+                  <Text className='text-slate-600 text-sm m-0 mt-1'>
+                    Code: {eventCode}
+                  </Text>
+                </Column>
+              </Row>
+              <Row className='mt-4'>
+                <Column>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0 mb-1'>
+                    Date
+                  </Text>
+                  <Text className='text-slate-900 text-sm m-0'>{date}</Text>
+                </Column>
+              </Row>
+            </Section>
 
-          <Hr style={hr} />
+            <Hr className='border-gray-100 mx-8' />
 
-          <Section style={footerSection}>
-            <Text style={footerText}>Thank you for your purchase!</Text>
-            <Text style={footerTextSmall}>
-              This is a computer-generated receipt and does not require a
-              signature.
-            </Text>
-            <Text style={footerTextSmall}>
-              For any queries, please contact us at{' '}
-              {organizationName.toLowerCase()}@example.com
-            </Text>
-          </Section>
-        </Container>
-      </Body>
+            <Section className='px-8 py-4'>
+              <Row className='bg-slate-50 rounded-t-lg'>
+                <Column className='w-2/5 px-4 py-3'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0'>
+                    Item
+                  </Text>
+                </Column>
+                <Column className='w-1/5 px-2 py-3 text-center'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0'>
+                    Qty
+                  </Text>
+                </Column>
+                <Column className='w-1/5 px-2 py-3 text-right'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0'>
+                    Price
+                  </Text>
+                </Column>
+                <Column className='w-1/5 px-4 py-3 text-right'>
+                  <Text className='text-slate-500 text-xs uppercase tracking-wider font-semibold m-0'>
+                    Total
+                  </Text>
+                </Column>
+              </Row>
+
+              {items.map((item, index) => (
+                <Row
+                  key={index}
+                  style={{
+                    borderBottom:
+                      index === items.length - 1 ? 'none' : '1px solid #f1f5f9',
+                  }}
+                >
+                  <Column className='w-2/5 px-4 py-3'>
+                    <Text className='text-slate-900 font-medium m-0 text-sm'>
+                      {item.name}
+                    </Text>
+                    {item.description && (
+                      <Text className='text-slate-500 text-xs m-0 mt-0.5'>
+                        {item.description}
+                      </Text>
+                    )}
+                  </Column>
+                  <Column className='w-1/5 px-2 py-3 text-center'>
+                    <Text className='text-slate-700 m-0 text-sm'>
+                      {item.quantity}
+                    </Text>
+                  </Column>
+                  <Column className='w-1/5 px-2 py-3 text-right'>
+                    <Text className='text-slate-700 m-0 text-sm'>
+                      ₹{item.price.toLocaleString('en-IN')}
+                    </Text>
+                  </Column>
+                  <Column className='w-1/5 px-4 py-3 text-right'>
+                    <Text className='text-slate-900 font-medium m-0 text-sm'>
+                      ₹{item.total.toLocaleString('en-IN')}
+                    </Text>
+                  </Column>
+                </Row>
+              ))}
+            </Section>
+
+            <Section className='px-8 py-5 bg-gradient-to-r from-slate-900 to-slate-800'>
+              <Row>
+                <Column className='w-3/5'>
+                  {paymentMethod && (
+                    <Section>
+                      <Text className='text-slate-400 text-xs uppercase tracking-wider font-semibold m-0 mb-1'>
+                        Payment Method
+                      </Text>
+                      <Text className='text-white font-medium m-0'>
+                        {paymentMethodLabels[paymentMethod] || paymentMethod}
+                      </Text>
+                    </Section>
+                  )}
+                </Column>
+                <Column className='w-2/5 text-right'>
+                  <Text className='text-slate-400 text-xs uppercase tracking-wider font-semibold m-0 mb-1'>
+                    Total Amount
+                  </Text>
+                  <Text className='text-white text-2xl font-bold m-0'>
+                    ₹{totalAmount.toLocaleString('en-IN')}
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+
+            <Section className='px-8 py-6 text-center'>
+              <Text className='text-slate-900 font-semibold text-base m-0 mb-2'>
+                Thank you for your purchase!
+              </Text>
+              <Text className='text-slate-500 text-sm m-0 mb-4'>
+                Your receipt is attached to this email as a PDF document.
+              </Text>
+              <Section className='bg-slate-50 rounded-lg p-4'>
+                <Text className='text-slate-500 text-xs m-0'>
+                  This is a computer-generated receipt and does not require a
+                  signature.
+                </Text>
+                <Text className='text-slate-500 text-xs m-0 mt-1'>
+                  For any queries, please contact us at{' '}
+                  <Link
+                    href={`mailto:${organizationName.toLowerCase()}@example.com`}
+                    className='text-slate-700 underline'
+                  >
+                    {organizationName.toLowerCase()}@example.com
+                  </Link>
+                </Text>
+              </Section>
+            </Section>
+
+            <Hr className='border-gray-100 mx-8' />
+
+            <Section className='px-8 py-4 bg-slate-50'>
+              <Row>
+                <Column className='text-center'>
+                  <Text className='text-slate-400 text-xs m-0'>
+                    © {new Date().getFullYear()} {organizationName}. All rights
+                    reserved.
+                  </Text>
+                </Column>
+              </Row>
+            </Section>
+          </Container>
+        </Body>
+      </Tailwind>
     </Html>
   )
-}
-
-const main = {
-  backgroundColor: '#f6f9fc',
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-}
-
-const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  padding: '20px 0 48px',
-  marginBottom: '64px',
-  maxWidth: '600px',
-}
-
-const headerSection = {
-  padding: '32px 48px',
-  textAlign: 'center' as const,
-  backgroundColor: '#1a1a2e',
-}
-
-const header = {
-  color: '#ffffff',
-  fontSize: '32px',
-  fontWeight: 'bold',
-  margin: '0 0 8px',
-}
-
-const subHeader = {
-  color: '#a0a0a0',
-  fontSize: '14px',
-  margin: '0',
-}
-
-const hr = {
-  borderColor: '#e6e8eb',
-  margin: '20px 48px',
-}
-
-const receiptTitle = {
-  fontSize: '24px',
-  fontWeight: 'bold',
-  color: '#1a1a2e',
-  margin: '0 0 8px 0',
-  paddingLeft: '48px',
-}
-
-const dateText = {
-  color: '#666666',
-  fontSize: '14px',
-  margin: '0',
-  paddingLeft: '48px',
-}
-
-const infoSection = {
-  padding: '0 48px',
-}
-
-const infoColumn = {
-  width: '50%',
-  verticalAlign: 'top' as const,
-}
-
-const infoColumnRight = {
-  width: '50%',
-  verticalAlign: 'top' as const,
-  textAlign: 'right' as const,
-}
-
-const infoLabel = {
-  color: '#666666',
-  fontSize: '12px',
-  fontWeight: 'bold',
-  textTransform: 'uppercase' as const,
-  margin: '0 0 4px 0',
-}
-
-const infoValue = {
-  color: '#1a1a2e',
-  fontSize: '16px',
-  fontWeight: '600',
-  margin: '0 0 4px 0',
-}
-
-const infoValueSmall = {
-  color: '#666666',
-  fontSize: '14px',
-  margin: '0',
-}
-
-const tableHeader = {
-  backgroundColor: '#f6f9fc',
-  padding: '12px 48px',
-}
-
-const tableHeaderText = {
-  color: '#666666',
-  fontSize: '12px',
-  fontWeight: 'bold',
-  textTransform: 'uppercase' as const,
-  margin: '0',
-}
-
-const tableRow = {
-  padding: '16px 48px',
-  borderBottom: '1px solid #e6e8eb',
-}
-
-const tableItemName = {
-  color: '#1a1a2e',
-  fontSize: '14px',
-  fontWeight: '600',
-  margin: '0 0 2px 0',
-}
-
-const tableItemDesc = {
-  color: '#666666',
-  fontSize: '12px',
-  margin: '0',
-}
-
-const tableValue = {
-  color: '#1a1a2e',
-  fontSize: '14px',
-  margin: '0',
-}
-
-const totalSection = {
-  padding: '20px 48px',
-  backgroundColor: '#f6f9fc',
-}
-
-const paymentMethodText = {
-  color: '#666666',
-  fontSize: '12px',
-  margin: '0',
-}
-
-const totalLabel = {
-  color: '#666666',
-  fontSize: '12px',
-  fontWeight: 'bold',
-  textTransform: 'uppercase' as const,
-  margin: '0 0 4px 0',
-}
-
-const totalValue = {
-  color: '#1a1a2e',
-  fontSize: '24px',
-  fontWeight: 'bold',
-  margin: '0',
-}
-
-const footerSection = {
-  padding: '32px 48px',
-  textAlign: 'center' as const,
-}
-
-const footerText = {
-  color: '#1a1a2e',
-  fontSize: '16px',
-  fontWeight: '600',
-  margin: '0 0 16px 0',
-}
-
-const footerTextSmall = {
-  color: '#666666',
-  fontSize: '12px',
-  margin: '0 0 4px 0',
 }
 
 export default ReceiptEmail

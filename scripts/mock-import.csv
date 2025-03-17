@@ -12,3 +12,4 @@ Divya Sharma,divya.sharma@gmail.com,+91 21098 76543,Ahmedabad,"Workshop Kit x1 @
 Rahul Sharma,rahul.sharma@gmail.com,+91 98765 43210,Mumbai,"Mug x1 @150",cash,Duplicate test,no
 Invalid Test,not-an-email,+91 12345 67890,Test,"T-Shirt x1 @500",cash,This should error,no
 Missing Items,test@example.com,+91 11111 11111,Test,,cash,No items here,no
+Unknown Item Test,unknown@test.com,+91 22222 22222,Test,"Random Item x1 @100; T-Shirt x1 @500",upi,Unknown item warning test,no

@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       totalAmount,
       paymentMethod,
       emailSent,
+      sendEmail,
       notes,
     } = body
 
@@ -58,6 +59,8 @@ export async function POST(request: NextRequest) {
       })
     )
 
+    const shouldSendEmail = sendEmail && !emailSent
+
     const receipt = await Receipt.create({
       receiptNumber,
       event: eventId,
@@ -74,6 +77,19 @@ export async function POST(request: NextRequest) {
       emailSentAt: emailSent ? new Date() : undefined,
       notes,
     })
+
+    // If sendEmail is true, trigger email sending
+    if (shouldSendEmail) {
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/receipts/${receiptNumber}/send-email`,
+          { method: 'POST' }
+        )
+      } catch (emailError) {
+        console.error('Failed to send email:', emailError)
+        // Don't fail the request if email fails
+      }
+    }
 
     return NextResponse.json({
       message: 'Receipt created successfully',

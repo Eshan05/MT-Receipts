@@ -85,6 +85,7 @@ export function CSVImportModal({
     success: number
     failed: number
   }>({ success: 0, failed: 0 })
+  const [sendEmails, setSendEmails] = useState(false)
 
   const resetState = useCallback(() => {
     setStep('upload')
@@ -94,6 +95,7 @@ export function CSVImportModal({
     setOverrideDuplicates(new Set())
     setImportProgress({ current: 0, total: 0 })
     setImportResults({ success: 0, failed: 0 })
+    setSendEmails(false)
   }, [])
 
   const handleFileUpload = useCallback(
@@ -101,7 +103,7 @@ export function CSVImportModal({
       const reader = new FileReader()
       reader.onload = (e) => {
         const text = e.target?.result as string
-        const result = parseCSV(text)
+        const result = parseCSV(text, event.items)
         setValidationResult(result)
 
         if (result.rows.length > 0) {
@@ -181,11 +183,16 @@ export function CSVImportModal({
 
   const getRowStatus = (
     row: ParsedCSVRow
-  ): { type: 'valid' | 'error' | 'duplicate'; label: string } => {
+  ): { type: 'valid' | 'error' | 'duplicate' | 'warning'; label: string } => {
     const hasError = validationResult?.errors.some(
       (e) => e.rowNumber === row.rowNumber
     )
     if (hasError) return { type: 'error', label: 'Error' }
+
+    const hasWarning = validationResult?.warnings.some(
+      (w) => w.rowNumber === row.rowNumber
+    )
+    if (hasWarning) return { type: 'warning', label: 'Warning' }
 
     const dupe = duplicates.find((d) => d.rowNumber === row.rowNumber)
     if (dupe) {
@@ -206,13 +213,14 @@ export function CSVImportModal({
     )
   }
 
-  const handleImport = async () => {
+  const handleImport = async (shouldSendEmails: boolean) => {
     const rows = getSelectedRows()
     if (rows.length === 0) {
       toast.error('No rows selected for import')
       return
     }
 
+    setSendEmails(shouldSendEmails)
     setStep('importing')
     setImportProgress({ current: 0, total: rows.length })
     let success = 0
@@ -243,7 +251,8 @@ export function CSVImportModal({
               0
             ),
             paymentMethod: row.paymentMethod,
-            emailSent: row.emailSent,
+            emailSent: shouldSendEmails ? false : row.emailSent,
+            sendEmail: shouldSendEmails,
             notes: row.notes,
           }),
         })
@@ -285,7 +294,16 @@ export function CSVImportModal({
         (e) => e.rowNumber === row.rowNumber
       )
       const isDupe = duplicates.some((d) => d.rowNumber === row.rowNumber)
-      return !hasError && !isDupe
+      const hasWarning = validationResult.warnings.some(
+        (w) => w.rowNumber === row.rowNumber
+      )
+      return !hasError && !isDupe && !hasWarning
+    }).length || 0
+  const warningRowsCount =
+    validationResult?.rows.filter((row) => {
+      return validationResult.warnings.some(
+        (w) => w.rowNumber === row.rowNumber
+      )
     }).length || 0
 
   const formatPaymentMethod = (method: string): string => {
@@ -323,7 +341,7 @@ export function CSVImportModal({
             <Button
               variant='outline'
               className='w-full gap-2'
-              onClick={() => downloadCSVTemplate(event.eventCode)}
+              onClick={() => downloadCSVTemplate(event.eventCode, event.items)}
             >
               <Download className='w-4 h-4' />
               Download Template
@@ -403,6 +421,12 @@ export function CSVImportModal({
                   {duplicates.length} duplicates
                 </Badge>
               )}
+              {validationResult.warnings.length > 0 && (
+                <Badge className='bg-orange-500/10 text-orange-600 border-orange-500/30 gap-1'>
+                  <AlertCircle className='w-3 h-3' />
+                  {validationResult.warnings.length} warnings
+                </Badge>
+              )}
             </div>
 
             <div className='flex items-center gap-2'>
@@ -418,7 +442,11 @@ export function CSVImportModal({
                     const isDupe = duplicates.some(
                       (d) => d.rowNumber === row.rowNumber
                     )
-                    selection[row.rowNumber] = !hasError && !isDupe
+                    const hasWarning = validationResult.warnings.some(
+                      (w) => w.rowNumber === row.rowNumber
+                    )
+                    selection[row.rowNumber] =
+                      !hasError && !isDupe && !hasWarning
                   })
                   setRowSelection(selection)
                 }}
@@ -447,9 +475,9 @@ export function CSVImportModal({
               </Button>
             </div>
 
-            <ScrollArea className='h-72 rounded border'>
-              <div className='w-full'>
-                <Table>
+            <ScrollArea className='h-72 rounded border no-scrollbar'>
+              <div className='w-full no-scrollbar'>
+                <Table scrollbar={false}>
                   <TableHeader>
                     <TableRow>
                       <TableHead className='w-8 sticky top-0 bg-background'></TableHead>
@@ -480,10 +508,17 @@ export function CSVImportModal({
                     {validationResult.rows.map((row) => {
                       const status = getRowStatus(row)
                       const hasError = status.type === 'error'
+                      const hasWarning = status.type === 'warning'
                       const isDupe = status.type === 'duplicate'
                       const isOverridden = overrideDuplicates.has(row.rowNumber)
                       const rowErrors = validationResult.errors.filter(
                         (e) => e.rowNumber === row.rowNumber
+                      )
+                      const rowWarnings = validationResult.warnings.filter(
+                        (e) => e.rowNumber === row.rowNumber
+                      )
+                      const invalidItems = validationResult.invalidItems.get(
+                        row.rowNumber
                       )
 
                       const paymentConfig: Record<
@@ -516,6 +551,7 @@ export function CSVImportModal({
                           key={row.rowNumber}
                           className={cn(
                             hasError && 'bg-red-500/5',
+                            hasWarning && 'bg-orange-500/5',
                             isDupe && !isOverridden && 'bg-yellow-500/5'
                           )}
                         >
@@ -530,7 +566,7 @@ export function CSVImportModal({
                             {row.rowNumber}
                           </TableCell>
                           <TableCell>
-                            <span className='text-sm truncate max-w-24 block'>
+                            <span className='text-xs truncate max-w-24 block'>
                               {row.customerName}
                             </span>
                           </TableCell>
@@ -573,6 +609,12 @@ export function CSVImportModal({
                                 Error
                               </Badge>
                             )}
+                            {status.type === 'warning' && (
+                              <Badge className='bg-orange-500/10 text-orange-600 border-orange-500/30 gap-1'>
+                                <AlertCircle className='w-3 h-3' />
+                                Warning
+                              </Badge>
+                            )}
                             {status.type === 'duplicate' && (
                               <Badge
                                 className={cn(
@@ -593,11 +635,16 @@ export function CSVImportModal({
                                 {rowErrors[0].message}
                               </span>
                             )}
+                            {status.type === 'warning' && invalidItems && (
+                              <span className='text-xs text-orange-600'>
+                                Unknown: {invalidItems.join(', ')}
+                              </span>
+                            )}
                             {isDupe && !isOverridden && (
                               <Button
                                 size='sm'
                                 variant='ghost'
-                                className='h-6 text-xs text-blue-600 hover:text-blue-700'
+                                className='h-6 text-xs text-white hover:text-blue-700'
                                 onClick={() =>
                                   toggleDuplicateOverride(row.rowNumber)
                                 }
@@ -708,20 +755,21 @@ export function CSVImportModal({
             </div>
 
             <div className='rounded-lg p-2 flex gap-2'>
-              <AlertTriangle className='w-4 h-4 text-yellow-600 shrink-0 mt-0.5' />
+              <AlertTriangle className='size-4 text-yellow-600 shrink-0 mt-0.5' />
               <div className='text-sm'>
-                <p className='font-medium text-yellow-600'>Before importing:</p>
-                <ul className='text-2xs text-muted-foreground mt-1 space-y-0.5'>
-                  <li>• Receipts will be generated automatically</li>
+                <p className='font-medium text-yellow-600'>Note:</p>
+                <ul className='text-2xs text-muted-foreground mt-1 space-y-0.5 -ml-1'>
+                  <li>• &nbsp;Receipts will be generated automatically</li>
                   <li>
-                    • Emails are sent for entries not marked as 'Email sent'
+                    • &nbsp;Choose "Save Only" to import without sending emails
                   </li>
-                  <li>• This action cannot be undone</li>
+                  <li>• &nbsp;The second button imports and send receipts</li>
+                  <li>• &nbsp;This action cannot be undone</li>
                 </ul>
               </div>
             </div>
 
-            <div className='flex justify-between pt-2'>
+            <div className='flex justify-between gap-2 pt-2'>
               <Button
                 variant='outline'
                 size='sm'
@@ -729,9 +777,18 @@ export function CSVImportModal({
               >
                 Back
               </Button>
-              <Button size='sm' onClick={handleImport}>
-                Import {selectedCount} Entries
-              </Button>
+              <div className='flex gap-2'>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => handleImport(false)}
+                >
+                  Save Only
+                </Button>
+                <Button size='sm' onClick={() => handleImport(true)}>
+                  Save & Send Emails
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -748,6 +805,11 @@ export function CSVImportModal({
             <p className='text-sm text-muted-foreground'>
               {importProgress.current} of {importProgress.total}
             </p>
+            {sendEmails && (
+              <p className='text-xs text-muted-foreground'>
+                Emails will be sent after import
+              </p>
+            )}
             <div className='flex justify-center gap-4'>
               {importResults.success > 0 && (
                 <Badge className='bg-green-500/10 text-green-600 border-green-500/30 gap-1'>

@@ -39,6 +39,12 @@ export interface CSVValidationResult {
   duplicates: DuplicateInfo[]
   validRowCount: number
   invalidRowCount: number
+  invalidItems: Map<number, string[]>
+}
+
+export interface EventItem {
+  name: string
+  price?: number
 }
 
 function parseItemsString(itemsStr: string): ParsedCSVRow['items'] {
@@ -91,7 +97,10 @@ function normalizePaymentMethod(
   return null
 }
 
-export function parseCSV(csvText: string): CSVValidationResult {
+export function parseCSV(
+  csvText: string,
+  eventItems?: EventItem[]
+): CSVValidationResult {
   const lines = csvText.split(/\r?\n/).filter((line) => line.trim())
   const result: CSVValidationResult = {
     rows: [],
@@ -100,6 +109,7 @@ export function parseCSV(csvText: string): CSVValidationResult {
     duplicates: [],
     validRowCount: 0,
     invalidRowCount: 0,
+    invalidItems: new Map(),
   }
 
   if (lines.length < 2) {
@@ -111,6 +121,10 @@ export function parseCSV(csvText: string): CSVValidationResult {
     })
     return result
   }
+
+  const eventItemNames = eventItems
+    ? eventItems.map((i) => i.name.trim())
+    : null
 
   // Parse header
   const headerLine = lines[0]
@@ -209,6 +223,28 @@ export function parseCSV(csvText: string): CSVValidationResult {
         severity: 'error',
       })
       hasError = true
+    }
+
+    // Validate items against event items
+    if (items.length > 0 && eventItemNames) {
+      const invalidItemNames: string[] = []
+      for (const item of items) {
+        const itemFound = eventItemNames.some(
+          (eventName) => eventName === item.name.trim()
+        )
+        if (!itemFound) {
+          invalidItemNames.push(item.name)
+        }
+      }
+      if (invalidItemNames.length > 0) {
+        result.warnings.push({
+          rowNumber,
+          field: 'items',
+          message: `Items not in event: ${invalidItemNames.join(', ')}`,
+          severity: 'warning',
+        })
+        result.invalidItems.set(rowNumber, invalidItemNames)
+      }
     }
 
     // Validate payment method

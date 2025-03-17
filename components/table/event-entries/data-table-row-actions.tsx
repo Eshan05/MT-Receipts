@@ -17,6 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -46,7 +49,7 @@ import { EventEntry } from './schema'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { PDFViewer } from '@react-pdf/renderer'
-import { getTemplateComponent } from '@/lib/templates'
+import { getTemplateComponent, getAllTemplateInfo } from '@/lib/templates'
 import { useMemo } from 'react'
 import { IEvent } from '@/models/event.model'
 import { EntryForm } from '@/app/(root)/events/[code]/_components/entry-form'
@@ -67,14 +70,17 @@ export function DataTableRowActions<TData>({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const entry = row.original as EventEntry
+  const templateInfo = getAllTemplateInfo()
 
-  const handleSendEmail = async () => {
+  const handleSendEmail = async (templateSlug?: string) => {
     if (!entry.receiptNumber) return
     try {
       const response = await fetch(
         `/api/receipts/${entry.receiptNumber}/send-email`,
         {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateSlug }),
         }
       )
       if (!response.ok) throw new Error('Failed to send email')
@@ -178,10 +184,22 @@ export function DataTableRowActions<TData>({
             <Eye className='mr-1' />
             View Receipt
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSendEmail}>
-            <Mail className='mr-1' />
-            {entry.emailSent ? 'Resend Email' : 'Send Email'}
-          </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Mail className='mr-1' />
+              {entry.emailSent ? 'Resend Email' : 'Send Email'}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {templateInfo.map((template) => (
+                <DropdownMenuItem
+                  key={template.slug}
+                  onClick={() => handleSendEmail(template.slug)}
+                >
+                  {template.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem onClick={handleDownloadPdf}>
             <Download className='mr-1' />
             Download PDF

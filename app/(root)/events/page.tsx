@@ -105,8 +105,13 @@ interface ItemCounts {
   }
 }
 
+interface EntryCounts {
+  [eventId: string]: number
+}
+
 export default function EventsPage() {
   const [itemCounts, setItemCounts] = useState<ItemCounts>({})
+  const [entryCounts, setEntryCounts] = useState<EntryCounts>({})
   const [open, setOpen] = useState(false)
   const [editEvent, setEditEvent] = useState<IEvent | null>(null)
   const [deleteEvent, setDeleteEvent] = useState<IEvent | null>(null)
@@ -177,8 +182,26 @@ export default function EventsPage() {
       }
     }
 
+    const fetchEntryCounts = async () => {
+      const eventIds = events.map((e) => e._id?.toString()).filter(Boolean)
+      if (eventIds.length > 0) {
+        try {
+          const countsResponse = await fetch(
+            `/api/events/entries-count?eventIds=${eventIds.join(',')}`
+          )
+          if (countsResponse.ok) {
+            const countsData = await countsResponse.json()
+            setEntryCounts(countsData.counts)
+          }
+        } catch (error) {
+          console.error('Error fetching entry counts:', error)
+        }
+      }
+    }
+
     if (events.length > 0) {
       fetchItemCounts()
+      fetchEntryCounts()
     }
   }, [events])
 
@@ -664,6 +687,7 @@ export default function EventsPage() {
                 key={event._id?.toString()}
                 event={event}
                 itemCounts={itemCounts[event._id?.toString() || ''] || {}}
+                entryCount={entryCounts[event._id?.toString() || ''] || 0}
                 onEdit={openEditDialog}
                 onDelete={openDeleteDialog}
                 onShare={handleShareEvent}
@@ -953,6 +977,7 @@ export default function EventsPage() {
 function EventCard({
   event,
   itemCounts,
+  entryCount,
   onEdit,
   onDelete,
   onShare,
@@ -962,6 +987,7 @@ function EventCard({
 }: {
   event: IEvent
   itemCounts: Record<string, number>
+  entryCount: number
   onEdit: (e: React.MouseEvent, event: IEvent) => void
   onDelete: (e: React.MouseEvent, event: IEvent) => void
   onShare: (e: React.MouseEvent, event: IEvent) => void
@@ -1170,6 +1196,10 @@ function EventCard({
                   </div>
                 </PopoverContent>
               </Popover>
+              <span className='flex items-center gap-1'>
+                <Users className='w-3 h-3' />
+                {entryCount}
+              </span>
               <span className='flex items-center gap-1'>
                 <Calendar className='w-3 h-3' />
                 {formatDate(new Date(event.createdAt))}

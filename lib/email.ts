@@ -6,6 +6,7 @@ import {
   streamToBuffer,
   type RenderReceiptOptions,
 } from '@/lib/pdf/template-renderer'
+import { generateReceiptQRCode } from '@/lib/qr-code'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -42,6 +43,7 @@ export interface SendReceiptOptions {
   organizationName?: string
   notes?: string
   qrCodeData?: string
+  templateSlug?: string
 }
 
 export async function sendReceiptEmail({
@@ -63,6 +65,7 @@ export async function sendReceiptEmail({
   organizationName = 'ACES',
   notes,
   qrCodeData,
+  templateSlug,
 }: SendReceiptOptions) {
   const date = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -88,6 +91,14 @@ export async function sendReceiptEmail({
       })
     )
 
+    let finalQrCodeData = qrCodeData
+    if (!finalQrCodeData) {
+      finalQrCodeData = await generateReceiptQRCode(
+        receiptNumber,
+        organizationName
+      )
+    }
+
     const renderOptions: RenderReceiptOptions = {
       receiptNumber,
       customer: {
@@ -101,7 +112,7 @@ export async function sendReceiptEmail({
         name: eventName,
         code: eventCode,
         type: eventType,
-        templateId: eventTemplateId,
+        templateId: templateSlug || eventTemplateId,
         location: eventLocation,
         startDate: eventStartDate,
         endDate: eventEndDate,
@@ -111,7 +122,7 @@ export async function sendReceiptEmail({
       paymentMethod,
       date,
       notes,
-      qrCodeData,
+      qrCodeData: finalQrCodeData,
     }
 
     const { stream } = await renderReceiptPDF(renderOptions)

@@ -77,11 +77,30 @@ ${exampleRow}
 ${descriptions}`
 }
 
-export function downloadCSVTemplate(eventName: string) {
+export function downloadCSVTemplate(
+  eventName: string,
+  eventItems?: { name: string; price?: number }[]
+) {
   const headers = csvTemplateFields.map((f) => f.label).join(',')
-  const exampleRow = csvTemplateFields
-    .map((f) => (f.required ? f.example : ''))
-    .join(',')
+
+  let exampleItems = 'Item x1 @100'
+  if (eventItems && eventItems.length > 0) {
+    exampleItems = eventItems
+      .slice(0, 2)
+      .map((item) => `${item.name} x1 @${item.price || 100}`)
+      .join('; ')
+  }
+
+  const exampleRow = [
+    'John Doe',
+    'john@example.com',
+    '+91 9876543210',
+    'Mumbai, India',
+    exampleItems,
+    'cash',
+    '',
+    'no',
+  ].join(',')
 
   const template = `${headers}
 ${exampleRow}`

@@ -22,6 +22,11 @@ import {
   CredenzaTitle,
 } from '@/components/ui/credenza'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { typeIcons, typeStyles } from '@/utils/mappings'
 import { IEvent } from '@/models/event.model'
 import {
@@ -36,6 +41,7 @@ import {
   FileJson,
   FileSpreadsheet,
   Upload,
+  DollarSign,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -47,6 +53,7 @@ import { EntryForm } from './_components/entry-form'
 import { EventForm } from '../_components/event-form'
 import { toast } from 'sonner'
 import { CSVImportModal } from '@/components/csv-import-modal'
+import { iconMap, defaultIcons } from '@/utils/mappings'
 
 function exportToCSV(entries: EventEntry[], eventCode: string) {
   const csvData = entries.map((entry) => ({
@@ -283,17 +290,45 @@ export default function EventEntriesPage() {
       </header>
 
       <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>
-        <Card className='gap-2'>
-          <CardHeader className=''>
-            <CardDescription className='flex items-center gap-1.5'>
-              <Package className='w-3.5 h-3.5' />
-              Items
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className='text-2xl font-semibold'>{event.items.length}</p>
-          </CardContent>
-        </Card>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Card className='gap-2 cursor-pointer hover:bg-muted/50 transition-colors'>
+              <CardHeader className=''>
+                <CardDescription className='flex items-center gap-1.5'>
+                  <Package className='w-3.5 h-3.5' />
+                  Items
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className='text-2xl font-semibold'>{event.items.length}</p>
+              </CardContent>
+            </Card>
+          </PopoverTrigger>
+          <PopoverContent align='start' className='w-56 p-1.5 gap-2'>
+            <div className='px-2 py-1.5 border-b border-border/50'>
+              <p className='text-xs font-medium'>Items</p>
+            </div>
+            <div className=''>
+              {event.items.map((item, idx) => {
+                const ItemIcon = getItemIcon(item.name)
+                return (
+                  <div
+                    key={idx}
+                    className='px-2 py-1 flex items-center gap-1.5 rounded hover:bg-muted/50'
+                  >
+                    <ItemIcon className='w-3 h-3 text-muted-foreground shrink-0' />
+                    <span className='text-2xs flex-1 truncate'>
+                      {item.name}
+                    </span>
+                    <span className='text-tiny text-muted-foreground font-mono'>
+                      ₹{item.price}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
         <Card className='gap-2'>
           <CardHeader className=''>
             <CardDescription className='flex items-center gap-1.5'>
@@ -429,4 +464,24 @@ export default function EventEntriesPage() {
       />
     </div>
   )
+}
+
+function hashCode(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash
+  }
+  return hash
+}
+
+function getItemIcon(name: string): IconType {
+  const lowerName = name.toLowerCase()
+  for (const [keyword, icon] of Object.entries(iconMap)) {
+    if (lowerName.includes(keyword)) return icon
+  }
+  return defaultIcons[
+    Math.floor(Math.abs(hashCode(name)) % defaultIcons.length)
+  ]
 }
