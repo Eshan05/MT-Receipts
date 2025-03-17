@@ -50,6 +50,8 @@ export function DataTable<TData, TValue>({
     React.useState<VisibilityState>({
       receiptNumber: true,
       createdBy: false,
+      customerPhone: false,
+      itemNames: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -90,7 +92,7 @@ export function DataTable<TData, TValue>({
   return (
     <>
       <div className='space-y-4'>
-        <DataTableToolbar table={table} />
+        <DataTableToolbar table={table} event={event} />
         <div className='rounded-md'>
           <ScrollArea className='w-full'>
             <Table>

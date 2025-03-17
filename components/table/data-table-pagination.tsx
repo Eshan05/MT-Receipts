@@ -25,7 +25,7 @@ export function DataTablePagination<TData>({
   return (
     <div className='flex items-center justify-between px-2 w-full overflow-x-scroll no-scrollbar'>
       {/* Selected */}
-      <div className='flex-1 text-sm text-muted-foreground'>
+      <div className='flex-1 text-xs text-muted-foreground'>
         {table.getFilteredSelectedRowModel().rows.length} of{' '}
         {table.getFilteredRowModel().rows.length} row(s)
         <span className='lg:inline hidden'> selected</span>.
@@ -36,7 +36,7 @@ export function DataTablePagination<TData>({
         <div className='flex items-center lg:justify-end space-x-6 min-w-[500px] overflow-x-auto'>
           {/* Rows per page */}
           <div className='flex items-center space-x-2 w-[150px] line-clamp-1'>
-            <p className='text-sm font-medium text-pretty'>Rows per page</p>
+            <p className='text-xs font-medium text-pretty'>Rows per page</p>
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
@@ -59,7 +59,7 @@ export function DataTablePagination<TData>({
           </div>
           {/* ROws per page end */}
           {/* Page number */}
-          <div className='flex w-[100px] items-center justify-center text-sm font-medium'>
+          <div className='flex w-[100px] items-center justify-center text-xs font-medium'>
             Page {table.getState().pagination.pageIndex + 1} /{' '}
             {table.getPageCount()}
           </div>

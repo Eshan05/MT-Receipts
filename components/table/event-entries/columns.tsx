@@ -138,14 +138,6 @@ export function createColumns({
                   {customer.email}
                 </span>
               </div>
-              {customer.phone && (
-                <div className='flex items-center gap-1 min-w-0'>
-                  <Phone className='size-3 text-muted-foreground shrink-0' />
-                  <span className='truncate text-xs text-muted-foreground'>
-                    {customer.phone}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         )
@@ -153,6 +145,20 @@ export function createColumns({
       enableSorting: true,
       enableHiding: false,
       accessorFn: (row) => row.customer.name,
+    },
+    {
+      accessorKey: 'customerPhone',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Phone' />
+      ),
+      accessorFn: (row) => row.customer.phone || '',
+      cell: ({ row }) => {
+        const phone = row.original.customer.phone
+        if (!phone) return <span className='text-muted-foreground'>-</span>
+        return <span className='font-mono text-xs'>{phone}</span>
+      },
+      enableSorting: true,
+      enableHiding: true,
     },
     {
       accessorKey: 'receiptNumber',
@@ -194,14 +200,15 @@ export function createColumns({
 
         if (items.length <= 2) {
           return (
-            <div className='flex flex-wrap gap-1 max-w-50'>
+            <div className='flex flex-wrap gap-1 max-w-50 w-min'>
               {items.map((item, index) => {
                 const Icon = getIconForName(item.name)
                 return (
                   <Badge
                     key={`${item.name}-${index}`}
                     variant='secondary'
-                    className='gap-1 text-xs font-normal whitespace-nowrap'
+                    title={`${item.name} x${item.quantity}`}
+                    className='gap-1 text-tiny font-normal whitespace-nowrap'
                   >
                     {createElement(Icon, { className: 'size-3' })}
                     <span className='truncate max-w-14'>{item.name}</span>
@@ -284,6 +291,20 @@ export function createColumns({
       },
       enableSorting: false,
       enableHiding: true,
+    },
+    {
+      accessorKey: 'itemNames',
+      header: () => null,
+      accessorFn: (row) => row.items.map((item) => item.name),
+      cell: () => null,
+      enableSorting: false,
+      enableHiding: true,
+      filterFn: (row, id, value) => {
+        const rowValue = row.getValue(id) as string[]
+        const filterValue = value as string[]
+        if (!filterValue || filterValue.length === 0) return true
+        return filterValue.some((item) => rowValue.includes(item))
+      },
     },
     {
       accessorKey: 'totalAmount',

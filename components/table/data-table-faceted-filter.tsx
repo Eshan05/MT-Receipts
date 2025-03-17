@@ -27,6 +27,7 @@ interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>
   title?: string
   buttonClasses?: string
+  popoverWidth?: string
   options: {
     label: string
     value: string
@@ -39,6 +40,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   title,
   buttonClasses,
   options,
+  popoverWidth,
 }: DataTableFacetedFilterProps<TData, TValue>) {
   const facets = column?.getFacetedUniqueValues() // Keep
   const selectedValues = new Set(
@@ -94,7 +96,10 @@ export function DataTableFacetedFilter<TData, TValue>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-50 p-0' align='start'>
+      <PopoverContent
+        className={popoverWidth ? `${popoverWidth} p-0` : 'w-50 p-0'}
+        align='start'
+      >
         <Command>
           <CommandInput placeholder={title} />
           <CommandList>
