@@ -101,30 +101,33 @@ export function DataTableBulkActions({
   }
 
   const handleSendEmails = (templateSlug?: string) =>
-    handleBulkAction('send emails', '/api/receipts/bulk/send-email', 'POST', {
-      receiptNumbers,
+    handleBulkAction('send emails', '/api/receipts/emails', 'POST', {
+      filter: { receiptNumbers },
       templateSlug,
     })
 
   const handleMarkSent = () =>
-    handleBulkAction('mark as sent', '/api/receipts/bulk/mark-sent')
+    handleBulkAction('mark as sent', '/api/receipts', 'PATCH', {
+      filter: { receiptNumbers },
+      emailSent: true,
+    })
 
   const handleMarkRefunded = () =>
-    handleBulkAction('mark as refunded', '/api/receipts/bulk/mark-refunded')
+    handleBulkAction('mark as refunded', '/api/receipts', 'PATCH', {
+      filter: { receiptNumbers },
+      refunded: true,
+    })
 
   const handleDelete = () =>
-    handleBulkAction('delete', '/api/receipts/bulk/delete', 'DELETE')
+    handleBulkAction('delete', '/api/receipts', 'DELETE', {
+      receiptNumbers,
+    })
 
   const handleChangePayment = (method: string) =>
-    handleBulkAction(
-      'change payment method',
-      '/api/receipts/bulk/payment',
-      'PATCH',
-      {
-        receiptNumbers,
-        paymentMethod: method,
-      }
-    )
+    handleBulkAction('change payment method', '/api/receipts', 'PATCH', {
+      filter: { receiptNumbers },
+      paymentMethod: method,
+    })
 
   const exportSelectedToCSV = () => {
     const csvData = selectedEntries.map((entry) => ({

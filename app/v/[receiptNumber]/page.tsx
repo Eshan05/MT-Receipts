@@ -53,12 +53,9 @@ interface ReceiptData {
 
 async function getReceipt(receiptNumber: string): Promise<ReceiptData> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const response = await fetch(
-    `${baseUrl}/api/receipts/${receiptNumber}/public`,
-    {
-      next: { revalidate: 300 },
-    }
-  )
+  const response = await fetch(`${baseUrl}/api/receipts/${receiptNumber}`, {
+    next: { revalidate: 300 },
+  })
   return response.json()
 }
 

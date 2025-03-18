@@ -7,14 +7,20 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect()
     const body = await request.json()
-    const { receiptNumbers, templateSlug } = body
+    const { filter, templateSlug } = body
 
-    if (!receiptNumbers || !Array.isArray(receiptNumbers)) {
+    if (
+      !filter ||
+      !filter.receiptNumbers ||
+      !Array.isArray(filter.receiptNumbers)
+    ) {
       return NextResponse.json(
-        { message: 'Invalid receipt numbers' },
+        { message: 'Invalid filter. Provide receiptNumbers array.' },
         { status: 400 }
       )
     }
+
+    const { receiptNumbers } = filter
 
     const receipts = await Receipt.find({
       receiptNumber: { $in: receiptNumbers },

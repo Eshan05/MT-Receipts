@@ -91,9 +91,9 @@ function AuthPageContent() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const response = await fetch('/api/v')
+      const response = await fetch('/api/sessions')
       const data = await response.json()
-      if (data.isAuthenticated) router.replace(redirectPath)
+      if (data.authenticated) router.replace(redirectPath)
     }
     checkAuth()
   }, [router, redirectPath])
@@ -105,7 +105,7 @@ function AuthPageContent() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
@@ -133,7 +133,7 @@ function AuthPageContent() {
     }
     setIsLoading(true)
     try {
-      const response = await fetch('/api/signup', {
+      const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

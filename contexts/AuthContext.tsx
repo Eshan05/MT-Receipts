@@ -52,17 +52,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const token = getCookie('authToken')
     if (token && typeof token === 'string' && token.trim() !== '') {
       try {
-        const verified: JWTPayload = (await jwtVerify(token, secret)).payload
-        const res = await fetch('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: verified.email }),
-        })
+        const res = await fetch('/api/sessions')
 
         if (res.ok) {
-          const userData = await res.json()
-          setUser(userData) // Set the user data
-          setIsAuthenticated(true)
+          const data = await res.json()
+          if (data.authenticated && data.user) {
+            setUser(data.user)
+            setIsAuthenticated(true)
+          } else {
+            logout()
+          }
         } else {
           logout()
         }
@@ -83,30 +82,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [checkAuth])
 
   const login = async (email: string, pass: string) => {
-    const res = await fetch('/api/login', {
+    const res = await fetch('/api/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass }),
     })
 
     if (res.ok) {
-      const token = getCookie('authToken')
-      if (typeof token === 'string') {
-        const verified: JWTPayload = (await jwtVerify(token, secret)).payload
-        const userRes = await fetch('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: verified.email }),
-        })
-
-        if (userRes.ok) {
-          const userData = await userRes.json()
-          setUser(userData)
-          setIsAuthenticated(true)
-          router.push('/events')
-        } else {
-          logout()
-        }
+      const data = await res.json()
+      if (data.user) {
+        setUser(data.user)
+        setIsAuthenticated(true)
+        router.push('/events')
       }
     } else {
       const errorData = await res.json()
@@ -115,30 +102,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   const signup = async (username: string, email: string, pass: string) => {
-    const res = await fetch('/api/signup', {
+    const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password: pass }),
     })
 
     if (res.ok) {
-      const token = getCookie('authToken')
-      if (typeof token === 'string') {
-        const verified: JWTPayload = (await jwtVerify(token, secret)).payload
-        const userRes = await fetch('/api/user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: verified.email }),
-        })
-
-        if (userRes.ok) {
-          const userData = await userRes.json()
-          setUser(userData)
-          setIsAuthenticated(true)
-          router.push('/events')
-        } else {
-          logout()
-        }
+      const data = await res.json()
+      if (data.user) {
+        setUser(data.user)
+        setIsAuthenticated(true)
+        router.push('/events')
       }
     } else {
       const errorData = await res.json()
@@ -146,8 +121,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const logout = () => {
-    deleteCookie('authToken')
+  const logout = async () => {
+    await fetch('/api/sessions', { method: 'DELETE' })
     setIsAuthenticated(false)
     setUser(null)
     router.push('/')

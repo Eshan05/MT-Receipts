@@ -4,7 +4,7 @@ import User from '@/models/user.model'
 import { setAuthCookie } from '@/lib/auth'
 import { z } from 'zod'
 
-const signupSchema = z.object({
+const createUserSchema = z.object({
   username: z.string().min(3).max(20),
   email: z.string().email(),
   password: z.string().min(8),
@@ -12,7 +12,6 @@ const signupSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // Check if signups are disabled
     if (process.env.NEXT_PUBLIC_DISABLE_SIGNUP === 'true') {
       return NextResponse.json(
         { error: 'Sign up is currently disabled' },
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
     await dbConnect()
     const body = await request.json()
 
-    const validationResult = signupSchema.safeParse(body)
+    const validationResult = createUserSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
         { error: 'Invalid Input', details: validationResult.error.format() },
@@ -44,24 +43,27 @@ export async function POST(request: Request) {
     await user.save()
 
     const response = NextResponse.json(
-      { message: 'User created successfully', userId: user._id },
+      {
+        message: 'User created successfully',
+        user: {
+          id: user._id,
+          email: user.email,
+          username: user.username,
+        },
+      },
       { status: 201 }
     )
     await setAuthCookie(email, response)
 
     return response
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(error)
-      return NextResponse.json(
-        { message: 'Internal Server Error', error: error.message },
-        { status: 500 }
-      )
-    } else {
-      return NextResponse.json(
-        { message: 'Internal Server Error', error: 'Unknown error' },
-        { status: 500 }
-      )
-    }
+    console.error('Signup error:', error)
+    return NextResponse.json(
+      {
+        message: 'Internal Server Error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    )
   }
 }

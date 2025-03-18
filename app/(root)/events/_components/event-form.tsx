@@ -213,7 +213,7 @@ export function EventForm({ onSuccess, onCancel, event }: EventFormProps) {
           onSuccess(responseData.event)
           return responseData.event
         } else {
-          const response = await fetch('/api/events/create', {
+          const response = await fetch('/api/events', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cleanedData),

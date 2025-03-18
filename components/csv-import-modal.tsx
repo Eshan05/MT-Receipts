@@ -229,7 +229,7 @@ export function CSVImportModal({
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       try {
-        const response = await fetch('/api/receipts/create', {
+        const response = await fetch('/api/receipts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

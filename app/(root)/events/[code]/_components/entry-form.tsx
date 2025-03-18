@@ -259,7 +259,7 @@ export function EntryForm({
           }
           return response.json()
         } else {
-          const response = await fetch('/api/receipts/create', {
+          const response = await fetch('/api/receipts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(receiptData),

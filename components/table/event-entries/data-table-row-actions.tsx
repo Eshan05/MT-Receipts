@@ -75,7 +75,7 @@ export function DataTableRowActions<TData>({
   const handleSendEmail = async (templateSlug?: string) => {
     if (!entry.receiptNumber) return
     toast.promise(
-      fetch(`/api/receipts/${entry.receiptNumber}/send-email`, {
+      fetch(`/api/receipts/${entry.receiptNumber}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ templateSlug }),
@@ -94,18 +94,18 @@ export function DataTableRowActions<TData>({
   const handleDownloadPdf = async () => {
     if (!entry.receiptNumber) return
     toast.promise(
-      fetch(`/api/receipts/${entry.receiptNumber}/pdf`).then(
-        async (response) => {
-          if (!response.ok) throw new Error('Failed to download PDF')
-          const blob = await response.blob()
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `receipt-${entry.receiptNumber}.pdf`
-          a.click()
-          URL.revokeObjectURL(url)
-        }
-      ),
+      fetch(`/api/receipts/${entry.receiptNumber}`, {
+        headers: { Accept: 'application/pdf' },
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Failed to download PDF')
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `receipt-${entry.receiptNumber}.pdf`
+        a.click()
+        URL.revokeObjectURL(url)
+      }),
       {
         loading: 'Generating PDF...',
         success: 'PDF downloaded',

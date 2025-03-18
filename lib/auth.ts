@@ -56,3 +56,12 @@ export async function setAuthCookie(email: string, response: NextResponse) {
     maxAge: 60 * 60 * 24,
   })
 }
+
+export async function clearAuthCookie(response: NextResponse) {
+  response.cookies.set({
+    name: 'authToken',
+    value: '',
+    path: '/',
+    maxAge: 0,
+  })
+}

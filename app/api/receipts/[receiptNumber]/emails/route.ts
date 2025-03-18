@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import Receipt from '@/models/receipt.model'
-import Event from '@/models/event.model'
 import { sendReceiptEmail } from '@/lib/email'
 
 export async function POST(

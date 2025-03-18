@@ -82,9 +82,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error generating PDF:', error)
+    console.error('Error generating document:', error)
     return NextResponse.json(
-      { message: 'Failed to generate PDF' },
+      { message: 'Failed to generate document' },
       { status: 500 }
     )
   }

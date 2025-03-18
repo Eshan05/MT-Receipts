@@ -318,7 +318,7 @@ export function ReceiptForm({
 
   const generatePdf = useCallback(async () => {
     toast.promise(
-      fetch('/api/receipts/generate', {
+      fetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -352,7 +352,7 @@ export function ReceiptForm({
     const receiptNumber = generateReceiptNumber()
 
     toast.promise(
-      fetch('/api/receipts/create', {
+      fetch('/api/receipts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
