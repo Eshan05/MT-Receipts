@@ -5,5 +5,15 @@ import Template from './template.model'
 import AuditLog from './audit-log.model'
 import FeatureFlag from './feature-flag.model'
 import Sequence from './sequence.model'
+import SMTPVault from './smtp-vault.model'
 
-export { User, Event, Receipt, Template, AuditLog, FeatureFlag, Sequence }
+export {
+  User,
+  Event,
+  Receipt,
+  Template,
+  AuditLog,
+  FeatureFlag,
+  Sequence,
+  SMTPVault,
+}
