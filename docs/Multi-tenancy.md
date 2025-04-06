@@ -52,15 +52,16 @@ MongoDB Atlas Cluster
 
 ---
 
-### Subdomain Routing
+### Path-Based Routing
 
 ```
-aces.receipts.yourdomain.com     → ACES organization
-robotics.receipts.yourdomain.com → Robotics Club
-receipts.yourdomain.com          → Landing page (No tenant)
+receipts.yourdomain.com              → Landing page (No tenant)
+receipts.yourdomain.com/aces         → ACES organization
+receipts.yourdomain.com/robotics     → Robotics Club
+receipts.yourdomain.com/tech         → TECH Club
 ```
 
-**Middleware extracts subdomain and sets organization context.**
+**Middleware extracts organization slug from URL path and sets organization context.**
 
 ---
 
@@ -95,7 +96,7 @@ interface User {
 // Master database - organizations collection
 interface Organization {
   _id: ObjectId
-  slug: string // URL-safe, used for subdomain
+  slug: string // URL-safe, used in path (e.g., /aces)
   name: string // Display name "ACES"
   description?: string
   logoUrl?: string
@@ -180,10 +181,10 @@ interface SMTPVault {
 2. User clicks "Create Organization"
 3. User enters:
    - Organization name: "ACES"
-   - Desired subdomain: "aces"
+   - Desired slug: "aces"
    - Their email, username, password
 4. System:
-   - Checks subdomain availability
+   - Checks slug availability
    - Creates user account
    - Creates organization (status: pending)
    - Adds user as admin of organization
@@ -191,7 +192,7 @@ interface SMTPVault {
 5. User sees: "Your organization is pending approval"
 6. Super admin approves
 7. Organization status → active
-8. User can now log in and use the system
+8. User can now log in and use the system at /aces
 ```
 
 ### Flow 2: Existing User Joins Another Organization
@@ -222,8 +223,9 @@ interface SMTPVault {
 1. Logged-in user has multiple memberships
 2. User clicks organization selector in sidebar (Dropdown)
 3. Selects different organization
-4. Session updates `currentOrganizationId`
-5. All subsequent requests route to that organization's database
+4. User is redirected to the selected organization's path (e.g., /robotics)
+5. Session updates `currentOrganizationId`
+6. All subsequent requests route to that organization's database
 ```
 
 ### Flow 4: Super Admin Flow
@@ -265,7 +267,7 @@ Deletion:
 2. Organization status → Deleted
 3. Field `deletedAt` timestamp set
 4. Field `restoresBefore` set to now + 30 days
-5. Subdomain still locked (Unavailable for reuse)
+5. Slug still locked (Unavailable for reuse)
 6. Access blocked for all members
 
 Restoration:
@@ -273,7 +275,7 @@ Restoration:
 2. Super admin clicks "Restore"
 3. Organization status → Active
 4. `deletedAt` and `restoresBefore` fields cleared
-5. Subdomain re-assigned
+5. Slug re-assigned
 6. Access restored
 
 Auto-Purge:
@@ -356,17 +358,23 @@ const PUBLIC_PATHS = [
   '/api/users',
 ]
 const SUPERADMIN_PATHS = ['/superadmin', '/api/superadmins']
+const STATIC_PATHS = ['/favicon.ico', '/_next', '/api']
 
 export async function middleware(request: NextRequest) {
-  const host = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
 
-  // Extract subdomain
-  const subdomain = extractSubdomain(host)
+  // Static paths and API routes (except tenant-aware ones) pass through
+  if (STATIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next()
+  }
 
-  // No subdomain = landing page / auth routes
-  if (!subdomain) {
-    return handleLandingRoutes(request, pathname)
+  // Public paths (no tenant)
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/invite/') ||
+    pathname === '/join'
+  ) {
+    return NextResponse.next()
   }
 
   // Super admin routes (no tenant)
@@ -374,8 +382,15 @@ export async function middleware(request: NextRequest) {
     return handleSuperAdminRoutes(request)
   }
 
+  // Extract organization slug from path: /aces/events -> 'aces'
+  const orgSlug = extractOrgSlug(pathname)
+
+  if (!orgSlug) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
   // Validate organization exists
-  const org = await getOrganizationBySlug(subdomain)
+  const org = await getOrganizationBySlug(orgSlug)
 
   if (!org) {
     return NextResponse.redirect(new URL('/org-not-found', request.url))
@@ -402,18 +417,38 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-function extractSubdomain(host: string): string | null {
-  // aces.receipts.yourdomain.com → 'aces'
-  // localhost:3000 → null (development)
-  // receipts.yourdomain.com → null
+function extractOrgSlug(pathname: string): string | null {
+  // /aces/events -> 'aces'
+  // /robotics/receipts -> 'robotics'
+  // /v/RCPT-001 -> null (public receipt view, handled separately)
 
-  if (host.includes('localhost')) return null
+  const segments = pathname.split('/').filter(Boolean)
 
-  const parts = host.split('.')
-  if (parts.length >= 3) {
-    return parts[0]
+  if (segments.length === 0) return null
+
+  const firstSegment = segments[0]
+
+  // Skip known non-tenant paths
+  if (
+    [
+      'v',
+      'api',
+      'superadmin',
+      'login',
+      'signup',
+      'join',
+      'create-organization',
+      'invite',
+      'org-not-found',
+      'org-pending',
+      'org-suspended',
+      'org-deleted',
+    ].includes(firstSegment)
+  ) {
+    return null
   }
-  return null
+
+  return firstSegment
 }
 ```
 
@@ -466,46 +501,46 @@ function formatReceiptNumber(format: string, data: ReceiptNumberData): string {
 
 **Goal:** Multi-tenant database infrastructure
 
-- [x] Create `lib/db/tenant.ts` - connection management
-- [x] Create `lib/db/tenant-models.ts` - model factory
-- [x] Create `lib/db-conn.ts` - master database connection (rename existing)
-- [x] Create `models/organization.model.ts` - organization schema
-- [x] Update `models/user.model.ts` - add memberships array, isSuperAdmin
-- [x] Create `models/membership-request.model.ts` - join requests and invites
-- [x] Create `models/smtp-vault.model.ts` - encrypted SMTP storage
-- [x] Create `lib/encryption.ts` - AES-256-GCM encryption utilities
+- [ ] Create `lib/db/tenant.ts` - connection management
+- [ ] Create `lib/db/tenant-models.ts` - model factory
+- [ ] Create `lib/db-conn.ts` - master database connection (rename existing)
+- [ ] Create `models/organization.model.ts` - organization schema
+- [ ] Update `models/user.model.ts` - add memberships array, isSuperAdmin
+- [ ] Create `models/membership-request.model.ts` - join requests and invites
+- [ ] Create `models/smtp-vault.model.ts` - encrypted SMTP storage
+- [ ] Create `lib/encryption.ts` - AES-256-GCM encryption utilities
 - [ ] Create database migration utility for creating tenant DBs
 
 ### Phase 2: Middleware & Routing (Week 1)
 
-**Goal:** Subdomain-based organization routing
+**Goal:** Path-based organization routing
 
-- [x] Create `middleware.ts` - subdomain extraction, org validation
-- [x] Create `lib/organization-context.ts` - request context helper
+- [ ] Create `middleware.ts` - path extraction, org validation
+- [ ] Create `lib/organization-context.ts` - request context helper
 - [ ] Create organization context provider for server components
-- [x] Create `app/(tenant)/org-not-found/page.tsx`
-- [x] Create `app/(tenant)/org-pending/page.tsx`
-- [x] Create `app/(tenant)/org-suspended/page.tsx`
-- [x] Create `app/(tenant)/org-deleted/page.tsx`
-- [ ] Test subdomain routing locally
+- [ ] Create `app/(tenant)/org-not-found/page.tsx`
+- [ ] Create `app/(tenant)/org-pending/page.tsx`
+- [ ] Create `app/(tenant)/org-suspended/page.tsx`
+- [ ] Create `app/(tenant)/org-deleted/page.tsx`
+- [ ] Test path-based routing locally
 
 ### Phase 3: Landing Page & Auth Updates (Week 2)
 
 **Goal:** New user sign-up flow with organization creation
 
-- [x] Create `app/(landing)/page.tsx` - marketing landing page
-- [x] Create `app/(landing)/create-organization/page.tsx` - org creation form
-- [x] Update `app/api/sessions/route.ts`:
+- [ ] Create `app/(landing)/page.tsx` - marketing landing page
+- [ ] Create `app/(landing)/create-organization/page.tsx` - org creation form
+- [ ] Update `app/api/sessions/route.ts`:
   - Handle org selection after login
   - Return available memberships
   - Support org switching
-- [x] Update `app/api/users/route.ts`:
+- [ ] Update `app/api/users/route.ts`:
   - Create org on signup (if creating new org)
   - Add user to org membership
-- [x] Create `app/api/organizations/route.ts`:
-  - GET: Check subdomain availability
+- [ ] Create `app/api/organizations/route.ts`:
+  - GET: Check slug availability
   - POST: Create organization (pending status)
-- [x] Create `app/api/organizations/[slug]/route.ts`:
+- [ ] Create `app/api/organizations/[slug]/route.ts`:
   - GET: Get organization info (public)
   - PATCH: Update organization settings
 
@@ -513,57 +548,57 @@ function formatReceiptNumber(format: string, data: ReceiptNumberData): string {
 
 **Goal:** Email invites and invite codes
 
-- [x] Create `app/api/invites/route.ts`:
+- [ ] Create `app/api/invites/route.ts`:
   - POST: Send email invite / generate invite code
   - GET: Validate invite code
-- [x] Create `app/api/invites/[token]/route.ts`:
+- [ ] Create `app/api/invites/[token]/route.ts`:
   - GET: Get invite details (for acceptance page)
   - POST: Accept invite
-- [x] Create `app/(landing)/join/page.tsx` - join org by code
-- [x] Create `app/(landing)/invite/[token]/page.tsx` - accept email invite
+- [ ] Create `app/(landing)/join/page.tsx` - join org by code
+- [ ] Create `app/(landing)/invite/[token]/page.tsx` - accept email invite
 - [ ] Create email template for organization invites
 
 ### Phase 5: Organization Management UI (Week 3)
 
 **Goal:** Admin dashboard for organization settings
 
-- [x] Create `app/(tenant)/settings/organization/page.tsx` - org settings
-- [x] Create `app/(tenant)/settings/members/page.tsx` - member management
-- [x] Create `app/(tenant)/settings/email/page.tsx` - SMTP configuration
-- [x] Create organization selector component (navbar)
-- [x] Create member invite UI component
-- [x] Create member role management (admin ↔ member)
+- [ ] Create `app/(tenant)/settings/organization/page.tsx` - org settings
+- [ ] Create `app/(tenant)/settings/members/page.tsx` - member management
+- [ ] Create `app/(tenant)/settings/email/page.tsx` - SMTP configuration
+- [ ] Create organization selector component (navbar)
+- [ ] Create member invite UI component
+- [ ] Create member role management (admin ↔ member)
 
 ### Phase 6: Super Admin (Week 3)
 
 **Goal:** Platform administration
 
-- [x] Create `app/(superadmin)/layout.tsx` - super admin layout
-- [x] Create `app/(superadmin)/dashboard/page.tsx` - admin dashboard
-- [x] Create `app/(superadmin)/organizations/page.tsx` - all orgs list
-- [x] Create `app/(superadmin)/organizations/[slug]/page.tsx` - manage org
-- [x] Create `app/(superadmin)/users/page.tsx` - all users list
-- [x] Create `app/(superadmin)/deleted/page.tsx` - deleted orgs (restorable)
-- [x] Create `app/api/superadmin/organizations/route.ts`
-- [x] Create `app/api/superadmin/organizations/[slug]/route.ts`:
+- [ ] Create `app/(superadmin)/layout.tsx` - super admin layout
+- [ ] Create `app/(superadmin)/dashboard/page.tsx` - admin dashboard
+- [ ] Create `app/(superadmin)/organizations/page.tsx` - all orgs list
+- [ ] Create `app/(superadmin)/organizations/[slug]/page.tsx` - manage org
+- [ ] Create `app/(superadmin)/users/page.tsx` - all users list
+- [ ] Create `app/(superadmin)/deleted/page.tsx` - deleted orgs (restorable)
+- [ ] Create `app/api/superadmin/organizations/route.ts`
+- [ ] Create `app/api/superadmin/organizations/[slug]/route.ts`:
   - PATCH: Approve, suspend, update limits
   - DELETE: Hard delete (past retention)
   - POST: Restore deleted org
-- [x] Create super admin middleware (check isSuperAdmin)
+- [ ] Create super admin middleware (check isSuperAdmin)
 
 ### Phase 7: Tenant Model Updates (Week 4)
 
 **Goal:** Update all existing models and routes for multi-tenancy
 
-- [x] Move schemas to `models/tenant/` directory
-- [x] Update all API routes to use tenant models:
-  - [x] `app/api/events/*`
-  - [x] `app/api/receipts/*`
-  - [x] `app/api/documents/*`
-  - [x] `app/api/templates/*`
+- [ ] Move schemas to `models/tenant/` directory
+- [ ] Update all API routes to use tenant models:
+  - [ ] `app/api/events/*`
+  - [ ] `app/api/receipts/*`
+  - [ ] `app/api/documents/*`
+  - [ ] `app/api/templates/*`
 - [ ] Update all server components to use tenant context
 - [ ] Update PDF generation with org branding
-- [x] Update email sending with SMTP vault selection
+- [ ] Update email sending with SMTP vault selection
 
 ### Phase 8: Customization & Branding (Week 4)
 
@@ -574,7 +609,7 @@ function formatReceiptNumber(format: string, data: ReceiptNumberData): string {
   - Logo
   - Organization name
 - [ ] Update receipt templates to accept org config
-- [x] Implement custom receipt number format per org
+- [ ] Implement custom receipt number format per org
 - [ ] Update email templates with org branding
 - [ ] UI theming based on org primary color (CSS variables)
 
@@ -582,25 +617,25 @@ function formatReceiptNumber(format: string, data: ReceiptNumberData): string {
 
 **Goal:** Usage limits per organization
 
-- [x] Create `lib/limits.ts` - limit checking utilities
+- [ ] Create `lib/limits.ts` - limit checking utilities
 - [ ] Create limit checking middleware
-- [x] Enforce limits on:
-  - [x] Event creation (maxEvents)
-  - [x] Receipt creation (maxReceiptsPerMonth)
-  - [x] Member invites (maxUsers)
-- [x] Create usage tracking (counts per org)
-- [x] Create usage dashboard for org admins
+- [ ] Enforce limits on:
+  - [ ] Event creation (maxEvents)
+  - [ ] Receipt creation (maxReceiptsPerMonth)
+  - [ ] Member invites (maxUsers)
+- [ ] Create usage tracking (counts per org)
+- [ ] Create usage dashboard for org admins
 - [ ] Create usage warning emails (optional)
 
 ### Phase 10: Deletion & Restoration (Week 5)
 
 **Goal:** Soft delete with recovery period
 
-- [x] Create organization deletion API
-- [x] Create organization restoration API
-- [x] Create cron job for auto-purging old deleted orgs
-- [x] Create UI for deletion flow
-- [x] Create UI for restoration (super admin)
+- [ ] Create organization deletion API
+- [ ] Create organization restoration API
+- [ ] Create cron job for auto-purging old deleted orgs
+- [ ] Create UI for deletion flow
+- [ ] Create UI for restoration (super admin)
 
 ### Phase 11: Migration & Testing (Week 6)
 
@@ -614,7 +649,7 @@ function formatReceiptNumber(format: string, data: ReceiptNumberData): string {
 - [ ] Performance test with multiple databases
 - [ ] Create admin documentation
 - [ ] Create user documentation
-- [ ] Deploy staging environment with wildcard domain
+- [ ] Deploy staging environment
 - [ ] Production deployment
 
 ---
@@ -637,6 +672,7 @@ SMTP_VAULT_SECRET=32-byte-encryption-key-here
 
 # Domain
 BASE_DOMAIN=receipts.yourdomain.com
+APP_URL=https://receipts.yourdomain.com
 
 # Super Admins (Comma-separated emails)
 SUPER_ADMIN_EMAILS=admin@yourdomain.com
@@ -651,27 +687,14 @@ SYSTEM_SMTP_PASS=xxx
 # Optional
 SMTP_VAULT_ENCRYPTION_ALGORITHM=aes-256-gcm
 ORGANIZATION_RETENTION_DAYS=30
-
-# Vercel (For REST APIs and sub-domains) (System)
-VERCEL_TOKEN=
-VERCEL_API_TOKEN=
-VERCEL_USER_ID=
-VERCEL_TEAM_ID=
-VERCEL_PROJECT_ID=
 ```
 
 ### Vercel Configuration
-
-Please also refer to https://docs.vercel.com/docs/rest-api/reference/welcome and
 
 ```json
 // vercel.json
 {
   "domains": [
-    {
-      "domain": "*.receipts.yourdomain.com",
-      "wildcard": true
-    },
     {
       "domain": "receipts.yourdomain.com"
     }
@@ -691,7 +714,7 @@ Please also refer to https://docs.vercel.com/docs/rest-api/reference/welcome and
 
 ```
 app/
-├── (landing)/                    # No subdomain
+├── (landing)/                    # No tenant context
 │   ├── page.tsx                  # Landing page
 │   ├── login/
 │   │   └── page.tsx
@@ -699,21 +722,23 @@ app/
 │   │   └── page.tsx
 │   ├── join/
 │   │   └── page.tsx              # Join by invite code
-│   └── invite/
-│       └── [token]/
-│           └── page.tsx          # Accept email invite
-│
-├── (tenant)/                     # Tenant subdomain (requires auth)
-│   ├── events/
-│   ├── receipts/
-│   ├── settings/
-│   │   ├── organization/
-│   │   ├── members/
-│   │   └── email/                # SMTP configuration
+│   ├── invite/
+│   │   └── [token]/
+│   │       └── page.tsx          # Accept email invite
 │   ├── org-not-found/
 │   ├── org-pending/
 │   ├── org-suspended/
 │   └── org-deleted/
+│
+├── (tenant)/                     # Tenant routes (path-based)
+│   └── [orgSlug]/                # Dynamic org slug from path
+│       ├── events/
+│       ├── receipts/
+│       ├── settings/
+│       │   ├── organization/
+│       │   ├── members/
+│       │   └── email/            # SMTP configuration
+│       └── page.tsx              # Org dashboard
 │
 ├── (superadmin)/                 # Super admin only
 │   ├── dashboard/
@@ -768,16 +793,22 @@ models/
 
 ## Summary
 
-| Aspect        | Decision                                         |
-| ------------- | ------------------------------------------------ |
-| Database      | Separate DB per tenant (`org_slug`)              |
-| Routing       | Subdomain-based (`aces.receipts.yourdomain.com`) |
-| User model    | Multi-tenant with memberships array              |
-| Invites       | Both email invites and shareable codes           |
-| SMTP          | Encrypted vault per organization                 |
-| Customization | Colors, logo, receipt format per Org             |
-| Limits        | Enforced by super admin                          |
-| Deletion      | Soft delete, 30-day recovery                     |
-| Super admin   | Full platform access, org management             |
+| Aspect        | Decision                                    |
+| ------------- | ------------------------------------------- |
+| Database      | Separate DB per tenant (`org_slug`)         |
+| Routing       | Path-based (`receipts.yourdomain.com/aces`) |
+| User model    | Multi-tenant with memberships array         |
+| Invites       | Both email invites and shareable codes      |
+| SMTP          | Encrypted vault per organization            |
+| Customization | Colors, logo, receipt format per Org        |
+| Limits        | Enforced by super admin                     |
+| Deletion      | Soft delete, 30-day recovery                |
+| Super admin   | Full platform access, org management        |
 
 ---
+
+## Notes
+
+1. We could've gone with custom sub-domains but it adds complexity with SSL, wildcard certs, and local development. Path-based routing is simpler to implement and manage. And more importantly, if someone doesn't have a domain they can still use for themselves
+2. Separate databases provide the strongest isolation and easiest compliance path. We accept the tradeoffs in migration complexity and cross-tenant queries.
+3. A organaization slug MUST BE GREATER THAN 2 CHARACTERS (Only letters, numbers, and hyphens allowed. Must start with letter. No trailing hyphens.) And must sanitize the slug. ALso not more than 20 characters
