@@ -7,14 +7,71 @@ import {
   type RenderReceiptOptions,
 } from '@/lib/pdf/template-renderer'
 import { generateReceiptQRCode } from '@/lib/qr-code'
+import dbConnect from '@/lib/db-conn'
+import SMTPVault from '@/models/smtp-vault.model'
+import { decryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_EMAIL,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-})
+interface SenderCredentials {
+  name?: string
+  user: string
+  pass: string
+}
+
+async function resolveSenderCredentials(
+  smtpVaultId?: string
+): Promise<SenderCredentials> {
+  await dbConnect()
+
+  let selectedVault = null
+
+  if (smtpVaultId) {
+    selectedVault = await SMTPVault.findById(smtpVaultId)
+  } else {
+    selectedVault = await SMTPVault.findOne({ isDefault: true })
+    if (!selectedVault) {
+      selectedVault = await SMTPVault.findOne().sort({ createdAt: 1 })
+    }
+  }
+
+  if (selectedVault) {
+    const decryptedPassword = decryptSmtpAppPassword(
+      selectedVault.encryptedAppPassword
+    )
+
+    await SMTPVault.findByIdAndUpdate(selectedVault._id, {
+      lastUsedAt: new Date(),
+    })
+
+    return {
+      name: selectedVault.name,
+      user: selectedVault.email,
+      pass: decryptedPassword,
+    }
+  }
+
+  if (process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD) {
+    return {
+      user: process.env.GMAIL_EMAIL,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    }
+  }
+
+  throw new Error(
+    'No sender configured. Add an SMTP vault sender or set GMAIL_EMAIL/GMAIL_APP_PASSWORD.'
+  )
+}
+
+async function createTransporter(smtpVaultId?: string) {
+  const credentials = await resolveSenderCredentials(smtpVaultId)
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: credentials.user,
+      pass: credentials.pass,
+    },
+  })
+}
 
 export interface ReceiptItem {
   name: string
@@ -44,6 +101,7 @@ export interface SendReceiptOptions {
   notes?: string
   qrCodeData?: string
   templateSlug?: string
+  smtpVaultId?: string
 }
 
 export async function sendReceiptEmail({
@@ -66,6 +124,7 @@ export async function sendReceiptEmail({
   notes,
   qrCodeData,
   templateSlug,
+  smtpVaultId,
 }: SendReceiptOptions) {
   const date = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
@@ -128,8 +187,17 @@ export async function sendReceiptEmail({
     const { stream } = await renderReceiptPDF(renderOptions)
     const pdfBuffer = await streamToBuffer(stream)
 
+    const senderCredentials = await resolveSenderCredentials(smtpVaultId)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: senderCredentials.user,
+        pass: senderCredentials.pass,
+      },
+    })
+
     const info = await transporter.sendMail({
-      from: `"${organizationName} Receipts" <${process.env.GMAIL_EMAIL}>`,
+      from: `"${senderCredentials.name || `${organizationName} Receipts`}" <${senderCredentials.user}>`,
       to,
       subject: `Receipt #${receiptNumber} - ${eventName}`,
       html: emailHtml,
@@ -157,6 +225,7 @@ export async function sendEmail({
   subject,
   html,
   attachments,
+  smtpVaultId,
 }: {
   to: string
   subject: string
@@ -166,10 +235,20 @@ export async function sendEmail({
     content: Buffer | string
     contentType?: string
   }>
+  smtpVaultId?: string
 }) {
   try {
+    const senderCredentials = await resolveSenderCredentials(smtpVaultId)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: senderCredentials.user,
+        pass: senderCredentials.pass,
+      },
+    })
+
     const info = await transporter.sendMail({
-      from: `"ACES Receipts" <${process.env.GMAIL_EMAIL}>`,
+      from: `"${senderCredentials.name || 'ACES Receipts'}" <${senderCredentials.user}>`,
       to,
       subject,
       html,
@@ -186,4 +265,4 @@ export async function sendEmail({
   }
 }
 
-export default transporter
+export default createTransporter
