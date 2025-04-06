@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect()
     const body = await request.json()
-    const { filter, templateSlug } = body
+    const { filter, templateSlug, smtpVaultId } = body
 
     if (
       !filter ||
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
           notes: receipt.notes,
           qrCodeData: receipt.qrCodeData,
           templateSlug,
+          smtpVaultId,
         })
 
         if (result.success) {

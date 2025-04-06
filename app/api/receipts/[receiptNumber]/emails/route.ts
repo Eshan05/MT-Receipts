@@ -11,7 +11,7 @@ export async function POST(
     await dbConnect()
     const { receiptNumber } = await params
     const body = await request.json().catch(() => ({}))
-    const { templateSlug } = body
+    const { templateSlug, smtpVaultId } = body
 
     const receipt = await Receipt.findOne({ receiptNumber }).populate('event')
 
@@ -55,6 +55,7 @@ export async function POST(
       notes: receipt.notes,
       qrCodeData: receipt.qrCodeData,
       templateSlug,
+      smtpVaultId,
     })
 
     if (result.success) {

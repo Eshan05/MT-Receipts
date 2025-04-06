@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
       emailSent,
       sendEmail,
       notes,
+      smtpVaultId,
     } = body
 
     if (!eventId || !customer || !items) {
@@ -144,7 +145,11 @@ export async function POST(request: NextRequest) {
       try {
         await fetch(
           `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/receipts/${receiptNumber}/emails`,
-          { method: 'POST' }
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ smtpVaultId }),
+          }
         )
       } catch (emailError) {
         console.error('Failed to send email:', emailError)
