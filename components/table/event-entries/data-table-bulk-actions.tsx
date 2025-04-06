@@ -7,9 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
@@ -21,6 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Mail,
   CheckCircle,
@@ -36,10 +41,20 @@ import {
   FileJson,
   FileSpreadsheet,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { EventEntry } from './schema'
 import { getAllTemplateInfo } from '@/lib/templates'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { FieldLabel } from '@/components/ui/field'
+import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface DataTableBulkActionsProps {
   selectedEntries: EventEntry[]
@@ -56,7 +71,25 @@ export function DataTableBulkActions({
 }: DataTableBulkActionsProps) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [sendDialogOpen, setSendDialogOpen] = useState(false)
+  const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
+  const [selectedTemplateSlug, setSelectedTemplateSlug] =
+    useState<string>('professional')
+  const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
   const templateInfo = getAllTemplateInfo()
+
+  useEffect(() => {
+    const loadVaults = async () => {
+      try {
+        const vaults = await fetchSmtpVaults()
+        setSmtpVaults(vaults)
+      } catch {
+        setSmtpVaults([])
+      }
+    }
+
+    loadVaults()
+  }, [])
 
   const selectedCount = selectedEntries.length
   const receiptNumbers = selectedEntries.map((e) => e.receiptNumber)
@@ -66,6 +99,10 @@ export function DataTableBulkActions({
   )
   const hasUnsent = selectedEntries.some((e) => !e.emailSent)
   const hasNonRefunded = selectedEntries.some((e) => !e.refunded)
+  const selectedSenderVault =
+    selectedVaultId === 'default'
+      ? undefined
+      : smtpVaults.find((vault) => vault.id === selectedVaultId)
 
   const handleBulkAction = async (
     action: string,
@@ -100,10 +137,11 @@ export function DataTableBulkActions({
     )
   }
 
-  const handleSendEmails = (templateSlug?: string) =>
+  const handleSendEmails = (templateSlug?: string, smtpVaultId?: string) =>
     handleBulkAction('send emails', '/api/receipts/emails', 'POST', {
       filter: { receiptNumbers },
       templateSlug,
+      smtpVaultId,
     })
 
   const handleMarkSent = () =>
@@ -229,15 +267,12 @@ export function DataTableBulkActions({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
-              {templateInfo.map((template) => (
-                <DropdownMenuItem
-                  key={template.slug}
-                  onClick={() => handleSendEmails(template.slug)}
-                  disabled={isProcessing === 'send emails'}
-                >
-                  {template.name}
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuItem
+                onClick={() => setSendDialogOpen(true)}
+                disabled={isProcessing === 'send emails'}
+              >
+                Configure Send
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -380,6 +415,83 @@ export function DataTableBulkActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Emails</DialogTitle>
+            <DialogDescription>
+              Choose template and sender for {selectedCount} selected entries.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-2'>
+            <div className='space-y-1'>
+              <FieldLabel>Template</FieldLabel>
+              <Select
+                value={selectedTemplateSlug}
+                onValueChange={setSelectedTemplateSlug}
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='Select template' />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateInfo.map((template) => (
+                    <SelectItem key={template.slug} value={template.slug}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1'>
+              <Select
+                value={selectedVaultId}
+                onValueChange={setSelectedVaultId}
+              >
+                <SelectTrigger className='w-full h-10!'>
+                  {selectedSenderVault ? (
+                    <SenderSelectView
+                      vault={selectedSenderVault}
+                      showDefaultBadge={false}
+                    />
+                  ) : (
+                    <SelectValue placeholder='Use default sender' />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='default'>Use default sender</SelectItem>
+                  {smtpVaults.map((vault) => (
+                    <SelectItem key={vault.id} value={vault.id}>
+                      <SenderSelectView vault={vault} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+                <FieldLabel>Sender</FieldLabel>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setSendDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setSendDialogOpen(false)
+                handleSendEmails(
+                  selectedTemplateSlug,
+                  selectedVaultId === 'default' ? undefined : selectedVaultId
+                )
+              }}
+              disabled={isProcessing === 'send emails'}
+            >
+              Send Emails
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

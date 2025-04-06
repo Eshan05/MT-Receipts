@@ -69,10 +69,13 @@ import {
   Sparkles,
   Trash2,
   User,
+  User2Icon,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface ReceiptFormProps {
   templates: TemplateInfo[]
@@ -128,6 +131,8 @@ export function ReceiptForm({
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [config, setConfig] = useState<TemplateConfig>(defaultConfig)
+  const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
+  const [selectedSmtpVaultId, setSelectedSmtpVaultId] = useState<string>('')
 
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(receiptSchema),
@@ -187,9 +192,32 @@ export function ReceiptForm({
     fetchEvents()
   }, [])
 
+  const loadSmtpVaults = useCallback(async () => {
+    try {
+      const vaults = await fetchSmtpVaults()
+      setSmtpVaults(vaults)
+      const defaultVault = vaults.find((vault) => vault.isDefault)
+      setSelectedSmtpVaultId(defaultVault?.id || '')
+    } catch (error) {
+      console.error('Error loading SMTP vaults:', error)
+      toast.error('Failed to load email vaults')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (configOpen) {
+      loadSmtpVaults()
+    }
+  }, [configOpen, loadSmtpVaults])
+
   const selectedEvent = useMemo(() => {
     return events.find((e) => e._id?.toString() === selectedEventId)
   }, [events, selectedEventId])
+
+  const selectedSenderVault = useMemo(() => {
+    if (!selectedSmtpVaultId) return undefined
+    return smtpVaults.find((vault) => vault.id === selectedSmtpVaultId)
+  }, [smtpVaults, selectedSmtpVaultId])
 
   useEffect(() => {
     const total = watchedItems.reduce(
@@ -367,6 +395,7 @@ export function ReceiptForm({
             startDate: selectedEvent.startDate,
             endDate: selectedEvent.endDate,
           },
+          smtpVaultId: selectedSmtpVaultId || undefined,
         }),
       }).then(async (response) => {
         if (!response.ok) {
@@ -683,6 +712,42 @@ export function ReceiptForm({
                           live preview but will be included in the downloaded
                           PDF. Download the PDF to see the final result.
                         </p>
+
+                        <div className='pt-2 border-t space-y-1.5'>
+                          <label className='text-xs font-medium flex items-center gap-1.5'>
+                            <User2Icon className='w-3 h-3' />
+                            Sender for new email sends
+                          </label>
+                          <Select
+                            value={selectedSmtpVaultId || 'default'}
+                            onValueChange={(value) =>
+                              setSelectedSmtpVaultId(
+                                value === 'default' ? '' : value
+                              )
+                            }
+                          >
+                            <SelectTrigger className='w-full h-10!'>
+                              {selectedSenderVault ? (
+                                <SenderSelectView
+                                  vault={selectedSenderVault}
+                                  showDefaultBadge={false}
+                                />
+                              ) : (
+                                <SelectValue placeholder='Use default sender' />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='default'>
+                                Use default sender
+                              </SelectItem>
+                              {smtpVaults.map((vault) => (
+                                <SelectItem key={vault.id} value={vault.id}>
+                                  <SenderSelectView vault={vault} />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </CredenzaBody>
                     <CredenzaFooter>
@@ -929,7 +994,7 @@ export function ReceiptForm({
                               }}
                             />
                             <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-1.5 text-muted-foreground/80'>
-                              <span className='text-[10px]'>₹</span>
+                              <span className='text-tiny'>₹</span>
                             </div>
                           </div>
                           {fieldState.invalid && (

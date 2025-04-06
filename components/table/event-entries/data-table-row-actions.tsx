@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Pencil,
   Trash2,
+  FileInputIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,14 +18,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -46,13 +45,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { EventEntry } from './schema'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PDFViewer } from '@react-pdf/renderer'
 import { getTemplateComponent, getAllTemplateInfo } from '@/lib/templates'
 import { useMemo } from 'react'
 import { IEvent } from '@/models/event.model'
 import { EntryForm } from '@/app/(root)/events/[code]/_components/entry-form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { FieldLabel } from '@/components/ui/field'
+import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -68,25 +77,52 @@ export function DataTableRowActions<TData>({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isSendOpen, setIsSendOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
+  const [selectedTemplateSlug, setSelectedTemplateSlug] =
+    useState<string>('professional')
+  const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
   const entry = row.original as EventEntry
   const templateInfo = getAllTemplateInfo()
 
-  const handleSendEmail = async (templateSlug?: string) => {
+  useEffect(() => {
+    const loadVaults = async () => {
+      try {
+        const vaults = await fetchSmtpVaults()
+        setSmtpVaults(vaults)
+      } catch {
+        setSmtpVaults([])
+      }
+    }
+
+    loadVaults()
+  }, [])
+
+  const handleSendEmail = async () => {
     if (!entry.receiptNumber) return
+    setIsSending(true)
+
     toast.promise(
       fetch(`/api/receipts/${entry.receiptNumber}/emails`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateSlug }),
+        body: JSON.stringify({
+          templateSlug: selectedTemplateSlug,
+          smtpVaultId:
+            selectedVaultId === 'default' ? undefined : selectedVaultId,
+        }),
       }).then(async (response) => {
         if (!response.ok) throw new Error('Failed to send email')
+        setIsSendOpen(false)
         return response.json()
       }),
       {
         loading: 'Sending email...',
         success: 'Email sent successfully',
         error: 'Failed to send email',
+        finally: () => setIsSending(false),
       }
     )
   }
@@ -141,6 +177,11 @@ export function DataTableRowActions<TData>({
     return getTemplateComponent('professional')
   }, [])
 
+  const selectedSenderVault = useMemo(() => {
+    if (selectedVaultId === 'default') return undefined
+    return smtpVaults.find((vault) => vault.id === selectedVaultId)
+  }, [smtpVaults, selectedVaultId])
+
   const templateProps = useMemo(() => {
     return {
       receiptNumber: entry.receiptNumber,
@@ -185,27 +226,15 @@ export function DataTableRowActions<TData>({
             <span className='sr-only'>Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' className='w-[160px]'>
+        <DropdownMenuContent align='end' className='w-40'>
           <DropdownMenuItem onClick={() => setIsPreviewOpen(true)}>
             <Eye className='mr-1' />
             View Receipt
           </DropdownMenuItem>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Mail className='mr-1' />
-              {entry.emailSent ? 'Resend Email' : 'Send Email'}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              {templateInfo.map((template) => (
-                <DropdownMenuItem
-                  key={template.slug}
-                  onClick={() => handleSendEmail(template.slug)}
-                >
-                  {template.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
+          <DropdownMenuItem onClick={() => setIsSendOpen(true)}>
+            <Mail className='mr-1' />
+            {entry.emailSent ? 'Resend Email' : 'Send Email'}
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleDownloadPdf}>
             <Download className='mr-1' />
             Download PDF
@@ -269,6 +298,77 @@ export function DataTableRowActions<TData>({
               <TemplateComponent {...templateProps} />
             </PDFViewer>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSendOpen} onOpenChange={setIsSendOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {entry.emailSent ? 'Resend Receipt Email' : 'Send Receipt Email'}
+            </DialogTitle>
+            <DialogDescription>
+              Choose a template and sender for {entry.customer.email}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-2'>
+            <div className='space-y-1'>
+              <FieldLabel>Template</FieldLabel>
+              <Select
+                value={selectedTemplateSlug}
+                onValueChange={setSelectedTemplateSlug}
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='Select template' />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateInfo.map((template) => (
+                    <SelectItem key={template.slug} value={template.slug}>
+                      <FileInputIcon />
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1'>
+              <Select
+                value={selectedVaultId}
+                onValueChange={setSelectedVaultId}
+              >
+                <SelectTrigger className='w-full h-10!'>
+                  {selectedSenderVault ? (
+                    <SenderSelectView
+                      vault={selectedSenderVault}
+                      showDefaultBadge={false}
+                    />
+                  ) : (
+                    <SelectValue placeholder='Use default sender' />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='default'>Use default sender</SelectItem>
+                  {smtpVaults.map((vault) => (
+                    <SelectItem key={vault.id} value={vault.id}>
+                      <SenderSelectView vault={vault} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldLabel>Sender</FieldLabel>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={() => setIsSendOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendEmail} disabled={isSending}>
+              {isSending ? 'Sending...' : 'Send Email'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

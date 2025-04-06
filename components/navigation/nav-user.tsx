@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronsUpDown, CogIcon, Heart, LogOut } from 'lucide-react'
+import { ChevronsUpDown, CogIcon, Heart, KeyRound, LogOut } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -20,10 +20,13 @@ import {
 } from '@/components/ui/sidebar'
 import { ContextUser, useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import { useState } from 'react'
+import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
 
 export function NavUser({ user }: { user: ContextUser | undefined | null }) {
   const { isMobile } = useSidebar()
   const { logout } = useAuth()
+  const [vaultOpen, setVaultOpen] = useState(false)
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -76,6 +79,13 @@ export function NavUser({ user }: { user: ContextUser | undefined | null }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <DropdownMenuItem
+                className='cursor-pointer'
+                onClick={() => setVaultOpen(true)}
+              >
+                <KeyRound />
+                Email Vault
+              </DropdownMenuItem>
               <DropdownMenuItem className='cursor-pointer'>
                 <CogIcon />
                 Change Password
@@ -103,6 +113,7 @@ export function NavUser({ user }: { user: ContextUser | undefined | null }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <EmailVaultCredenza open={vaultOpen} onOpenChange={setVaultOpen} />
     </SidebarMenu>
   )
 }

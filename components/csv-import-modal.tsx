@@ -47,6 +47,16 @@ import {
   type DuplicateInfo,
 } from '@/lib/csv-parser'
 import { IEvent } from '@/models/event.model'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import { useEffect } from 'react'
+import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface CSVImportModalProps {
   open: boolean
@@ -86,6 +96,8 @@ export function CSVImportModal({
     failed: number
   }>({ success: 0, failed: 0 })
   const [sendEmails, setSendEmails] = useState(false)
+  const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
+  const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
 
   const resetState = useCallback(() => {
     setStep('upload')
@@ -96,7 +108,23 @@ export function CSVImportModal({
     setImportProgress({ current: 0, total: 0 })
     setImportResults({ success: 0, failed: 0 })
     setSendEmails(false)
+    setSelectedVaultId('default')
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+
+    const loadVaults = async () => {
+      try {
+        const vaults = await fetchSmtpVaults()
+        setSmtpVaults(vaults)
+      } catch {
+        setSmtpVaults([])
+      }
+    }
+
+    loadVaults()
+  }, [open])
 
   const handleFileUpload = useCallback(
     (file: File) => {
@@ -253,6 +281,10 @@ export function CSVImportModal({
             paymentMethod: row.paymentMethod,
             emailSent: shouldSendEmails ? false : row.emailSent,
             sendEmail: shouldSendEmails,
+            smtpVaultId:
+              shouldSendEmails && selectedVaultId !== 'default'
+                ? selectedVaultId
+                : undefined,
             notes: row.notes,
           }),
         })
@@ -305,6 +337,10 @@ export function CSVImportModal({
         (w) => w.rowNumber === row.rowNumber
       )
     }).length || 0
+  const selectedSenderVault =
+    selectedVaultId === 'default'
+      ? undefined
+      : smtpVaults.find((vault) => vault.id === selectedVaultId)
 
   const formatPaymentMethod = (method: string): string => {
     const labels: Record<string, string> = {
@@ -767,6 +803,33 @@ export function CSVImportModal({
                   <li>• &nbsp;This action cannot be undone</li>
                 </ul>
               </div>
+            </div>
+
+            <div className='space-y-1.5'>
+              <p className='text-xs font-medium'>Sender for save and send</p>
+              <Select
+                value={selectedVaultId}
+                onValueChange={setSelectedVaultId}
+              >
+                <SelectTrigger className='h-10! w-full'>
+                  {selectedSenderVault ? (
+                    <SenderSelectView
+                      vault={selectedSenderVault}
+                      showDefaultBadge={false}
+                    />
+                  ) : (
+                    <SelectValue placeholder='Use default sender' />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='default'>Use default sender</SelectItem>
+                  {smtpVaults.map((vault) => (
+                    <SelectItem key={vault.id} value={vault.id}>
+                      <SenderSelectView vault={vault} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className='flex justify-between gap-2 pt-2'>
