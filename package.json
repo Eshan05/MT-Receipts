@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint:es": "eslint .",
-    "lint:ts": "tsc --noEmit"
+    "lint:ts": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "validate:phase1": "npx tsx scripts/validate-phase1.ts",
+    "validate:phase2": "npx tsx scripts/validate-phase2.ts"
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {
@@ -21,6 +26,7 @@
     "@react-email/tailwind": "^2.0.5",
     "@react-pdf/renderer": "^4.3.2",
     "@tanstack/react-table": "^8.21.3",
+    "@upstash/redis": "^1.36.2",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -56,27 +62,34 @@
     "@eslint/eslintrc": "^3.3.3",
     "@react-email/preview-server": "^5.2.8",
     "@tailwindcss/postcss": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/bcrypt": "^6.0.0",
     "@types/color": "^4.2.0",
     "@types/node": "^25.2.3",
     "@types/nodemailer": "^7.0.9",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "^4.0.18",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^10.0.0",
     "eslint-config-next": "16.1.6",
     "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
+    "mongodb-memory-server": "^11.0.1",
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "react-email": "^5.2.8",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "bcrypt",
       "canvas",
       "esbuild",
+      "mongodb-memory-server",
       "sharp",
       "skia-canvas"
     ],
