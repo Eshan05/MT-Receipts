@@ -1,11 +1,15 @@
 import mongoose, { Document, Model, Schema, model } from 'mongoose'
 
 export interface ISMTPVault extends Document {
-  name: string
+  organizationId: mongoose.Types.ObjectId
+  label: string
   email: string
   encryptedAppPassword: string
+  iv: string
+  authTag: string
   isDefault: boolean
   lastUsedAt?: Date
+  createdBy: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
 }
@@ -14,7 +18,12 @@ interface ISMTPVaultModel extends Model<ISMTPVault> {}
 
 const smtpVaultSchema = new Schema<ISMTPVault, ISMTPVaultModel>(
   {
-    name: {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+    },
+    label: {
       type: String,
       trim: true,
       maxlength: 80,
@@ -29,6 +38,14 @@ const smtpVaultSchema = new Schema<ISMTPVault, ISMTPVaultModel>(
       type: String,
       required: true,
     },
+    iv: {
+      type: String,
+      required: true,
+    },
+    authTag: {
+      type: String,
+      required: true,
+    },
     isDefault: {
       type: Boolean,
       default: false,
@@ -36,12 +53,17 @@ const smtpVaultSchema = new Schema<ISMTPVault, ISMTPVaultModel>(
     lastUsedAt: {
       type: Date,
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
   },
   { timestamps: true }
 )
 
-smtpVaultSchema.index({ email: 1 }, { unique: true })
-smtpVaultSchema.index({ isDefault: 1 })
+smtpVaultSchema.index({ organizationId: 1, email: 1 }, { unique: true })
+smtpVaultSchema.index({ organizationId: 1, isDefault: 1 })
 
 const SMTPVault: ISMTPVaultModel =
   (mongoose.models.SMTPVault as ISMTPVaultModel) ||
