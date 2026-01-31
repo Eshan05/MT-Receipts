@@ -1,11 +1,19 @@
-import mongoose, { Schema, Document, model, Model } from 'mongoose'
+import mongoose, { Schema, Document, Model, model } from 'mongoose'
 import bcrypt from 'bcrypt'
+
+export interface IMembership {
+  organizationId: mongoose.Types.ObjectId
+  organizationSlug: string
+  role: 'admin' | 'member'
+  approvedAt?: Date
+}
 
 export interface IUser extends Document {
   username: string
   email: string
   passhash: string
-  role: 'admin' | 'member'
+  isSuperAdmin: boolean
+  memberships: IMembership[]
   avatar?: string
   isActive: boolean
   lastSignIn: Date
@@ -17,6 +25,31 @@ interface IUserModel extends Model<IUser> {
   comparePassword(password: string, passhash: string): Promise<boolean>
 }
 
+const membershipSchema = new Schema<IMembership>(
+  {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+    },
+    organizationSlug: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'member'],
+      required: true,
+      default: 'member',
+    },
+    approvedAt: {
+      type: Date,
+    },
+  },
+  { _id: false }
+)
+
 const userSchema = new Schema<IUser, IUserModel>(
   {
     username: { type: String, required: true, trim: true },
@@ -27,8 +60,9 @@ const userSchema = new Schema<IUser, IUserModel>(
       lowercase: true,
     },
     passhash: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'member'], default: 'member' },
-    avatar: { type: String }, // Store as Base64 string or URL
+    isSuperAdmin: { type: Boolean, default: false },
+    memberships: [membershipSchema],
+    avatar: { type: String },
     isActive: { type: Boolean, default: true },
     lastSignIn: { type: Date },
     createdAt: { type: Date, default: Date.now },
@@ -39,6 +73,8 @@ const userSchema = new Schema<IUser, IUserModel>(
 userSchema.index({ email: 1 }, { unique: true })
 userSchema.index({ username: 1 }, { unique: true })
 userSchema.index({ isActive: 1 })
+userSchema.index({ 'memberships.organizationId': 1 })
+userSchema.index({ isSuperAdmin: 1 })
 
 userSchema.statics.hashPassword = async function (
   password: string
