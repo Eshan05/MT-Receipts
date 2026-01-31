@@ -1,0 +1,194 @@
+import mongoose, { Schema, Document, Model, model } from 'mongoose'
+
+export interface IOrganizationSettings {
+  primaryColor?: string
+  secondaryColor?: string
+  organizationName?: string
+  receiptNumberFormat?: string
+  defaultTemplate?: string
+  emailFromName?: string
+  emailFromAddress?: string
+}
+
+export interface IOrganizationLimits {
+  maxEvents: number
+  maxReceiptsPerMonth: number
+  maxUsers: number
+}
+
+export type OrganizationStatus = 'pending' | 'active' | 'suspended' | 'deleted'
+
+export interface IOrganization extends Document {
+  slug: string
+  name: string
+  description?: string
+  logoUrl?: string
+  settings: IOrganizationSettings
+  limits: IOrganizationLimits
+  status: OrganizationStatus
+  createdBy: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+  approvedAt?: Date
+  approvedBy?: mongoose.Types.ObjectId
+  deletedAt?: Date
+  restoresBefore?: Date
+}
+
+interface IOrganizationModel extends Model<IOrganization> {
+  findBySlug(slug: string): Promise<IOrganization | null>
+  findActive(): Promise<IOrganization[]>
+  findDeleted(): Promise<IOrganization[]>
+}
+
+const settingsSchema = new Schema<IOrganizationSettings>(
+  {
+    primaryColor: { type: String, default: '#3b82f6' },
+    secondaryColor: { type: String, default: '#1e40af' },
+    organizationName: { type: String },
+    receiptNumberFormat: {
+      type: String,
+      default: 'RCP-{eventCode}-{initials}{seq}',
+    },
+    defaultTemplate: { type: String },
+    emailFromName: { type: String },
+    emailFromAddress: { type: String },
+  },
+  { _id: false }
+)
+
+const limitsSchema = new Schema<IOrganizationLimits>(
+  {
+    maxEvents: { type: Number, default: -1 },
+    maxReceiptsPerMonth: { type: Number, default: -1 },
+    maxUsers: { type: Number, default: -1 },
+  },
+  { _id: false }
+)
+
+const organizationSchema = new Schema<IOrganization, IOrganizationModel>(
+  {
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 20,
+      match: /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z][a-z0-9]*$/,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    logoUrl: {
+      type: String,
+      trim: true,
+    },
+    settings: {
+      type: settingsSchema,
+      default: () => ({}),
+    },
+    limits: {
+      type: limitsSchema,
+      default: () => ({ maxEvents: -1, maxReceiptsPerMonth: -1, maxUsers: -1 }),
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'active', 'suspended', 'deleted'],
+      default: 'pending',
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    approvedAt: {
+      type: Date,
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    deletedAt: {
+      type: Date,
+    },
+    restoresBefore: {
+      type: Date,
+    },
+  },
+  { timestamps: true }
+)
+
+organizationSchema.index({ status: 1 })
+organizationSchema.index({ createdAt: -1 })
+organizationSchema.index({ deletedAt: 1 }, { sparse: true })
+
+organizationSchema.statics.findBySlug = async function (slug: string) {
+  return this.findOne({ slug: slug.toLowerCase() })
+}
+
+organizationSchema.statics.findActive = async function () {
+  return this.find({ status: 'active' })
+}
+
+organizationSchema.statics.findDeleted = async function () {
+  return this.find({ status: 'deleted', deletedAt: { $exists: true } })
+}
+
+const Organization: IOrganizationModel =
+  (mongoose.models.Organization as IOrganizationModel) ||
+  model<IOrganization, IOrganizationModel>('Organization', organizationSchema)
+
+export default Organization
+
+export const RESERVED_SLUGS = [
+  'api',
+  'v',
+  'superadmin',
+  'admin',
+  'login',
+  'signup',
+  'sign-in',
+  'sign-up',
+  'logout',
+  'settings',
+  'events',
+  'receipts',
+  'templates',
+  'documents',
+  'organization',
+  'org',
+  'invite',
+  'join',
+  'dashboard',
+  'users',
+  'members',
+  'migrations',
+  'errors',
+  'deleted',
+  'backup',
+  'cron',
+  'www',
+  'mail',
+  'email',
+  'help',
+  'support',
+  'about',
+  'pricing',
+  'terms',
+  'privacy',
+  'legal',
+]
+
+export function isSlugReserved(slug: string): boolean {
+  return RESERVED_SLUGS.includes(slug.toLowerCase())
+}
