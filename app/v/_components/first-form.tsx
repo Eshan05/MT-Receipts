@@ -9,6 +9,7 @@ import React from 'react'
 import { UseFormReturn, Controller } from 'react-hook-form'
 import { z } from 'zod'
 import { PasswordCompare } from './password-compare'
+import { MailIcon, User2Icon } from 'lucide-react'
 
 const signUpFormSchema = z
   .object({
@@ -61,24 +62,31 @@ const FirstForm: React.FC<FirstFormProps> = ({ form, isLoading = false }) => {
           beforehand. If you haven&apos;t then drop a message in the WP group.
         </p>
       </header>
-      <FieldGroup>
+      <FieldGroup className='gap-2'>
         <Controller
           name='username'
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor='username'>Preferred Name</FieldLabel>
-              <Input
-                {...field}
-                id='username'
-                className='w-80'
-                tabIndex={1}
-                placeholder='Enter your username'
-                disabled={isLoading}
-                aria-invalid={fieldState.invalid}
-                value={field.value ?? ''}
-              />
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              {/* <FieldLabel htmlFor='username'>Preferred Name</FieldLabel> */}
+              <div className='relative w-full '>
+                <Input
+                  {...field}
+                  id='username'
+                  className='w-full peer ps-7'
+                  tabIndex={1}
+                  placeholder='Enter your username'
+                  disabled={isLoading}
+                  aria-invalid={fieldState.invalid}
+                  value={field.value ?? ''}
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
+                  <User2Icon aria-hidden='true' size={12} />
+                </div>
+                {fieldState.invalid && (
+                  <FieldError errors={[fieldState.error]} />
+                )}
+              </div>
             </Field>
           )}
         />
@@ -87,24 +95,29 @@ const FirstForm: React.FC<FirstFormProps> = ({ form, isLoading = false }) => {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor='email'>Email</FieldLabel>
-              <Input
-                {...field}
-                id='email'
-                className='w-80'
-                tabIndex={1}
-                placeholder='Enter your email'
-                disabled={isLoading}
-                aria-invalid={fieldState.invalid}
-                value={field.value ?? ''}
-              />
+              {/* <FieldLabel htmlFor='email'>Email</FieldLabel> */}
+              <div className='relative'>
+                <Input
+                  {...field}
+                  id='email'
+                  className='w-full peer ps-7'
+                  tabIndex={1}
+                  placeholder='Enter your email'
+                  disabled={isLoading}
+                  aria-invalid={fieldState.invalid}
+                  value={field.value ?? ''}
+                />
+                <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
+                  <MailIcon aria-hidden='true' size={12} />
+                </div>
+              </div>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
         <PasswordCompare
           form={form}
-          className='w-80 mx-auto flex flex-col items-start justify-start gap-4'
+          className='w-80 mx-auto flex flex-col items-start justify-start gap-2 my-2'
           isLoading={isLoading}
         />
       </FieldGroup>

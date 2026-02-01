@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { CheckCircle, Eye, EyeOff, XCircle } from 'lucide-react'
+import { CheckCircle, Eye, EyeOff, KeyIcon, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -130,6 +130,7 @@ const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
           id='password'
           label='Password'
           fieldName='password'
+          placeholder='Strong Password'
           isLoading={isLoading}
         />
         <PasswordField
@@ -137,9 +138,10 @@ const PasswordCompare = React.forwardRef<HTMLDivElement, PasswordCompareProps>(
           id='confirmPassword'
           label='Confirm password'
           fieldName='confirmPassword'
+          placeholder='Confirm Password'
           isLoading={isLoading}
         />
-        <div className='flex w-full flex-col items-start justify-center'>
+        <div className='flex w-full flex-col items-start justify-center mt-1'>
           <div className='mx-auto flex flex-col items-start justify-start gap-2'>
             {Object.keys(flags).map((key) => (
               <PasswordValidityChip
@@ -180,33 +182,38 @@ const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
         control={form.control}
         render={({ field: controllerField, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor={id}>{label}</FieldLabel>
+            {/* <FieldLabel htmlFor={id}>{label}</FieldLabel> */}
             <div className='flex w-full flex-col items-start justify-start gap-1'>
               <div className='inline-flex w-full items-center justify-start gap-2'>
-                <Input
-                  {...controllerField}
-                  type={visible ? 'text' : 'password'}
-                  id={id}
-                  tabIndex={2}
-                  value={field?.toString() || ''}
-                  placeholder={placeholder}
-                  disabled={isLoading}
-                  aria-invalid={fieldState.invalid}
-                  onChange={(e) => {
-                    controllerField.onChange(e)
-                    form.trigger(fieldName)
-                    if (fieldName === 'password')
-                      form.trigger('confirmPassword')
-                  }}
-                />
+                <div className='relative w-full'>
+                  <Input
+                    {...controllerField}
+                    type={visible ? 'text' : 'password'}
+                    id={id}
+                    tabIndex={2}
+                    value={field?.toString() || ''}
+                    placeholder={placeholder}
+                    disabled={isLoading}
+                    className='peer ps-7'
+                    aria-invalid={fieldState.invalid}
+                    onChange={(e) => {
+                      controllerField.onChange(e)
+                      form.trigger(fieldName)
+                      if (fieldName === 'password')
+                        form.trigger('confirmPassword')
+                    }}
+                  />
+                  <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
+                    <KeyIcon aria-hidden='true' size={12} />
+                  </div>
+                </div>
                 <Button
-                  className='min-w-10'
                   variant='outline'
                   size='icon'
                   onClick={() => setVisible(!visible)}
                   disabled={isLoading}
                 >
-                  {visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                  {visible ? <Eye size={12} /> : <EyeOff size={12} />}
                 </Button>
               </div>
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}

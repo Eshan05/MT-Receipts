@@ -186,7 +186,7 @@ function AuthPageContent() {
         ) : (
           <SignInForm form={form} isLoading={isLoading} />
         )}
-        <footer className='flex justify-end mt-4 gap-4 flex-wrap flex-col md:flex-row'>
+        <footer className='flex justify-center mt-4 gap-2 flex-wrap flex-col md:flex-row'>
           {isSignUp && (
             <Button type='submit' disabled={isLoading}>
               {isLoading ? 'Signing Up...' : 'Sign Up'}
