@@ -97,7 +97,7 @@ export function EmailVaultCredenza({
     const search = query.trim().toLowerCase()
     if (!search) return orderedVaults
     return orderedVaults.filter((vault) =>
-      `${vault.name || ''} ${vault.email}`.toLowerCase().includes(search)
+      `${vault.label || ''} ${vault.email}`.toLowerCase().includes(search)
     )
   }, [orderedVaults, query])
 
@@ -302,7 +302,7 @@ export function EmailVaultCredenza({
               <CommandGroup heading='All Senders'>
                 {filteredVaults.map((vault) => {
                   const avatarUrl = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(vault.email)}`
-                  const senderLabel = vault.name?.trim() || 'Unknown Sender'
+                  const senderLabel = vault.label?.trim() || 'Unknown Sender'
 
                   return (
                     <CommandItem

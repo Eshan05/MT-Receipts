@@ -5,7 +5,7 @@ import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
 
 function sanitizeVault(vault: {
   _id: string
-  name?: string
+  label?: string
   email: string
   isDefault: boolean
   lastUsedAt?: Date
@@ -14,7 +14,7 @@ function sanitizeVault(vault: {
 }) {
   return {
     id: vault._id,
-    name: vault.name,
+    label: vault.label,
     email: vault.email,
     isDefault: vault.isDefault,
     lastUsedAt: vault.lastUsedAt,
@@ -42,9 +42,9 @@ export async function PATCH(
 
     const updates: Record<string, unknown> = {}
 
-    if (body.name !== undefined) {
-      const name = String(body.name || '').trim()
-      updates.name = name || undefined
+    if (body.label !== undefined) {
+      const label = String(body.label || '').trim()
+      updates.label = label || undefined
     }
 
     if (body.email !== undefined) {
@@ -112,7 +112,7 @@ export async function PATCH(
       message: 'SMTP vault updated successfully',
       vault: sanitizeVault({
         _id: String(updated._id),
-        name: updated.name,
+        label: updated.label,
         email: updated.email,
         isDefault: updated.isDefault,
         lastUsedAt: updated.lastUsedAt,

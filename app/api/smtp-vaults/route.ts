@@ -5,7 +5,7 @@ import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
 
 function sanitizeVault(vault: {
   _id: string
-  name: string
+  label: string
   email: string
   isDefault: boolean
   lastUsedAt?: Date
@@ -14,7 +14,7 @@ function sanitizeVault(vault: {
 }) {
   return {
     id: vault._id,
-    name: vault.name,
+    label: vault.label,
     email: vault.email,
     isDefault: vault.isDefault,
     lastUsedAt: vault.lastUsedAt,
@@ -33,7 +33,7 @@ export async function GET() {
       vaults: vaults.map((vault) =>
         sanitizeVault({
           _id: String(vault._id),
-          name: vault.name,
+          label: vault.label,
           email: vault.email,
           isDefault: vault.isDefault,
           lastUsedAt: vault.lastUsedAt,
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     const vault = await SMTPVault.create({
-      name: name || undefined,
+      label: name || undefined,
       email,
       encryptedAppPassword: encryptSmtpAppPassword(appPassword),
       isDefault,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         message: 'SMTP vault created successfully',
         vault: sanitizeVault({
           _id: String(vault._id),
-          name: vault.name,
+          label: vault.label,
           email: vault.email,
           isDefault: vault.isDefault,
           lastUsedAt: vault.lastUsedAt,

@@ -12,7 +12,7 @@ import SMTPVault from '@/models/smtp-vault.model'
 import { decryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
 
 interface SenderCredentials {
-  name?: string
+  label?: string
   user: string
   pass: string
 }
@@ -43,7 +43,7 @@ async function resolveSenderCredentials(
     })
 
     return {
-      name: selectedVault.name,
+      label: selectedVault.label,
       user: selectedVault.email,
       pass: decryptedPassword,
     }
@@ -197,7 +197,7 @@ export async function sendReceiptEmail({
     })
 
     const info = await transporter.sendMail({
-      from: `"${senderCredentials.name || `${organizationName} Receipts`}" <${senderCredentials.user}>`,
+      from: `"${senderCredentials.label || `${organizationName} Receipts`}" <${senderCredentials.user}>`,
       to,
       subject: `Receipt #${receiptNumber} - ${eventName}`,
       html: emailHtml,
@@ -248,7 +248,7 @@ export async function sendEmail({
     })
 
     const info = await transporter.sendMail({
-      from: `"${senderCredentials.name || 'ACES Receipts'}" <${senderCredentials.user}>`,
+      from: `"${senderCredentials.label || 'ACES Receipts'}" <${senderCredentials.user}>`,
       to,
       subject,
       html,

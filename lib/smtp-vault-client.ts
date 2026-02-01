@@ -1,6 +1,6 @@
 export interface SmtpVaultMeta {
   id: string
-  name?: string
+  label?: string
   email: string
   isDefault: boolean
   lastUsedAt?: string

@@ -13,7 +13,7 @@ export function SenderSelectView({
   showDefaultBadge = true,
 }: SenderSelectViewProps) {
   const avatarUrl = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(vault.email)}`
-  const displayName = vault.name?.trim() || vault.email.split('@')[0]
+  const displayName = vault.label?.trim() || vault.email.split('@')[0]
 
   return (
     <div className='flex items-center gap-2 min-w-0 w-full'>
