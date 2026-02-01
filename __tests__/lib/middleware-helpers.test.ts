@@ -23,6 +23,7 @@ describe('Path Constants', () => {
   describe('PUBLIC_PATHS', () => {
     it('contains expected public paths', () => {
       expect(PUBLIC_PATHS).toContain('/')
+      expect(PUBLIC_PATHS).toContain('/v')
       expect(PUBLIC_PATHS).toContain('/login')
       expect(PUBLIC_PATHS).toContain('/signup')
       expect(PUBLIC_PATHS).toContain('/create-organization')

@@ -11,7 +11,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:light": "cross-env SKIP_MONGODB_SETUP=true vitest run __tests__/lib/middleware-helpers.test.ts",
     "validate:phase1": "npx tsx scripts/validate-phase1.ts",
     "validate:phase2": "npx tsx scripts/validate-phase2.ts"
   },

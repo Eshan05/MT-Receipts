@@ -3,6 +3,7 @@ import { RESERVED_SLUGS } from './reserved-slugs'
 
 export const PUBLIC_PATHS = [
   '/',
+  '/v',
   '/login',
   '/signup',
   '/create-organization',
