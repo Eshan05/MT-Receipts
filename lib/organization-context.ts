@@ -1,6 +1,5 @@
 import { headers } from 'next/headers'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
-import Organization from '@/models/organization.model'
 import { getMasterConnection } from '@/lib/db/conn'
 
 export interface OrganizationContext {
@@ -43,6 +42,7 @@ export async function resolveOrganization(
   }
 
   await getMasterConnection()
+  const { default: Organization } = await import('@/models/organization.model')
   const org = await Organization.findBySlug(slug)
 
   if (!org) {

@@ -1,14 +1,21 @@
 import { beforeAll, afterAll } from 'vitest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
-import 'dotenv/config'
 import mongoose from 'mongoose'
 
 let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
+  if (process.env.SKIP_MONGODB_SETUP === 'true') {
+    process.env.SMTP_VAULT_SECRET = 'a'.repeat(32)
+    process.env.MASTER_DB_NAME = 'master'
+    process.env.TENANT_DB_PREFIX = 'org_'
+    return
+  }
+
   mongoServer = await MongoMemoryServer.create({
     binary: {
-      systemBinary: process.env.MONGOD_PATH,
+      systemBinary:
+        'C:\\Users\\redma\\scoop\\apps\\mongodb\\current\\bin\\mongod.exe',
       version: '8.0.6',
     },
     instance: {

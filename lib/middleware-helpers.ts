@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { RESERVED_SLUGS } from '@/models/organization.model'
+import { RESERVED_SLUGS } from './reserved-slugs'
 
 export const PUBLIC_PATHS = [
   '/',

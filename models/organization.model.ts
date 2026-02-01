@@ -150,45 +150,4 @@ const Organization: IOrganizationModel =
 
 export default Organization
 
-export const RESERVED_SLUGS = [
-  'api',
-  'v',
-  'superadmin',
-  'admin',
-  'login',
-  'signup',
-  'sign-in',
-  'sign-up',
-  'logout',
-  'settings',
-  'events',
-  'receipts',
-  'templates',
-  'documents',
-  'organization',
-  'org',
-  'invite',
-  'join',
-  'dashboard',
-  'users',
-  'members',
-  'migrations',
-  'errors',
-  'deleted',
-  'backup',
-  'cron',
-  'www',
-  'mail',
-  'email',
-  'help',
-  'support',
-  'about',
-  'pricing',
-  'terms',
-  'privacy',
-  'legal',
-]
-
-export function isSlugReserved(slug: string): boolean {
-  return RESERVED_SLUGS.includes(slug.toLowerCase())
-}
+export { RESERVED_SLUGS, isSlugReserved } from '@/lib/reserved-slugs'
