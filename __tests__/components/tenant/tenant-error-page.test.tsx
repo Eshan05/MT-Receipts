@@ -56,9 +56,7 @@ describe('TenantErrorPage Component', () => {
   describe('pending type', () => {
     it('renders correct title', () => {
       render(<TenantErrorPage type='pending' />)
-      expect(
-        screen.getByText('Organization Pending Approval')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Organization Pending')).toBeInTheDocument()
     })
 
     it('renders correct description', () => {
