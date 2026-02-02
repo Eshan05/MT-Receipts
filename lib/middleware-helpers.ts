@@ -6,7 +6,7 @@ export const PUBLIC_PATHS = [
   '/v',
   '/login',
   '/signup',
-  '/create-organization',
+  '/o',
   '/api/sessions',
   '/api/users',
 ]
@@ -24,11 +24,7 @@ export const NON_TENANT_PATHS = [
   'sign-in',
   'sign-up',
   'logout',
-  'create-organization',
-  'org-not-found',
-  'org-pending',
-  'org-suspended',
-  'org-deleted',
+  'o',
 ]
 
 export function isStaticPath(pathname: string): boolean {

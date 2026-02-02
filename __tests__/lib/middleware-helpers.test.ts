@@ -26,7 +26,7 @@ describe('Path Constants', () => {
       expect(PUBLIC_PATHS).toContain('/v')
       expect(PUBLIC_PATHS).toContain('/login')
       expect(PUBLIC_PATHS).toContain('/signup')
-      expect(PUBLIC_PATHS).toContain('/create-organization')
+      expect(PUBLIC_PATHS).toContain('/o')
     })
   })
 
@@ -50,8 +50,7 @@ describe('Path Constants', () => {
       expect(NON_TENANT_PATHS).toContain('v')
       expect(NON_TENANT_PATHS).toContain('api')
       expect(NON_TENANT_PATHS).toContain('superadmin')
-      expect(NON_TENANT_PATHS).toContain('org-not-found')
-      expect(NON_TENANT_PATHS).toContain('org-pending')
+      expect(NON_TENANT_PATHS).toContain('o')
     })
   })
 })
@@ -94,8 +93,8 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/signup')).toBe(true)
   })
 
-  it('returns true for create-organization path', () => {
-    expect(isPublicPath('/create-organization')).toBe(true)
+  it('returns true for organization path', () => {
+    expect(isPublicPath('/o')).toBe(true)
   })
 
   it('returns true for public path subroutes', () => {
@@ -139,7 +138,7 @@ describe('isNonTenantPath', () => {
     expect(isNonTenantPath('api')).toBe(true)
     expect(isNonTenantPath('superadmin')).toBe(true)
     expect(isNonTenantPath('login')).toBe(true)
-    expect(isNonTenantPath('org-not-found')).toBe(true)
+    expect(isNonTenantPath('o')).toBe(true)
   })
 
   it('returns false for tenant segments', () => {
@@ -204,10 +203,10 @@ describe('extractSlugFromPath', () => {
   })
 
   it('returns null for error pages', () => {
-    expect(extractSlugFromPath('/org-not-found')).toBe(null)
-    expect(extractSlugFromPath('/org-pending')).toBe(null)
-    expect(extractSlugFromPath('/org-suspended')).toBe(null)
-    expect(extractSlugFromPath('/org-deleted')).toBe(null)
+    expect(extractSlugFromPath('/o/404')).toBe(null)
+    expect(extractSlugFromPath('/o/202')).toBe(null)
+    expect(extractSlugFromPath('/o/403')).toBe(null)
+    expect(extractSlugFromPath('/o/410')).toBe(null)
   })
 })
 
@@ -220,8 +219,8 @@ describe('createRedirectUrl', () => {
       },
     } as any
 
-    const url = createRedirectUrl(mockRequest, '/org-not-found')
-    expect(url.pathname).toBe('/org-not-found')
+    const url = createRedirectUrl(mockRequest, '/o/404')
+    expect(url.pathname).toBe('/o/404')
     expect(url.origin).toBe('http://localhost:3000')
   })
 })

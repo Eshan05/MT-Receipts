@@ -729,7 +729,7 @@ Handles path-based routing and organization context injection:
 
 **Path categories:**
 
-- `PUBLIC_PATHS`: `/`, `/login`, `/signup`, `/create-organization`, `/api/sessions`, `/api/users`
+- `PUBLIC_PATHS`: `/`, `/login`, `/signup`, `/o`, `/api/sessions`, `/api/users`
 - `SUPERADMIN_PATHS`: `/superadmin`, `/api/superadmins`
 - `STATIC_PATHS`: `/favicon.ico`, `/_next`, `/api`
 
@@ -847,8 +847,12 @@ Runs as a one-time operation during the multi-tenancy rollout:
 
 **Goal:** New user sign-up flow with organization creation
 
-- [ ] Create `app/(landing)/page.tsx` - marketing landing page
-- [ ] Create `app/(landing)/create-organization/page.tsx` - org creation form
+- [ ] Create `app/page.tsx` - landing page
+- [ ] Create `app/o/page.tsx` - org creation form
+- [ ] Create `app/o/404/page.tsx` - organization not found
+- [ ] Create `app/o/202/page.tsx` - organization pending approval
+- [ ] Create `app/o/403/page.tsx` - organization suspended
+- [ ] Create `app/o/410/page.tsx` - organization deleted
 - [ ] Update `app/api/sessions/route.ts`:
   - Handle org selection after login
   - Return available memberships

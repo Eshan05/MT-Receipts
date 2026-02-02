@@ -1,6 +1,7 @@
 export const RESERVED_SLUGS = [
   'api',
   'v',
+  'o',
   'superadmin',
   'admin',
   'login',

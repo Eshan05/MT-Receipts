@@ -89,16 +89,16 @@ export function getOrganizationErrorPath(
   org: OrganizationContext | null
 ): string | null {
   if (!org) {
-    return '/org-not-found'
+    return '/o/404'
   }
 
   switch (org.status) {
     case 'pending':
-      return '/org-pending'
+      return '/o/202'
     case 'suspended':
-      return '/org-suspended'
+      return '/o/403'
     case 'deleted':
-      return '/org-deleted'
+      return '/o/410'
     default:
       return null
   }

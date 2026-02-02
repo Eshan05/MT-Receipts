@@ -190,7 +190,7 @@ async function validateOrganizationContext() {
     }
     logTest(
       'Error path for pending',
-      getOrganizationErrorPath(pendingOrg) === '/org-pending'
+      getOrganizationErrorPath(pendingOrg) === '/o/202'
     )
 
     const suspendedOrg = {
@@ -201,7 +201,7 @@ async function validateOrganizationContext() {
     }
     logTest(
       'Error path for suspended',
-      getOrganizationErrorPath(suspendedOrg) === '/org-suspended'
+      getOrganizationErrorPath(suspendedOrg) === '/o/403'
     )
 
     const deletedOrg = {
@@ -212,12 +212,12 @@ async function validateOrganizationContext() {
     }
     logTest(
       'Error path for deleted',
-      getOrganizationErrorPath(deletedOrg) === '/org-deleted'
+      getOrganizationErrorPath(deletedOrg) === '/o/410'
     )
 
     logTest(
       'Error path for null org',
-      getOrganizationErrorPath(null) === '/org-not-found'
+      getOrganizationErrorPath(null) === '/o/404'
     )
 
     await invalidateCachedOrganization(testSlug)
@@ -241,10 +241,10 @@ async function validateTenantPages() {
     const path = await import('path')
 
     const pages = [
-      { path: 'app/(tenant)/org-not-found/page.tsx', type: 'not-found' },
-      { path: 'app/(tenant)/org-pending/page.tsx', type: 'pending' },
-      { path: 'app/(tenant)/org-suspended/page.tsx', type: 'suspended' },
-      { path: 'app/(tenant)/org-deleted/page.tsx', type: 'deleted' },
+      { path: 'app/(tenant)/o/404/page.tsx', type: 'not-found' },
+      { path: 'app/(tenant)/o/202/page.tsx', type: 'pending' },
+      { path: 'app/(tenant)/o/403/page.tsx', type: 'suspended' },
+      { path: 'app/(tenant)/o/410/page.tsx', type: 'deleted' },
     ]
 
     for (const page of pages) {
