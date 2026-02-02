@@ -11,8 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate:phase1": "npx tsx scripts/validate-phase1.ts",
-    "validate:phase2": "npx tsx scripts/validate-phase2.ts"
+    "validate:p-one": "npx tsx scripts/validate-phase1.ts",
+    "validate:p-two": "npx tsx scripts/validate-phase2.ts",
+    "validate:p-three": "npx tsx scripts/validate-phase3.ts"
   },
   "packageManager": "pnpm@10.27.0",
   "engines": {

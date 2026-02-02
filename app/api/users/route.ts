@@ -39,7 +39,8 @@ export async function POST(request: Request) {
       )
     }
 
-    const user = new User({ username, email, passhash: password })
+    const hashedPassword = await User.hashPassword(password)
+    const user = new User({ username, email, passhash: hashedPassword })
     await user.save()
 
     const response = NextResponse.json(

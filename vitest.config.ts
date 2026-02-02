@@ -26,6 +26,7 @@ export default defineConfig({
             '__tests__/lib/redis.test.ts',
             '__tests__/lib/organization-context.test.ts',
             '__tests__/lib/encryption.test.ts',
+            '__tests__/api/**/*.test.ts',
           ],
           testTimeout: 300000,
           hookTimeout: 600000,
@@ -35,11 +36,14 @@ export default defineConfig({
       {
         ...sharedConfig,
         test: {
-          name: 'middleware',
+          name: 'unit',
           globals: true,
           environment: 'node',
           setupFiles: ['./__tests__/setup-lightweight.ts'],
-          include: ['__tests__/lib/middleware-helpers.test.ts'],
+          include: [
+            '__tests__/lib/middleware-helpers.test.ts',
+            '__tests__/lib/auth.test.ts',
+          ],
           testTimeout: 30000,
         },
       },
@@ -50,7 +54,10 @@ export default defineConfig({
           globals: true,
           environment: 'jsdom',
           setupFiles: ['./__tests__/setup-components.ts'],
-          include: ['__tests__/components/**/*.test.tsx'],
+          include: [
+            '__tests__/components/**/*.test.tsx',
+            '__tests__/app/**/*.test.tsx',
+          ],
           testTimeout: 30000,
         },
       },

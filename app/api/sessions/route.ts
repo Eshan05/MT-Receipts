@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
+import Organization from '@/models/organization.model'
 import {
   setAuthCookie,
   clearAuthCookie,
+  clearCurrentOrgCookie,
   verifyAuthToken,
   getTokenServer,
+  getCurrentOrgSlug,
+  setCurrentOrgCookie,
 } from '@/lib/auth'
 import { z } from 'zod'
 
@@ -14,10 +18,21 @@ const loginSchema = z.object({
   password: z.string().min(8),
 })
 
+const switchOrgSchema = z.object({
+  action: z.literal('switch'),
+  organizationSlug: z.string().min(1),
+})
+
 export async function POST(request: Request) {
   try {
     await dbConnect()
     const body = await request.json()
+
+    const switchValidation = switchOrgSchema.safeParse(body)
+    if (switchValidation.success) {
+      return handleOrgSwitch(switchValidation.data.organizationSlug)
+    }
+
     const validationResult = loginSchema.safeParse(body)
 
     if (!validationResult.success) {
@@ -47,6 +62,8 @@ export async function POST(request: Request) {
     user.lastSignIn = new Date()
     await user.save()
 
+    const memberships = await buildMemberships(user)
+
     const response = NextResponse.json(
       {
         message: 'Session created',
@@ -54,7 +71,9 @@ export async function POST(request: Request) {
           id: user._id,
           email: user.email,
           username: user.username,
+          isSuperAdmin: user.isSuperAdmin,
         },
+        memberships,
       },
       { status: 201 }
     )
@@ -72,6 +91,76 @@ export async function POST(request: Request) {
   }
 }
 
+async function handleOrgSwitch(organizationSlug: string) {
+  const token = await getTokenServer()
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const verifiedToken = await verifyAuthToken(token)
+  if (!verifiedToken || !verifiedToken.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const user = await User.findOne({ email: verifiedToken.email })
+  if (!user) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  const membership = user.memberships.find(
+    (m) => m.organizationSlug === organizationSlug
+  )
+
+  if (!membership) {
+    return NextResponse.json(
+      { error: 'You are not a member of this organization' },
+      { status: 403 }
+    )
+  }
+
+  const org = await Organization.findBySlug(organizationSlug)
+  if (!org || org.status !== 'active') {
+    return NextResponse.json(
+      { error: 'Organization not available' },
+      { status: 404 }
+    )
+  }
+
+  const response = NextResponse.json({
+    message: 'Organization switched',
+    currentOrganization: {
+      id: org._id,
+      slug: org.slug,
+      name: org.name,
+      role: membership.role,
+    },
+  })
+
+  await setCurrentOrgCookie(organizationSlug, response)
+  return response
+}
+
+async function buildMemberships(user: any) {
+  if (!user.memberships || user.memberships.length === 0) {
+    return []
+  }
+
+  const orgIds = user.memberships.map((m: any) => m.organizationId)
+  const orgs = await Organization.find({ _id: { $in: orgIds } })
+
+  return user.memberships.map((m: any) => {
+    const org = orgs.find(
+      (o: any) => o._id.toString() === m.organizationId.toString()
+    )
+    return {
+      organizationId: m.organizationId.toString(),
+      organizationSlug: m.organizationSlug,
+      organizationName: org?.name || 'Unknown',
+      role: m.role,
+    }
+  })
+}
+
 export async function GET() {
   try {
     const token = await getTokenServer()
@@ -86,12 +175,28 @@ export async function GET() {
     }
 
     await dbConnect()
-    const user = await User.findOne({ email: verifiedToken.email }).select(
-      'username email'
-    )
+    const user = await User.findOne({ email: verifiedToken.email })
 
     if (!user) {
       return NextResponse.json({ authenticated: false }, { status: 401 })
+    }
+
+    const memberships = await buildMemberships(user)
+    const currentOrgSlug = await getCurrentOrgSlug()
+
+    let currentOrganization = null
+    if (currentOrgSlug && memberships.length > 0) {
+      const currentMembership = memberships.find(
+        (m: any) => m.organizationSlug === currentOrgSlug
+      )
+      if (currentMembership) {
+        currentOrganization = {
+          id: currentMembership.organizationId,
+          slug: currentMembership.organizationSlug,
+          name: currentMembership.organizationName,
+          role: currentMembership.role,
+        }
+      }
     }
 
     return NextResponse.json({
@@ -100,7 +205,10 @@ export async function GET() {
         id: user._id,
         email: user.email,
         username: user.username,
+        isSuperAdmin: user.isSuperAdmin,
       },
+      memberships,
+      currentOrganization,
     })
   } catch (error) {
     console.error('Session verification error:', error)
@@ -114,5 +222,6 @@ export async function DELETE() {
     { status: 200 }
   )
   await clearAuthCookie(response)
+  await clearCurrentOrgCookie(response)
   return response
 }

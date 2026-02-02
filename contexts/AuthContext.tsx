@@ -9,28 +9,43 @@ import {
   ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCookie, deleteCookie, setCookie } from 'cookies-next'
-import { jwtVerify, type JWTPayload } from 'jose'
 
 export interface ContextUser {
+  id: string
   email: string
   username: string
-  lastLogin?: Date
+  isSuperAdmin: boolean
+}
+
+export interface Membership {
+  organizationId: string
+  organizationSlug: string
+  organizationName: string
+  role: 'admin' | 'member'
+}
+
+export interface CurrentOrganization {
+  id: string
+  slug: string
+  name: string
+  role: 'admin' | 'member'
 }
 
 interface AuthContextProps {
   isAuthenticated: boolean
   user: ContextUser | null
+  memberships: Membership[]
+  currentOrganization: CurrentOrganization | null
+  hasOrganizations: boolean
   loading: boolean
   login: (email: string, pass: string) => Promise<void>
   signup: (username: string, email: string, pass: string) => Promise<void>
   logout: () => void
+  switchOrganization: (slug: string) => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined)
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'PGnPIUmff+6rZ1yedUq9/W0AVl7P/KKVBS4tpWLPcW0='
-)
 
 export function useAuth() {
   const context = useContext(AuthContext)
@@ -45,41 +60,42 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [user, setUser] = useState<ContextUser | null>(null)
+  const [memberships, setMemberships] = useState<Membership[]>([])
+  const [currentOrganization, setCurrentOrganization] =
+    useState<CurrentOrganization | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const router = useRouter()
 
-  const checkAuth = useCallback(async () => {
-    const token = getCookie('authToken')
-    if (token && typeof token === 'string' && token.trim() !== '') {
-      try {
-        const res = await fetch('/api/sessions')
+  const hasOrganizations = memberships.length > 0
 
-        if (res.ok) {
-          const data = await res.json()
-          if (data.authenticated && data.user) {
-            setUser(data.user)
-            setIsAuthenticated(true)
-          } else {
-            logout()
-          }
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sessions')
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.authenticated && data.user) {
+          setUser(data.user)
+          setMemberships(data.memberships || [])
+          setCurrentOrganization(data.currentOrganization || null)
+          setIsAuthenticated(true)
         } else {
           logout()
         }
-      } catch (error) {
-        console.error('Authentication check failed:', error)
+      } else {
         logout()
       }
-    } else {
-      setIsAuthenticated(false)
-      setUser(null)
+    } catch (error) {
+      console.error('Authentication check failed:', error)
+      logout()
     }
 
     setLoading(false)
   }, [router])
 
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+    refreshSession()
+  }, [refreshSession])
 
   const login = async (email: string, pass: string) => {
     const res = await fetch('/api/sessions', {
@@ -92,8 +108,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const data = await res.json()
       if (data.user) {
         setUser(data.user)
+        setMemberships(data.memberships || [])
+        setCurrentOrganization(data.currentOrganization || null)
         setIsAuthenticated(true)
-        router.push('/events')
+
+        if (data.memberships && data.memberships.length > 0) {
+          const firstOrg = data.memberships[0]
+          router.push(`/${firstOrg.organizationSlug}/events`)
+        } else {
+          router.push('/o')
+        }
       }
     } else {
       const errorData = await res.json()
@@ -112,8 +136,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const data = await res.json()
       if (data.user) {
         setUser(data.user)
+        setMemberships([])
+        setCurrentOrganization(null)
         setIsAuthenticated(true)
-        router.push('/events')
+        router.push('/o')
       }
     } else {
       const errorData = await res.json()
@@ -125,16 +151,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await fetch('/api/sessions', { method: 'DELETE' })
     setIsAuthenticated(false)
     setUser(null)
+    setMemberships([])
+    setCurrentOrganization(null)
     router.push('/')
+  }
+
+  const switchOrganization = async (slug: string) => {
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'switch', organizationSlug: slug }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (data.currentOrganization) {
+          setCurrentOrganization(data.currentOrganization)
+          router.push(`/${slug}/events`)
+        }
+      } else {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to switch organization')
+      }
+    } catch (error) {
+      throw error
+    }
   }
 
   const contextValue: AuthContextProps = {
     isAuthenticated,
     user,
+    memberships,
+    currentOrganization,
+    hasOrganizations,
     loading,
     login,
     signup,
     logout,
+    switchOrganization,
+    refreshSession,
   }
 
   return (
