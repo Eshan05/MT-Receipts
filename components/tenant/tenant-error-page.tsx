@@ -28,7 +28,7 @@ const ERROR_CONFIGS: Record<TenantErrorType, TenantErrorConfig> = {
   },
   pending: {
     icon: ClockIcon,
-    title: 'Organization Pending Approval',
+    title: 'Organization Pending',
     description:
       'This organization is currently pending approval. You will be able to access it once an administrator approves it.',
     showHomeButton: true,
@@ -71,7 +71,9 @@ export default function TenantErrorPage({ type }: TenantErrorPageProps) {
             {config.title}
           </h1>
 
-          <p className='mb-8 text-muted-foreground'>{config.description}</p>
+          <p className='mb-8 text-muted-foreground text-base'>
+            {config.description}
+          </p>
 
           {config.showHomeButton && (
             <div className='flex flex-col gap-4 sm:flex-row'>

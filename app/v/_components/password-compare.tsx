@@ -175,14 +175,12 @@ export interface PasswordFieldProps {
 const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
   ({ form, id, placeholder, label, fieldName, isLoading = false }, ref) => {
     const [visible, setVisible] = React.useState<boolean>(false)
-    const field = form.watch(fieldName)
     return (
       <Controller
         name={fieldName}
         control={form.control}
         render={({ field: controllerField, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            {/* <FieldLabel htmlFor={id}>{label}</FieldLabel> */}
             <div className='flex w-full flex-col items-start justify-start gap-1'>
               <div className='inline-flex w-full items-center justify-start gap-2'>
                 <div className='relative w-full'>
@@ -191,7 +189,6 @@ const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
                     type={visible ? 'text' : 'password'}
                     id={id}
                     tabIndex={2}
-                    value={field?.toString() || ''}
                     placeholder={placeholder}
                     disabled={isLoading}
                     className='peer ps-7'
