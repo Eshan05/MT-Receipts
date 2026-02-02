@@ -39,10 +39,10 @@ export function JoinWithCodeCredenza({
 
     setLoading(true)
     try {
-      const response = await fetch('/api/invites/join', {
+      const response = await fetch('/api/memberships', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmedCode }),
+        body: JSON.stringify({ inviteCode: trimmedCode }),
       })
 
       const data = await response.json()

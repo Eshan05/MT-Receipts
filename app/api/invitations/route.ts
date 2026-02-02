@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 import MembershipRequest from '@/models/membership-request.model'
-import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 
 export async function GET() {
@@ -18,11 +17,6 @@ export async function GET() {
     }
 
     await dbConnect()
-
-    const user = await User.findOne({ email: verifiedToken.email })
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     const emailInvites = await MembershipRequest.find({
       email: verifiedToken.email,
@@ -53,16 +47,11 @@ export async function GET() {
       }
     })
 
-    const applications: any[] = []
-
-    return NextResponse.json({
-      invitations,
-      applications,
-    })
+    return NextResponse.json(invitations)
   } catch (error) {
-    console.error('Error fetching membership requests:', error)
+    console.error('Error fetching invitations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch membership requests' },
+      { error: 'Failed to fetch invitations' },
       { status: 500 }
     )
   }

@@ -2,14 +2,22 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 import MembershipRequest from '@/models/membership-request.model'
+import mongoose from 'mongoose'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: Promise<{ code: string }>
+}
+
+function isValidObjectId(id: string): boolean {
+  return (
+    mongoose.Types.ObjectId.isValid(id) &&
+    new mongoose.Types.ObjectId(id).toString() === id
+  )
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params
+    const { code } = await params
     const token = await getTokenServer()
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -22,8 +30,19 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await dbConnect()
 
-    const invite = await MembershipRequest.findById(id)
-    if (!invite || invite.status !== 'pending') {
+    let invite = await MembershipRequest.findOne({
+      code: code.toUpperCase(),
+      status: 'pending',
+    })
+
+    if (!invite && isValidObjectId(code)) {
+      invite = await MembershipRequest.findOne({
+        _id: code,
+        status: 'pending',
+      })
+    }
+
+    if (!invite) {
       return NextResponse.json(
         { error: 'Invitation not found or already processed' },
         { status: 404 }

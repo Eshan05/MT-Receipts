@@ -6,8 +6,8 @@ import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'
 
-const joinSchema = z.object({
-  code: z.string().min(1),
+const createMembershipSchema = z.object({
+  inviteCode: z.string().min(1),
 })
 
 export async function POST(request: Request) {
@@ -30,15 +30,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const validationResult = joinSchema.safeParse(body)
+    const validationResult = createMembershipSchema.safeParse(body)
 
     if (!validationResult.success) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    const { code } = validationResult.data
+    const { inviteCode } = validationResult.data
 
-    const invite = await MembershipRequest.findValidByCode(code)
+    const invite = await MembershipRequest.findValidByCode(inviteCode)
     if (!invite) {
       return NextResponse.json(
         { error: 'Invalid or expired invite code' },
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Join error:', error)
+    console.error('Create membership error:', error)
     return NextResponse.json(
       { error: 'Failed to join organization' },
       { status: 500 }

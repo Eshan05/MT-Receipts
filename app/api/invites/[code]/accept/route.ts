@@ -4,14 +4,22 @@ import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 import MembershipRequest from '@/models/membership-request.model'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
+import mongoose from 'mongoose'
 
 interface RouteParams {
-  params: Promise<{ id: string }>
+  params: Promise<{ code: string }>
+}
+
+function isValidObjectId(id: string): boolean {
+  return (
+    mongoose.Types.ObjectId.isValid(id) &&
+    new mongoose.Types.ObjectId(id).toString() === id
+  )
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const { id } = await params
+    const { code } = await params
     const token = await getTokenServer()
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,8 +37,19 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const invite = await MembershipRequest.findById(id)
-    if (!invite || invite.status !== 'pending') {
+    let invite = await MembershipRequest.findOne({
+      code: code.toUpperCase(),
+      status: 'pending',
+    })
+
+    if (!invite && isValidObjectId(code)) {
+      invite = await MembershipRequest.findOne({
+        _id: code,
+        status: 'pending',
+      })
+    }
+
+    if (!invite) {
       return NextResponse.json(
         { error: 'Invitation not found or already processed' },
         { status: 404 }
@@ -44,6 +63,26 @@ export async function POST(request: Request, { params }: RouteParams) {
       )
     }
 
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      invite.status = 'expired'
+      await invite.save()
+      return NextResponse.json(
+        { error: 'This invite has expired' },
+        { status: 410 }
+      )
+    }
+
+    if (
+      invite.type === 'code' &&
+      invite.maxUses &&
+      invite.usedCount >= invite.maxUses
+    ) {
+      return NextResponse.json(
+        { error: 'This invite has reached its maximum uses' },
+        { status: 410 }
+      )
+    }
+
     const organization = await Organization.findById(invite.organizationId)
     if (!organization || organization.status !== 'active') {
       return NextResponse.json(
@@ -53,7 +92,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const existingMembership = user.memberships.find(
-      (m) => m.organizationId.toString() === invite.organizationId.toString()
+      (m) => m.organizationId.toString() === invite!.organizationId.toString()
     )
 
     if (existingMembership) {
@@ -71,7 +110,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     })
     await user.save()
 
-    invite.status = 'accepted'
+    invite.usedCount += 1
+    if (
+      invite.type === 'code' &&
+      invite.maxUses &&
+      invite.usedCount >= invite.maxUses
+    ) {
+      invite.status = 'accepted'
+    }
     invite.acceptedBy = user._id as any
     invite.acceptedAt = new Date()
     await invite.save()

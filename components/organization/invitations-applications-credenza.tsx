@@ -62,12 +62,12 @@ export function InvitationsApplicationsCredenza({
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/users/me/membership-requests')
+      const response = await fetch('/api/invitations')
       const data = await response.json()
 
       if (response.ok) {
-        setInvitations(data.invitations || [])
-        setApplications(data.applications || [])
+        setInvitations(data || [])
+        setApplications([])
       }
     } catch (error) {
       console.error('Failed to load invitations/applications:', error)
