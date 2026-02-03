@@ -85,8 +85,10 @@ export function InvitationsApplicationsCredenza({
   const handleAcceptInvite = async (inviteId: string) => {
     setActionLoading(inviteId)
     try {
-      const response = await fetch(`/api/invites/${inviteId}/accept`, {
+      const response = await fetch('/api/memberships', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteCode: inviteId }),
       })
 
       const data = await response.json()
@@ -109,8 +111,8 @@ export function InvitationsApplicationsCredenza({
   const handleRejectInvite = async (inviteId: string) => {
     setActionLoading(inviteId)
     try {
-      const response = await fetch(`/api/invites/${inviteId}/reject`, {
-        method: 'POST',
+      const response = await fetch(`/api/invites/${inviteId}`, {
+        method: 'DELETE',
       })
 
       const data = await response.json()
