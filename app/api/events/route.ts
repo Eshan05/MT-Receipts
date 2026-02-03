@@ -1,15 +1,56 @@
-import dbConnect from '@/lib/db-conn'
-import AEvent, { IEvent } from '@/models/event.model'
-import { eventSchema } from '@/lib/schemas/event'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getTenantContext } from '@/lib/tenant-route'
 
 const PAGE_SIZE = 12
 
+const eventSchema = z.object({
+  eventCode: z
+    .string()
+    .min(1)
+    .max(20)
+    .transform((v) => v.toUpperCase()),
+  type: z.enum([
+    'seminar',
+    'workshop',
+    'conference',
+    'competition',
+    'meetup',
+    'training',
+    'webinar',
+    'hackathon',
+    'concert',
+    'fundraiser',
+    'networking',
+    'internal',
+    'other',
+  ]),
+  name: z.string().min(1).max(100),
+  desc: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string(),
+        price: z.number().min(0),
+      })
+    )
+    .optional()
+    .default([]),
+  templateId: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  location: z.string().optional(),
+  maxPurchases: z.number().optional(),
+  tags: z.array(z.string()).optional().default([]),
+})
+
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
 
+    const { Event } = ctx.models
     const { searchParams } = new URL(req.url)
     const includeDeleted = searchParams.get('includeDeleted') === 'true'
     const cursor = searchParams.get('cursor')
@@ -20,7 +61,7 @@ export async function GET(req: NextRequest) {
       : { isActive: true }
 
     if (cursor) {
-      const cursorEvent = await AEvent.findById(cursor)
+      const cursorEvent = await Event.findById(cursor)
         .select('createdAt')
         .lean()
       if (cursorEvent) {
@@ -28,7 +69,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const events = await AEvent.find(filter)
+    const events = await Event.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit + 1)
       .exec()
@@ -54,22 +95,23 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Event } = ctx.models
     const body = await req.json()
 
-    try {
-      eventSchema.parse(body)
-    } catch (validationError) {
-      if (validationError instanceof z.ZodError) {
-        return NextResponse.json(
-          { message: 'Validation Error', errors: validationError.issues },
-          { status: 400 }
-        )
-      }
-      throw validationError
+    const validationResult = eventSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { message: 'Validation Error', errors: validationResult.error.issues },
+        { status: 400 }
+      )
     }
 
-    const existingEvent = await AEvent.findByEventCode(body.eventCode)
+    const data = validationResult.data
+
+    const existingEvent = await Event.findByEventCode(data.eventCode)
     if (existingEvent) {
       return NextResponse.json(
         { message: 'Event with this code already exists' },
@@ -77,8 +119,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const newEvent: IEvent = new AEvent(body)
-    await newEvent.save()
+    const newEvent = await Event.create({
+      ...data,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      createdBy: ctx.user.id,
+    })
 
     return NextResponse.json(
       { message: 'Event created successfully', event: newEvent },

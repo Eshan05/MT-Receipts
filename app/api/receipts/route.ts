@@ -1,31 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
-import Receipt from '@/models/receipt.model'
-import Sequence from '@/models/sequence.model'
-import Event from '@/models/event.model'
+import { getTenantContext } from '@/lib/tenant-route'
 import { generateCustomerInitials } from '@/lib/utils'
-
-async function generateReceiptNumber(
-  eventCode: string,
-  customerName: string
-): Promise<string> {
-  const initials = generateCustomerInitials(customerName)
-
-  const sequenceName = `receipt_${eventCode}`
-  const sequence = await Sequence.findOneAndUpdate(
-    { name: sequenceName },
-    { $inc: { value: 1 } },
-    { new: true, upsert: true }
-  )
-
-  const sequenceNumber = sequence.value.toString().padStart(5, '0')
-  return `RCP-${eventCode}-${initials}${sequenceNumber}`
-}
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
 
+    const { Receipt, Event } = ctx.models
     const { searchParams } = new URL(request.url)
     const eventId = searchParams.get('eventId')
     const cursor = searchParams.get('cursor')
@@ -74,8 +56,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
 
+    const { Receipt, Event, Sequence } = ctx.models
     const body = await request.json()
     const {
       eventId,
@@ -101,10 +85,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
     }
 
-    const receiptNumber = await generateReceiptNumber(
-      event.eventCode,
-      customer.name
+    const initials = generateCustomerInitials(customer.name)
+    const sequenceName = `receipt_${event.eventCode}`
+    const sequence = await Sequence.findOneAndUpdate(
+      { name: sequenceName },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true }
     )
+    const sequenceNumber = sequence.value.toString().padStart(5, '0')
+    const receiptNumber = `RCP-${event.eventCode}-${initials}${sequenceNumber}`
 
     const processedItems = items.map(
       (item: {
@@ -139,6 +128,7 @@ export async function POST(request: NextRequest) {
       emailSent: emailSent || false,
       emailSentAt: emailSent ? new Date() : undefined,
       notes,
+      createdBy: ctx.user.id,
     })
 
     if (shouldSendEmail) {
@@ -179,7 +169,10 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Receipt } = ctx.models
     const body = await request.json()
     const { filter, ...updates } = body
 
@@ -258,7 +251,10 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Receipt } = ctx.models
     const body = await request.json()
     const { receiptNumbers } = body
 

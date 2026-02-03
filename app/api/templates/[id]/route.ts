@@ -1,13 +1,16 @@
-import dbConnect from '@/lib/db-conn'
-import Template from '@/models/template.model'
 import { NextRequest, NextResponse } from 'next/server'
+import { getTenantContext } from '@/lib/tenant-route'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Template } = ctx.models
     const { id } = await params
 
     const template = await Template.findById(id)
@@ -28,16 +31,17 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Template } = ctx.models
     const { id } = await params
     const body = await req.json()
 
-    const { name, description, config, isDefault } = body
+    const { name, description, config, isDefault, htmlTemplate, category } =
+      body
 
     const template = await Template.findById(id)
     if (!template) {
@@ -63,7 +67,15 @@ export async function PUT(
 
     if (description !== undefined) template.description = description
     if (config) template.config = config
-    if (isDefault !== undefined) template.isDefault = isDefault
+    if (htmlTemplate !== undefined) template.htmlTemplate = htmlTemplate
+    if (category !== undefined) template.category = category
+
+    if (isDefault === true && !template.isDefault) {
+      await Template.updateMany({}, { isDefault: false })
+      template.isDefault = true
+    } else if (isDefault === false) {
+      template.isDefault = false
+    }
 
     await template.save()
 
@@ -77,12 +89,12 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Template } = ctx.models
     const { id } = await params
 
     const template = await Template.findByIdAndDelete(id)

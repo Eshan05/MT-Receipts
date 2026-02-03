@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getTenantContext } from '@/lib/tenant-route'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
 
 export async function POST(request: NextRequest) {
   try {
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
     const body = await request.json()
     const {
       receiptNumber,
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest) {
       const { generateReceiptQRCode } = await import('@/lib/qr-code')
       qrCodeData = await generateReceiptQRCode(
         receiptNumber,
-        config.organizationName || 'ACES'
+        config.organizationName || ctx.organization.name
       )
     }
 

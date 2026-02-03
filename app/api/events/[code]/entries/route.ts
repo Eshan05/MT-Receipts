@@ -1,15 +1,11 @@
-import dbConnect from '@/lib/db-conn'
-import Event from '@/models/event.model'
-import Receipt from '@/models/receipt.model'
 import { NextRequest, NextResponse } from 'next/server'
+import { getTenantContext } from '@/lib/tenant-route'
 
-interface Context {
-  params: {
-    code: string
-  }
+interface RouteParams {
+  params: Promise<{ code: string }>
 }
 
-export async function GET(req: NextRequest, { params }: Context) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { code } = await params
 
@@ -20,16 +16,17 @@ export async function GET(req: NextRequest, { params }: Context) {
       )
     }
 
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Event, Receipt } = ctx.models
 
     const event = await Event.findByEventCode(code)
     if (!event) {
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
     }
 
-    const eventId = event._id
-
-    const receipts = await Receipt.find({ event: eventId })
+    const receipts = await Receipt.find({ event: event._id })
       .sort({ createdAt: -1 })
       .lean()
 

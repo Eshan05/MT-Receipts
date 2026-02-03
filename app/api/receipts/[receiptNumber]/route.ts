@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
-import Receipt from '@/models/receipt.model'
-import Event from '@/models/event.model'
+import { getOrganizationContext } from '@/lib/organization-context'
+import { getTenantModels } from '@/lib/db/tenant-models'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
-import { verifyAuthToken, getTokenServer } from '@/lib/auth'
+
+interface RouteParams {
+  params: Promise<{ receiptNumber: string }>
+}
 
 function formatPublicReceipt(receipt: any, event: any) {
   return {
@@ -44,7 +47,7 @@ function formatPublicReceipt(receipt: any, event: any) {
   }
 }
 
-function formatPrivateReceipt(receipt: any, event: any, createdBy: any) {
+function formatPrivateReceipt(receipt: any, event: any) {
   return {
     receipt: {
       _id: receipt._id,
@@ -63,13 +66,6 @@ function formatPrivateReceipt(receipt: any, event: any, createdBy: any) {
       emailLog: receipt.emailLog,
       createdAt: receipt.createdAt,
       updatedAt: receipt.updatedAt,
-      createdBy: createdBy
-        ? {
-            _id: createdBy._id,
-            username: createdBy.username,
-            email: createdBy.email,
-          }
-        : null,
     },
     event: event
       ? {
@@ -96,14 +92,19 @@ async function isAuthenticated(): Promise<boolean> {
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ receiptNumber: string }> }
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
     const { receiptNumber } = await params
 
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found', valid: false },
+        { status: 400 }
+      )
+    }
+
+    const { Receipt, Event } = await getTenantModels(organization.slug)
     const acceptHeader = request.headers.get('accept') || ''
 
     if (acceptHeader.includes('application/pdf')) {
@@ -126,7 +127,10 @@ export async function GET(
       let qrCodeData: string | undefined = receipt.qrCodeData
       if (!qrCodeData) {
         const { generateReceiptQRCode } = await import('@/lib/qr-code')
-        qrCodeData = await generateReceiptQRCode(receiptNumber, 'ACES')
+        qrCodeData = await generateReceiptQRCode(
+          receiptNumber,
+          organization.name
+        )
       }
 
       const result = await renderReceiptPDF({
@@ -173,25 +177,11 @@ export async function GET(
 
     const isAuth = await isAuthenticated()
 
-    if (isAuth) {
-      const receipt = await Receipt.findOne({ receiptNumber })
-        .populate('event')
-        .populate('createdBy', 'username email')
-
-      if (!receipt) {
-        return NextResponse.json(
-          { message: 'Receipt not found' },
-          { status: 404 }
-        )
-      }
-
-      return NextResponse.json(
-        formatPrivateReceipt(receipt, receipt.event, receipt.createdBy)
-      )
-    }
-
     const receipt = await Receipt.findOne({ receiptNumber })
-      .populate('event', 'name eventCode type location startDate endDate')
+      .populate(
+        'event',
+        isAuth ? '' : 'name eventCode type location startDate endDate'
+      )
       .lean()
 
     if (!receipt) {
@@ -199,6 +189,10 @@ export async function GET(
         { message: 'Receipt not found', valid: false },
         { status: 404 }
       )
+    }
+
+    if (isAuth) {
+      return NextResponse.json(formatPrivateReceipt(receipt, receipt.event))
     }
 
     return NextResponse.json(formatPublicReceipt(receipt, receipt.event))
@@ -211,13 +205,19 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ receiptNumber: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
     const { receiptNumber } = await params
+
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found' },
+        { status: 400 }
+      )
+    }
+
+    const { Receipt } = await getTenantModels(organization.slug)
     const body = await request.json()
 
     const {
@@ -328,13 +328,19 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ receiptNumber: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
     const { receiptNumber } = await params
+
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found' },
+        { status: 400 }
+      )
+    }
+
+    const { Receipt } = await getTenantModels(organization.slug)
 
     const receipt = await Receipt.findOneAndDelete({ receiptNumber })
 
@@ -345,9 +351,7 @@ export async function DELETE(
       )
     }
 
-    return NextResponse.json({
-      message: 'Receipt deleted successfully',
-    })
+    return NextResponse.json({ message: 'Receipt deleted successfully' })
   } catch (error) {
     console.error('Error deleting receipt:', error)
     return NextResponse.json(

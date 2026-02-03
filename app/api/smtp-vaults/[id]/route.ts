@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
+import { getOrganizationContext } from '@/lib/organization-context'
 import SMTPVault from '@/models/smtp-vault.model'
 import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
+
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
 
 function sanitizeVault(vault: {
   _id: string
@@ -23,16 +27,24 @@ function sanitizeVault(vault: {
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found' },
+        { status: 400 }
+      )
+    }
+
     const { id } = await params
     const body = await request.json()
 
-    const vault = await SMTPVault.findById(id)
+    const vault = await SMTPVault.findOne({
+      _id: id,
+      organizationId: organization.id,
+    })
+
     if (!vault) {
       return NextResponse.json(
         { message: 'SMTP vault not found' },
@@ -60,6 +72,7 @@ export async function PATCH(
       }
 
       const duplicate = await SMTPVault.findOne({
+        organizationId: organization.id,
         email,
         _id: { $ne: id },
       }).lean()
@@ -82,11 +95,17 @@ export async function PATCH(
         )
       }
 
-      updates.encryptedAppPassword = encryptSmtpAppPassword(appPassword)
+      const { encryptedData, iv, authTag } = encryptSmtpAppPassword(appPassword)
+      updates.encryptedAppPassword = encryptedData
+      updates.iv = iv
+      updates.authTag = authTag
     }
 
     if (body.isDefault === true) {
-      await SMTPVault.updateMany({ isDefault: true }, { isDefault: false })
+      await SMTPVault.updateMany(
+        { organizationId: organization.id, isDefault: true },
+        { isDefault: false }
+      )
       updates.isDefault = true
     }
 
@@ -97,9 +116,11 @@ export async function PATCH(
       )
     }
 
-    const updated = await SMTPVault.findByIdAndUpdate(id, updates, {
-      new: true,
-    })
+    const updated = await SMTPVault.findOneAndUpdate(
+      { _id: id, organizationId: organization.id },
+      updates,
+      { new: true }
+    )
 
     if (!updated) {
       return NextResponse.json(
@@ -129,15 +150,23 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found' },
+        { status: 400 }
+      )
+    }
+
     const { id } = await params
 
-    const vault = await SMTPVault.findById(id)
+    const vault = await SMTPVault.findOne({
+      _id: id,
+      organizationId: organization.id,
+    })
+
     if (!vault) {
       return NextResponse.json(
         { message: 'SMTP vault not found' },
@@ -150,7 +179,9 @@ export async function DELETE(
     await SMTPVault.findByIdAndDelete(id)
 
     if (wasDefault) {
-      const fallback = await SMTPVault.findOne().sort({ createdAt: 1 })
+      const fallback = await SMTPVault.findOne({
+        organizationId: organization.id,
+      }).sort({ createdAt: 1 })
       if (fallback) {
         fallback.isDefault = true
         await fallback.save()

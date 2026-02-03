@@ -1,9 +1,12 @@
-import dbConnect from '@/lib/db-conn'
-import Receipt from '@/models/receipt.model'
 import { NextRequest, NextResponse } from 'next/server'
+import { getTenantContext } from '@/lib/tenant-route'
 
 export async function GET(req: NextRequest) {
   try {
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Receipt } = ctx.models
     const { searchParams } = new URL(req.url)
     const eventIds = searchParams.get('eventIds')
 
@@ -13,12 +16,10 @@ export async function GET(req: NextRequest) {
 
     const eventIdArray = eventIds.split(',')
 
-    await dbConnect()
-
     const counts = await Receipt.aggregate([
       {
         $match: {
-          event: { $in: eventIdArray.map((id) => id) },
+          event: { $in: eventIdArray },
           refunded: { $ne: true },
         },
       },

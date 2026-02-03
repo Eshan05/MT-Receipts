@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
-import SMTPVault from '@/models/smtp-vault.model'
+import { getTenantContext } from '@/lib/tenant-route'
 import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
+import SMTPVault from '@/models/smtp-vault.model'
 
 function sanitizeVault(vault: {
   _id: string
-  label: string
+  label?: string
   email: string
   isDefault: boolean
   lastUsedAt?: Date
@@ -25,9 +25,12 @@ function sanitizeVault(vault: {
 
 export async function GET() {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
 
-    const vaults = await SMTPVault.find().sort({ isDefault: -1, createdAt: -1 })
+    const vaults = await SMTPVault.find({
+      organizationId: ctx.organization.id,
+    }).sort({ isDefault: -1, createdAt: -1 })
 
     return NextResponse.json({
       vaults: vaults.map((vault) =>
@@ -53,7 +56,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
     const body = await request.json()
 
     const email = String(body.email || '')
@@ -78,7 +83,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existing = await SMTPVault.findOne({ email }).lean()
+    const existing = await SMTPVault.findOne({
+      organizationId: ctx.organization.id,
+      email,
+    }).lean()
     if (existing) {
       return NextResponse.json(
         { message: 'This email is already in your vault' },
@@ -86,18 +94,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const vaultCount = await SMTPVault.countDocuments()
+    const vaultCount = await SMTPVault.countDocuments({
+      organizationId: ctx.organization.id,
+    })
     const isDefault = requestedDefault || vaultCount === 0
 
     if (isDefault) {
-      await SMTPVault.updateMany({ isDefault: true }, { isDefault: false })
+      await SMTPVault.updateMany(
+        { organizationId: ctx.organization.id, isDefault: true },
+        { isDefault: false }
+      )
     }
 
+    const { encryptedData, iv, authTag } = encryptSmtpAppPassword(appPassword)
+
     const vault = await SMTPVault.create({
+      organizationId: ctx.organization.id,
       label: name || undefined,
       email,
-      encryptedAppPassword: encryptSmtpAppPassword(appPassword),
+      encryptedAppPassword: encryptedData,
+      iv,
+      authTag,
       isDefault,
+      createdBy: ctx.user.id,
     })
 
     return NextResponse.json(

@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
-import Receipt from '@/models/receipt.model'
+import { getOrganizationContext } from '@/lib/organization-context'
+import { getTenantModels } from '@/lib/db/tenant-models'
 import { sendReceiptEmail } from '@/lib/email'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ receiptNumber: string }> }
-) {
+interface RouteParams {
+  params: Promise<{ receiptNumber: string }>
+}
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    await dbConnect()
     const { receiptNumber } = await params
+
+    const organization = await getOrganizationContext()
+    if (!organization) {
+      return NextResponse.json(
+        { message: 'Organization context not found' },
+        { status: 400 }
+      )
+    }
+
+    const { Receipt } = await getTenantModels(organization.slug)
     const body = await request.json().catch(() => ({}))
     const { templateSlug, smtpVaultId } = body
 

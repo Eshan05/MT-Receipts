@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/lib/db-conn'
-import Receipt from '@/models/receipt.model'
+import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Receipt } = ctx.models
     const body = await request.json()
     const { filter, templateSlug, smtpVaultId } = body
 
