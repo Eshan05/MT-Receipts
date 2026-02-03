@@ -11,6 +11,7 @@ import {
   getCurrentOrgSlug,
   setCurrentOrgCookie,
 } from '@/lib/auth'
+import { setCachedOrganization } from '@/lib/redis'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -64,6 +65,31 @@ export async function POST(request: Request) {
 
     const memberships = await buildMemberships(user)
 
+    let currentOrganization = null
+
+    if (user.currentOrganizationSlug && memberships.length > 0) {
+      const currentMembership = memberships.find(
+        (m: any) => m.organizationSlug === user.currentOrganizationSlug
+      )
+      if (currentMembership) {
+        currentOrganization = {
+          id: currentMembership.organizationId,
+          slug: currentMembership.organizationSlug,
+          name: currentMembership.organizationName,
+          role: currentMembership.role,
+        }
+      }
+    }
+
+    if (!currentOrganization && memberships.length > 0) {
+      currentOrganization = {
+        id: memberships[0].organizationId,
+        slug: memberships[0].organizationSlug,
+        name: memberships[0].organizationName,
+        role: memberships[0].role,
+      }
+    }
+
     const response = NextResponse.json(
       {
         message: 'Session created',
@@ -74,10 +100,16 @@ export async function POST(request: Request) {
           isSuperAdmin: user.isSuperAdmin,
         },
         memberships,
+        currentOrganization,
       },
       { status: 201 }
     )
     await setAuthCookie(email, response)
+
+    if (currentOrganization) {
+      await setCurrentOrgCookie(currentOrganization.slug, response)
+    }
+
     return response
   } catch (error) {
     console.error('Login error:', error)
@@ -126,6 +158,9 @@ async function handleOrgSwitch(organizationSlug: string) {
     )
   }
 
+  user.currentOrganizationSlug = organizationSlug
+  await user.save()
+
   const response = NextResponse.json({
     message: 'Organization switched',
     currentOrganization: {
@@ -147,6 +182,15 @@ async function buildMemberships(user: any) {
 
   const orgIds = user.memberships.map((m: any) => m.organizationId)
   const orgs = await Organization.find({ _id: { $in: orgIds } })
+
+  for (const org of orgs) {
+    await setCachedOrganization(org.slug, {
+      id: (org._id as any).toString(),
+      slug: org.slug,
+      name: org.name,
+      status: org.status,
+    })
+  }
 
   return user.memberships.map((m: any) => {
     const org = orgs.find(
@@ -182,12 +226,11 @@ export async function GET() {
     }
 
     const memberships = await buildMemberships(user)
-    const currentOrgSlug = await getCurrentOrgSlug()
 
     let currentOrganization = null
-    if (currentOrgSlug && memberships.length > 0) {
+    if (user.currentOrganizationSlug && memberships.length > 0) {
       const currentMembership = memberships.find(
-        (m: any) => m.organizationSlug === currentOrgSlug
+        (m: any) => m.organizationSlug === user.currentOrganizationSlug
       )
       if (currentMembership) {
         currentOrganization = {
@@ -196,6 +239,15 @@ export async function GET() {
           name: currentMembership.organizationName,
           role: currentMembership.role,
         }
+      }
+    }
+
+    if (!currentOrganization && memberships.length > 0) {
+      currentOrganization = {
+        id: memberships[0].organizationId,
+        slug: memberships[0].organizationSlug,
+        name: memberships[0].organizationName,
+        role: memberships[0].role,
       }
     }
 

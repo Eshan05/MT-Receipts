@@ -4,6 +4,7 @@ import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
 import { verifyAuthToken, getTokenServer } from '@/lib/auth'
 import { isSlugReserved } from '@/lib/reserved-slugs'
+import { setCachedOrganization } from '@/lib/redis'
 import { z } from 'zod'
 
 const slugCheckSchema = z.object({
@@ -150,6 +151,13 @@ export async function POST(request: Request) {
       approvedAt: new Date(),
     })
     await user.save()
+
+    await setCachedOrganization(organization.slug, {
+      id: (organization._id as any).toString(),
+      slug: organization.slug,
+      name: organization.name,
+      status: organization.status,
+    })
 
     return NextResponse.json(
       {

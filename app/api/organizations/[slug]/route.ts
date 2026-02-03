@@ -3,6 +3,10 @@ import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
 import { verifyAuthToken, getTokenServer } from '@/lib/auth'
+import {
+  setCachedOrganization,
+  invalidateCachedOrganization,
+} from '@/lib/redis'
 import { z } from 'zod'
 
 const updateOrganizationSchema = z.object({
@@ -39,6 +43,13 @@ export async function GET(request: Request, { params }: RouteParams) {
         { status: 404 }
       )
     }
+
+    await setCachedOrganization(organization.slug, {
+      id: (organization._id as any).toString(),
+      slug: organization.slug,
+      name: organization.name,
+      status: organization.status,
+    })
 
     return NextResponse.json({
       id: organization._id,
