@@ -14,6 +14,7 @@ export interface IUser extends Document {
   passhash: string
   isSuperAdmin: boolean
   memberships: IMembership[]
+  currentOrganizationSlug?: string
   avatar?: string
   isActive: boolean
   lastSignIn: Date
@@ -62,6 +63,7 @@ const userSchema = new Schema<IUser, IUserModel>(
     passhash: { type: String, required: true },
     isSuperAdmin: { type: Boolean, default: false },
     memberships: [membershipSchema],
+    currentOrganizationSlug: { type: String },
     avatar: { type: String },
     isActive: { type: Boolean, default: true },
     lastSignIn: { type: Date },

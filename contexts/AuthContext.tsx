@@ -112,7 +112,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setCurrentOrganization(data.currentOrganization || null)
         setIsAuthenticated(true)
 
-        if (data.memberships && data.memberships.length > 0) {
+        if (data.currentOrganization) {
+          router.push(`/${data.currentOrganization.slug}/events`)
+        } else if (data.memberships && data.memberships.length > 0) {
           const firstOrg = data.memberships[0]
           router.push(`/${firstOrg.organizationSlug}/events`)
         } else {

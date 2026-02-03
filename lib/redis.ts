@@ -18,7 +18,7 @@ export interface CachedOrganization {
 export async function getCachedOrganization(
   slug: string
 ): Promise<CachedOrganization | null> {
-  const key = `${ORG_CACHE_PREFIX}${slug}`
+  const key = `${ORG_CACHE_PREFIX}${slug.toLowerCase()}`
   const cached = await redis.get<CachedOrganization>(key)
   return cached
 }
@@ -27,17 +27,17 @@ export async function setCachedOrganization(
   slug: string,
   data: CachedOrganization
 ): Promise<void> {
-  const key = `${ORG_CACHE_PREFIX}${slug}`
+  const key = `${ORG_CACHE_PREFIX}${slug.toLowerCase()}`
   await redis.setex(key, ORG_CACHE_TTL, JSON.stringify(data))
 }
 
 export async function invalidateCachedOrganization(
   slug: string
 ): Promise<void> {
-  const key = `${ORG_CACHE_PREFIX}${slug}`
+  const key = `${ORG_CACHE_PREFIX}${slug.toLowerCase()}`
   await redis.del(key)
 }
 
 export async function getCacheKey(slug: string): Promise<string> {
-  return `${ORG_CACHE_PREFIX}${slug}`
+  return `${ORG_CACHE_PREFIX}${slug.toLowerCase()}`
 }

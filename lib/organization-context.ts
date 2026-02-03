@@ -1,6 +1,5 @@
 import { headers } from 'next/headers'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
-import { getMasterConnection } from '@/lib/db/conn'
 
 export interface OrganizationContext {
   id: string
@@ -32,35 +31,10 @@ export async function getOrganizationContext(): Promise<OrganizationContext | nu
   }
 }
 
-export async function resolveOrganization(
+export async function resolveOrganizationFromCache(
   slug: string
 ): Promise<OrganizationContext | null> {
-  const cached = await getCachedOrganization(slug)
-
-  if (cached) {
-    return cached
-  }
-
-  await getMasterConnection()
-  const { default: Organization } = await import('@/models/organization.model')
-  const org = await Organization.findBySlug(slug)
-
-  if (!org) {
-    return null
-  }
-
-  const context: OrganizationContext = {
-    id: (org._id as { toString(): string }).toString(),
-    slug: org.slug,
-    name: org.name,
-    status: org.status,
-  }
-
-  if (org.status === 'active') {
-    await setCachedOrganization(slug, context)
-  }
-
-  return context
+  return getCachedOrganization(slug)
 }
 
 export function isOrganizationActive(org: OrganizationContext | null): boolean {
@@ -110,4 +84,11 @@ export function createOrganizationHeaders(org: OrganizationContext): Headers {
   headers.set(ORG_SLUG_HEADER, org.slug)
   headers.set(ORG_NAME_HEADER, org.name)
   return headers
+}
+
+export async function cacheOrganization(
+  slug: string,
+  org: OrganizationContext
+): Promise<void> {
+  await setCachedOrganization(slug, org)
 }
