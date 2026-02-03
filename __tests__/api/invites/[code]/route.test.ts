@@ -1,13 +1,32 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from 'vitest'
 import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/invites/[code]/route'
+import { GET, DELETE } from '@/app/api/invites/[code]/route'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import MembershipRequest from '@/models/membership-request.model'
+
+vi.mock('@/lib/auth', async () => {
+  const actual = await vi.importActual('@/lib/auth')
+  return {
+    ...actual,
+    getTokenServer: vi.fn(),
+    verifyAuthToken: vi.fn(),
+  }
+})
+
+import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 
 describe('GET /api/invites/[code]', () => {
   let adminUser: any
@@ -176,5 +195,147 @@ describe('GET /api/invites/[code]', () => {
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.type).toBe('code')
+  })
+})
+
+describe('DELETE /api/invites/[code]', () => {
+  let adminUser: any
+  let otherUser: any
+  let organization: any
+  let codeInvite: any
+  let emailInvite: any
+
+  beforeAll(async () => {
+    await dbConnect()
+
+    const timestamp = Date.now()
+
+    adminUser = await User.create({
+      username: `delete-admin-${timestamp}`,
+      email: `delete-admin-${timestamp}@test.local`,
+      passhash: 'hashedpassword',
+      memberships: [],
+    })
+
+    otherUser = await User.create({
+      username: `delete-other-${timestamp}`,
+      email: `delete-other-${timestamp}@test.local`,
+      passhash: 'hashedpassword',
+      memberships: [],
+    })
+
+    organization = await Organization.create({
+      name: 'Test Delete Invite Org',
+      slug: `tdi${timestamp}`.slice(0, 20),
+      status: 'active',
+      createdBy: adminUser._id,
+    })
+
+    adminUser.memberships.push({
+      organizationId: organization._id,
+      organizationSlug: organization.slug,
+      role: 'admin',
+      approvedAt: new Date(),
+    })
+    await adminUser.save()
+  })
+
+  afterAll(async () => {
+    await MembershipRequest.deleteMany({ organizationId: organization._id })
+    await Organization.findByIdAndDelete(organization._id)
+    await User.findByIdAndDelete(adminUser._id)
+    await User.findByIdAndDelete(otherUser._id)
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns 401 when not authenticated', async () => {
+    vi.mocked(getTokenServer).mockResolvedValue(undefined)
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/invites/SOMECODE',
+      {
+        method: 'DELETE',
+      }
+    )
+    const response = await DELETE(request, {
+      params: Promise.resolve({ code: 'SOMECODE' }),
+    })
+    expect(response.status).toBe(401)
+  })
+
+  it('returns 404 for non-existent invite', async () => {
+    vi.mocked(getTokenServer).mockResolvedValue('token')
+    vi.mocked(verifyAuthToken).mockResolvedValue({ email: adminUser.email })
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/invites/NONEXIST',
+      {
+        method: 'DELETE',
+      }
+    )
+    const response = await DELETE(request, {
+      params: Promise.resolve({ code: 'NONEXIST' }),
+    })
+    expect(response.status).toBe(404)
+  })
+
+  it('rejects email invite by ID when user is the invitee', async () => {
+    const inviteEmail = `reject-me-${Date.now()}@test.local`
+
+    const invite = await MembershipRequest.create({
+      organizationId: organization._id,
+      organizationSlug: organization.slug,
+      type: 'email',
+      email: inviteEmail,
+      invitedBy: adminUser._id,
+      role: 'member',
+      status: 'pending',
+    })
+
+    vi.mocked(getTokenServer).mockResolvedValue('token')
+    vi.mocked(verifyAuthToken).mockResolvedValue({ email: inviteEmail })
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/invites/${invite._id}`,
+      { method: 'DELETE' }
+    )
+    const response = await DELETE(request, {
+      params: Promise.resolve({ code: invite._id.toString() }),
+    })
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data.message).toContain('rejected')
+
+    const updatedInvite = await MembershipRequest.findById(invite._id)
+    expect(updatedInvite?.status).toBe('cancelled')
+  })
+
+  it('returns 403 when user is not the invitee of email invite', async () => {
+    const invite = await MembershipRequest.create({
+      organizationId: organization._id,
+      organizationSlug: organization.slug,
+      type: 'email',
+      email: `not-yours-${Date.now()}@test.local`,
+      invitedBy: adminUser._id,
+      role: 'member',
+      status: 'pending',
+    })
+
+    vi.mocked(getTokenServer).mockResolvedValue('token')
+    vi.mocked(verifyAuthToken).mockResolvedValue({ email: otherUser.email })
+
+    const request = new NextRequest(
+      `http://localhost:3000/api/invites/${invite._id}`,
+      { method: 'DELETE' }
+    )
+    const response = await DELETE(request, {
+      params: Promise.resolve({ code: invite._id.toString() }),
+    })
+    expect(response.status).toBe(403)
+
+    await MembershipRequest.findByIdAndDelete(invite._id)
   })
 })
