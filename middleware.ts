@@ -12,7 +12,7 @@ import {
   isApiRoute,
 } from '@/lib/middleware-helpers'
 import {
-  resolveOrganization,
+  resolveOrganizationFromCache as resolveOrganization,
   getOrganizationErrorPath,
 } from '@/lib/organization-context'
 
