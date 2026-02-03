@@ -40,4 +40,4 @@ export function getAllTemplateInfo(): TemplateInfo[] {
   return Object.values(templateInfo)
 }
 
-export const DEFAULT_TEMPLATE = 'minimal'
+export const DEFAULT_TEMPLATE = 'professional'

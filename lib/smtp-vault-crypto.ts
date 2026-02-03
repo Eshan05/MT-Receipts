@@ -14,7 +14,15 @@ function getVaultKey(): Buffer {
   return crypto.createHash('sha256').update(getVaultSecret()).digest()
 }
 
-export function encryptSmtpAppPassword(plainText: string): string {
+export interface EncryptedPasswordResult {
+  encryptedData: string
+  iv: string
+  authTag: string
+}
+
+export function encryptSmtpAppPassword(
+  plainText: string
+): EncryptedPasswordResult {
   const iv = crypto.randomBytes(12)
   const cipher = crypto.createCipheriv(ALGORITHM, getVaultKey(), iv)
 
@@ -24,28 +32,45 @@ export function encryptSmtpAppPassword(plainText: string): string {
   ])
   const authTag = cipher.getAuthTag()
 
-  return `${iv.toString('base64')}.${authTag.toString('base64')}.${encrypted.toString('base64')}`
+  return {
+    encryptedData: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  }
 }
 
-export function decryptSmtpAppPassword(payload: string): string {
+export function decryptSmtpAppPassword(
+  encryptedData: string,
+  iv: string,
+  authTag: string
+): string {
+  const decipher = crypto.createDecipheriv(
+    ALGORITHM,
+    getVaultKey(),
+    Buffer.from(iv, 'base64')
+  )
+
+  decipher.setAuthTag(Buffer.from(authTag, 'base64'))
+
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(encryptedData, 'base64')),
+    decipher.final(),
+  ])
+
+  return decrypted.toString('utf8')
+}
+
+export function encryptSmtpAppPasswordCombined(plainText: string): string {
+  const { encryptedData, iv, authTag } = encryptSmtpAppPassword(plainText)
+  return `${iv}.${authTag}.${encryptedData}`
+}
+
+export function decryptSmtpAppPasswordCombined(payload: string): string {
   const [ivB64, authTagB64, encryptedB64] = payload.split('.')
 
   if (!ivB64 || !authTagB64 || !encryptedB64) {
     throw new Error('Invalid encrypted SMTP password payload')
   }
 
-  const decipher = crypto.createDecipheriv(
-    ALGORITHM,
-    getVaultKey(),
-    Buffer.from(ivB64, 'base64')
-  )
-
-  decipher.setAuthTag(Buffer.from(authTagB64, 'base64'))
-
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(encryptedB64, 'base64')),
-    decipher.final(),
-  ])
-
-  return decrypted.toString('utf8')
+  return decryptSmtpAppPassword(encryptedB64, ivB64, authTagB64)
 }

@@ -1,7 +1,4 @@
 import { renderToStream } from '@react-pdf/renderer'
-import Template, { ITemplate } from '@/models/template.model'
-import Event from '@/models/event.model'
-import dbConnect from '@/lib/db-conn'
 import {
   getTemplateComponent,
   DEFAULT_TEMPLATE,
@@ -12,6 +9,8 @@ import type {
   TemplateConfig,
   TemplateItem,
 } from '@/lib/templates/types'
+import { getOrganizationContext } from '@/lib/organization-context'
+import { getTenantModels } from '@/lib/db/tenant-models'
 
 export interface RenderReceiptOptions {
   receiptNumber: string
@@ -46,12 +45,16 @@ export interface RenderResult {
   config: TemplateConfig
 }
 
-import mongoose from 'mongoose'
+interface TenantTemplate {
+  _id: string
+  slug: string
+  config: TemplateConfig
+}
 
 async function getTemplateConfig(
   templateId?: string | null,
   slug?: string
-): Promise<{ template: ITemplate | null; slug: string }> {
+): Promise<{ template: TenantTemplate | null; slug: string }> {
   const requestedSlug = templateId || slug
 
   if (requestedSlug && requestedSlug in templateRegistry) {
@@ -61,16 +64,38 @@ async function getTemplateConfig(
     }
   }
 
-  await dbConnect()
+  const organization = await getOrganizationContext()
+  if (!organization) {
+    return {
+      template: null,
+      slug: requestedSlug || 'professional',
+    }
+  }
 
-  let template: ITemplate | null = null
+  const { Template } = await getTenantModels(organization.slug)
+
+  let template: TenantTemplate | null = null
 
   if (requestedSlug) {
-    template = await Template.findBySlug(requestedSlug)
+    const found = await Template.findBySlug(requestedSlug)
+    if (found) {
+      template = {
+        _id: found._id.toString(),
+        slug: found.slug,
+        config: found.config,
+      }
+    }
   }
 
   if (!template) {
-    template = await Template.getDefault()
+    const defaultTemplate = await Template.getDefault()
+    if (defaultTemplate) {
+      template = {
+        _id: defaultTemplate._id.toString(),
+        slug: defaultTemplate.slug,
+        config: defaultTemplate.config,
+      }
+    }
   }
 
   if (template) {
@@ -86,7 +111,10 @@ async function getTemplateConfig(
   }
 }
 
-function buildConfig(template: ITemplate | null): TemplateConfig {
+function buildConfig(
+  template: TenantTemplate | null,
+  orgName?: string
+): TemplateConfig {
   const defaultLogoUrl =
     'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
 
@@ -94,7 +122,7 @@ function buildConfig(template: ITemplate | null): TemplateConfig {
     return {
       primaryColor: '#1E40AF',
       showQrCode: true,
-      organizationName: 'Organization',
+      organizationName: orgName || 'Organization',
       logoUrl: defaultLogoUrl,
     }
   }
@@ -105,7 +133,8 @@ function buildConfig(template: ITemplate | null): TemplateConfig {
     logoUrl: template.config.logoUrl || defaultLogoUrl,
     showQrCode: template.config.showQrCode,
     footerText: template.config.footerText,
-    organizationName: template.config.organizationName,
+    organizationName:
+      template.config.organizationName || orgName || 'Organization',
   }
 }
 
@@ -132,8 +161,9 @@ export async function renderReceiptPDF(
       year: 'numeric',
     })
 
+  const organization = await getOrganizationContext()
   const { template, slug } = await getTemplateConfig(event.templateId)
-  const dbConfig = buildConfig(template)
+  const dbConfig = buildConfig(template, organization?.name)
   const config = customConfig || dbConfig
   const TemplateComponent = getTemplateComponent(slug)
 
@@ -175,19 +205,20 @@ export async function renderReceiptPDF(
 export async function getTemplateSlugForEvent(
   eventId: string
 ): Promise<string> {
-  await dbConnect()
+  const organization = await getOrganizationContext()
+  if (!organization) {
+    return DEFAULT_TEMPLATE
+  }
 
-  const event = await Event.findById(eventId)
-    .select('templateId')
-    .populate('templateId', 'slug')
-    .lean()
+  const { Event, Template } = await getTenantModels(organization.slug)
 
-  if (
-    event?.templateId &&
-    typeof event.templateId === 'object' &&
-    'slug' in event.templateId
-  ) {
-    return (event.templateId as { slug: string }).slug
+  const event = await Event.findById(eventId).select('templateId').lean()
+
+  if (event?.templateId) {
+    const template = await Template.findById(event.templateId)
+    if (template) {
+      return template.slug
+    }
   }
 
   const defaultTemplate = await Template.getDefault()

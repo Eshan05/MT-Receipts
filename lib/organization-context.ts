@@ -1,4 +1,4 @@
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
 
 export interface OrganizationContext {
@@ -11,6 +11,7 @@ export interface OrganizationContext {
 export const ORG_ID_HEADER = 'x-organization-id'
 export const ORG_SLUG_HEADER = 'x-organization-slug'
 export const ORG_NAME_HEADER = 'x-organization-name'
+export const CURRENT_ORG_COOKIE = 'currentOrganization'
 
 export async function getOrganizationContext(): Promise<OrganizationContext | null> {
   const headersList = await headers()
@@ -19,16 +20,23 @@ export async function getOrganizationContext(): Promise<OrganizationContext | nu
   const slug = headersList.get(ORG_SLUG_HEADER)
   const name = headersList.get(ORG_NAME_HEADER)
 
-  if (!id || !slug || !name) {
+  if (id && slug && name) {
+    return { id, slug, name, status: 'active' }
+  }
+
+  const cookieStore = await cookies()
+  const orgSlug = cookieStore.get(CURRENT_ORG_COOKIE)?.value
+
+  if (!orgSlug) {
     return null
   }
 
-  return {
-    id,
-    slug,
-    name,
-    status: 'active',
+  const cachedOrg = await getCachedOrganization(orgSlug)
+  if (!cachedOrg) {
+    return null
   }
+
+  return cachedOrg
 }
 
 export async function resolveOrganizationFromCache(

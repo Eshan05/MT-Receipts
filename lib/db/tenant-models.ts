@@ -1,126 +1,308 @@
-import mongoose from 'mongoose'
+import mongoose, { Schema, Model } from 'mongoose'
 import { getTenantConnection } from './tenant'
 import type { Connection } from 'mongoose'
 
-export interface TenantModels {
-  Event: mongoose.Model<any>
-  Receipt: mongoose.Model<any>
-  Sequence: mongoose.Model<any>
-  Template: mongoose.Model<any>
+export interface ITenantEvent {
+  _id: mongoose.Types.ObjectId
+  eventCode: string
+  type:
+    | 'seminar'
+    | 'workshop'
+    | 'conference'
+    | 'competition'
+    | 'meetup'
+    | 'training'
+    | 'webinar'
+    | 'hackathon'
+    | 'concert'
+    | 'fundraiser'
+    | 'networking'
+    | 'internal'
+    | 'other'
+  name: string
+  desc?: string
+  items: Array<{
+    name: string
+    description: string
+    price: number
+  }>
+  templateId?: mongoose.Types.ObjectId
+  startDate?: Date
+  endDate?: Date
+  location?: string
+  maxPurchases?: number
+  tags?: string[]
+  createdBy?: mongoose.Types.ObjectId
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
-const eventSchema = new mongoose.Schema(
+export interface ITenantReceipt {
+  _id: mongoose.Types.ObjectId
+  receiptNumber: string
+  event: mongoose.Types.ObjectId
+  customer: {
+    name: string
+    email: string
+    address?: string
+    phone?: string
+  }
+  items: Array<{
+    name: string
+    description?: string
+    quantity: number
+    price: number
+    total: number
+  }>
+  totalAmount: number
+  paymentMethod?: 'cash' | 'upi' | 'card' | 'other'
+  templateSlug?: string
+  qrCodeData?: string
+  pdfUrl?: string
+  notes?: string
+  emailSent: boolean
+  emailSentAt?: Date
+  emailError?: string
+  emailLog: Array<{
+    sentTo: string
+    status: 'sent' | 'failed'
+    sentAt: Date
+    error?: string
+  }>
+  refunded: boolean
+  refundReason?: string
+  refundedAt?: Date
+  createdBy?: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ITenantTemplate {
+  _id: mongoose.Types.ObjectId
+  name: string
+  slug: string
+  description?: string
+  isDefault: boolean
+  config: {
+    primaryColor: string
+    secondaryColor?: string
+    logoUrl?: string
+    showQrCode: boolean
+    footerText?: string
+    organizationName?: string
+  }
+  htmlTemplate?: string
+  previewImage?: string
+  version: number
+  category?: string
+  createdBy?: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ITenantSequence {
+  _id: mongoose.Types.ObjectId
+  name: string
+  value: number
+}
+
+const EVENT_TYPES = [
+  'seminar',
+  'workshop',
+  'conference',
+  'competition',
+  'meetup',
+  'training',
+  'webinar',
+  'hackathon',
+  'concert',
+  'fundraiser',
+  'networking',
+  'internal',
+  'other',
+] as const
+
+const eventSchema = new Schema<ITenantEvent>(
   {
-    code: {
-      type: String,
-      required: true,
-      uppercase: true,
-      trim: true,
-    },
+    eventCode: { type: String, required: true, uppercase: true, trim: true },
+    type: { type: String, enum: EVENT_TYPES, required: true },
     name: { type: String, required: true, trim: true },
-    type: {
-      type: String,
-      enum: ['seminar', 'workshop', 'conference', 'meetup', 'other'],
-      default: 'other',
-    },
-    description: { type: String, trim: true },
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    venue: { type: String, trim: true },
-    status: {
-      type: String,
-      enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-      default: 'upcoming',
-    },
+    desc: { type: String },
+    items: [
+      {
+        name: { type: String, required: true },
+        description: { type: String, required: true },
+        price: { type: Number, required: true },
+      },
+    ],
+    templateId: { type: Schema.Types.ObjectId, ref: 'Template' },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    location: { type: String },
+    maxPurchases: { type: Number },
+    tags: [{ type: String }],
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 )
 
-eventSchema.index({ code: 1 }, { unique: true })
+eventSchema.index({ eventCode: 1 }, { unique: true })
+eventSchema.index({ isActive: 1 })
+eventSchema.index({ type: 1 })
 eventSchema.index({ startDate: 1 })
-eventSchema.index({ status: 1 })
 
-const receiptSchema = new mongoose.Schema(
+eventSchema.statics.findByEventCode = function (eventCode: string) {
+  return this.findOne({ eventCode: eventCode.toUpperCase(), isActive: true })
+}
+
+const receiptSchema = new Schema<ITenantReceipt>(
   {
     receiptNumber: { type: String, required: true },
-    eventId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Event',
-      required: true,
+    event: { type: Schema.Types.ObjectId, ref: 'Event', required: true },
+    customer: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      address: { type: String },
+      phone: { type: String },
     },
-    customerName: { type: String, required: true, trim: true },
-    customerEmail: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    amount: { type: Number, required: true, min: 0 },
-    currency: { type: String, default: 'PHP' },
-    paymentMethod: {
-      type: String,
-      enum: ['cash', 'gcash', 'bank_transfer', 'card', 'other'],
-      default: 'cash',
-    },
-    notes: { type: String, trim: true },
-    issuedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    sentAt: { type: Date },
+    items: [
+      {
+        name: { type: String, required: true },
+        description: { type: String },
+        quantity: { type: Number, required: true },
+        price: { type: Number, required: true },
+        total: { type: Number, required: true },
+      },
+    ],
+    totalAmount: { type: Number, required: true },
+    paymentMethod: { type: String, enum: ['cash', 'upi', 'card', 'other'] },
+    templateSlug: { type: String, default: 'professional' },
+    qrCodeData: { type: String },
+    pdfUrl: { type: String },
+    notes: { type: String },
+    emailSent: { type: Boolean, default: false },
+    emailSentAt: { type: Date },
+    emailError: { type: String },
+    emailLog: [
+      {
+        sentTo: { type: String, required: true },
+        status: { type: String, enum: ['sent', 'failed'], required: true },
+        sentAt: { type: Date, default: Date.now },
+        error: { type: String },
+      },
+    ],
+    refunded: { type: Boolean, default: false },
+    refundReason: { type: String },
+    refundedAt: { type: Date },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 )
 
 receiptSchema.index({ receiptNumber: 1 }, { unique: true })
-receiptSchema.index({ eventId: 1 })
+receiptSchema.index({ event: 1 })
+receiptSchema.index({ 'customer.email': 1 })
 receiptSchema.index({ createdAt: -1 })
-receiptSchema.index({ customerEmail: 1 })
+receiptSchema.index({ emailSent: 1 })
+receiptSchema.index({ refunded: 1 })
 
-const sequenceSchema = new mongoose.Schema(
+const templateSchema = new Schema<ITenantTemplate>(
   {
     name: { type: String, required: true },
-    value: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-)
-
-sequenceSchema.index({ name: 1 }, { unique: true })
-
-const templateSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true },
-    content: { type: String, required: true },
+    description: { type: String },
     isDefault: { type: Boolean, default: false },
-    isActive: { type: Boolean, default: true },
+    config: {
+      primaryColor: { type: String, default: '#1E40AF' },
+      secondaryColor: { type: String },
+      logoUrl: { type: String },
+      showQrCode: { type: Boolean, default: true },
+      footerText: { type: String },
+      organizationName: { type: String, default: 'Organization' },
+    },
+    htmlTemplate: { type: String },
+    previewImage: { type: String },
+    version: { type: Number, default: 1 },
+    category: { type: String },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 )
 
+templateSchema.index({ name: 1 })
 templateSchema.index({ isDefault: 1 })
+templateSchema.index({ category: 1 })
+
+templateSchema.statics.getDefault = function () {
+  return this.findOne({ isDefault: true })
+}
+
+templateSchema.statics.findBySlug = function (slug: string) {
+  return this.findOne({ slug })
+}
+
+const sequenceSchema = new Schema<ITenantSequence>({
+  name: { type: String, required: true, unique: true },
+  value: { type: Number, default: 1 },
+})
+
+sequenceSchema.statics.getNext = async function (
+  name: string
+): Promise<number> {
+  const sequence = await this.findOneAndUpdate(
+    { name },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true }
+  )
+  return sequence.value
+}
+
+export interface TenantModels {
+  Event: Model<ITenantEvent> & {
+    findByEventCode(eventCode: string): Promise<ITenantEvent | null>
+  }
+  Receipt: Model<ITenantReceipt>
+  Template: Model<ITenantTemplate> & {
+    getDefault(): Promise<ITenantTemplate | null>
+    findBySlug(slug: string): Promise<ITenantTemplate | null>
+  }
+  Sequence: Model<ITenantSequence> & {
+    getNext(name: string): Promise<number>
+  }
+}
 
 const modelCache = new Map<string, TenantModels>()
 
-function createModelsForConnection(
-  conn: Connection,
-  dbName: string
-): TenantModels {
-  const Event = conn.model('Event', eventSchema)
-  const Receipt = conn.model('Receipt', receiptSchema)
-  const Sequence = conn.model('Sequence', sequenceSchema)
-  const Template = conn.model('Template', templateSchema)
+function createModelsForConnection(conn: Connection): TenantModels {
+  const Event = conn.model('Event', eventSchema) as TenantModels['Event']
+  const Receipt = conn.model(
+    'Receipt',
+    receiptSchema
+  ) as TenantModels['Receipt']
+  const Template = conn.model(
+    'Template',
+    templateSchema
+  ) as TenantModels['Template']
+  const Sequence = conn.model(
+    'Sequence',
+    sequenceSchema
+  ) as TenantModels['Sequence']
 
-  return { Event, Receipt, Sequence, Template }
+  return { Event, Receipt, Template, Sequence }
 }
 
 export async function getTenantModels(slug: string): Promise<TenantModels> {
-  if (modelCache.has(slug)) {
-    return modelCache.get(slug)!
+  const normalizedSlug = slug.toLowerCase()
+
+  if (modelCache.has(normalizedSlug)) {
+    return modelCache.get(normalizedSlug)!
   }
 
-  const conn = await getTenantConnection(slug)
-  const dbName = conn.name
-  const models = createModelsForConnection(conn, dbName)
-  modelCache.set(slug, models)
+  const conn = await getTenantConnection(normalizedSlug)
+  const models = createModelsForConnection(conn)
+  modelCache.set(normalizedSlug, models)
 
   return models
 }
