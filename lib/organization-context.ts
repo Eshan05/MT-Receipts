@@ -1,5 +1,7 @@
 import { headers, cookies } from 'next/headers'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
+import dbConnect from '@/lib/db-conn'
+import Organization from '@/models/organization.model'
 
 export interface OrganizationContext {
   id: string
@@ -32,17 +34,62 @@ export async function getOrganizationContext(): Promise<OrganizationContext | nu
   }
 
   const cachedOrg = await getCachedOrganization(orgSlug)
-  if (!cachedOrg) {
-    return null
+  if (cachedOrg) {
+    return cachedOrg
   }
 
-  return cachedOrg
+  try {
+    await dbConnect()
+    const org = await Organization.findBySlug(orgSlug)
+    if (!org || org.status !== 'active') {
+      return null
+    }
+
+    const orgContext: OrganizationContext = {
+      id: (org._id as any).toString(),
+      slug: org.slug,
+      name: org.name,
+      status: org.status,
+    }
+
+    await setCachedOrganization(orgSlug, orgContext)
+
+    return orgContext
+  } catch (error) {
+    console.error('Failed to resolve organization from database:', error)
+    return null
+  }
 }
 
 export async function resolveOrganizationFromCache(
   slug: string
 ): Promise<OrganizationContext | null> {
-  return getCachedOrganization(slug)
+  const cachedOrg = await getCachedOrganization(slug)
+  if (cachedOrg) {
+    return cachedOrg
+  }
+
+  try {
+    await dbConnect()
+    const org = await Organization.findBySlug(slug)
+    if (!org) {
+      return null
+    }
+
+    const orgContext: OrganizationContext = {
+      id: (org._id as any).toString(),
+      slug: org.slug,
+      name: org.name,
+      status: org.status,
+    }
+
+    await setCachedOrganization(slug, orgContext)
+
+    return orgContext
+  } catch (error) {
+    console.error('Failed to resolve organization:', error)
+    return null
+  }
 }
 
 export function isOrganizationActive(org: OrganizationContext | null): boolean {

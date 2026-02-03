@@ -276,19 +276,18 @@ export interface TenantModels {
 const modelCache = new Map<string, TenantModels>()
 
 function createModelsForConnection(conn: Connection): TenantModels {
-  const Event = conn.model('Event', eventSchema) as TenantModels['Event']
-  const Receipt = conn.model(
-    'Receipt',
-    receiptSchema
-  ) as TenantModels['Receipt']
-  const Template = conn.model(
-    'Template',
-    templateSchema
-  ) as TenantModels['Template']
-  const Sequence = conn.model(
-    'Sequence',
-    sequenceSchema
-  ) as TenantModels['Sequence']
+  const Event =
+    (conn.models.Event as TenantModels['Event']) ||
+    (conn.model('Event', eventSchema) as TenantModels['Event'])
+  const Receipt =
+    (conn.models.Receipt as TenantModels['Receipt']) ||
+    (conn.model('Receipt', receiptSchema) as TenantModels['Receipt'])
+  const Template =
+    (conn.models.Template as TenantModels['Template']) ||
+    (conn.model('Template', templateSchema) as TenantModels['Template'])
+  const Sequence =
+    (conn.models.Sequence as TenantModels['Sequence']) ||
+    (conn.model('Sequence', sequenceSchema) as TenantModels['Sequence'])
 
   return { Event, Receipt, Template, Sequence }
 }

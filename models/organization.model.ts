@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model, model } from 'mongoose'
+import dbConnect from '@/lib/db-conn'
 
 export interface IOrganizationSettings {
   primaryColor?: string
@@ -144,9 +145,17 @@ organizationSchema.statics.findDeleted = async function () {
   return this.find({ status: 'deleted', deletedAt: { $exists: true } })
 }
 
-const Organization: IOrganizationModel =
-  (mongoose.models.Organization as IOrganizationModel) ||
-  model<IOrganization, IOrganizationModel>('Organization', organizationSchema)
+function getOrganizationModel(): IOrganizationModel {
+  if (mongoose.models && mongoose.models.Organization) {
+    return mongoose.models.Organization as IOrganizationModel
+  }
+  return model<IOrganization, IOrganizationModel>(
+    'Organization',
+    organizationSchema
+  )
+}
+
+const Organization = getOrganizationModel()
 
 export default Organization
 

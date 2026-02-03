@@ -32,8 +32,8 @@ Font.register({
 const createStyles = (primaryColor: string) =>
   StyleSheet.create({
     page: {
-      padding: 30, // Reduced padding to ensure single page
-      fontSize: 9, // Reduced base font size
+      padding: 30,
+      fontSize: 9,
       backgroundColor: '#FFFFFF',
       color: '#1F2937',
       fontFamily: 'Geist',
@@ -46,7 +46,7 @@ const createStyles = (primaryColor: string) =>
       marginBottom: 20,
     },
     receiptTitle: {
-      fontSize: 48, // Reduced from 64
+      fontSize: 48,
       fontWeight: 'bold',
       color: '#25345b',
       letterSpacing: 0.5,

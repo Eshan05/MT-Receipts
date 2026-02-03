@@ -27,6 +27,7 @@ export default defineConfig({
             '__tests__/lib/organization-context.test.ts',
             '__tests__/lib/encryption.test.ts',
             '__tests__/api/**/*.test.ts',
+            '__tests__/tenant/**/*.test.ts',
           ],
           testTimeout: 300000,
           hookTimeout: 600000,
