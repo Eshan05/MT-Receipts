@@ -139,6 +139,26 @@ async function handleTenantRoutes(
   })
 }
 
+async function handleApiRoutes(request: NextRequest): Promise<NextResponse> {
+  const orgSlugCookie = request.cookies.get('currentOrganization')?.value
+
+  if (!orgSlugCookie) {
+    return NextResponse.next()
+  }
+
+  const org = await resolveOrganization(orgSlugCookie)
+
+  if (!org || org.status !== 'active') {
+    return NextResponse.next()
+  }
+
+  return injectOrganizationHeaders(request, {
+    id: org.id,
+    slug: org.slug,
+    name: org.name,
+  })
+}
+
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }

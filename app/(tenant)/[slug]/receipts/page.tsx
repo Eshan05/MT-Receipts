@@ -7,8 +7,11 @@ import { CalendarDays, FileText, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ReceiptForm } from './_components/receipt-form'
+import { useParams } from 'next/navigation'
 
 export default function ReceiptsPage() {
+  const params = useParams()
+  const slug = params.slug as string
   const [templates, setTemplates] = useState<TemplateInfo[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -26,13 +29,13 @@ export default function ReceiptsPage() {
           </h1>
           <div className='flex items-center gap-2 flex-wrap justify-end'>
             <Button variant='outline' size='sm' className='gap-1.5' asChild>
-              <Link href='/events'>
+              <Link href={`/${slug}/events`}>
                 <CalendarDays className='w-4 h-4' />
                 View Events
               </Link>
             </Button>
             <Button variant='outline' size='sm' className='gap-1.5' asChild>
-              <Link href='/templates'>
+              <Link href={`/${slug}/templates`}>
                 <FileText className='w-4 h-4' />
                 View Receipts
               </Link>
