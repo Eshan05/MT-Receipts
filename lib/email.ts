@@ -12,6 +12,7 @@ import SMTPVault from '@/models/smtp-vault.model'
 import { decryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
 
 interface SenderCredentials {
+  vaultId?: string
   label?: string
   user: string
   pass: string
@@ -45,6 +46,7 @@ async function resolveSenderCredentials(
     })
 
     return {
+      vaultId: String(selectedVault._id),
       label: selectedVault.label,
       user: selectedVault.email,
       pass: decryptedPassword,
@@ -212,12 +214,21 @@ export async function sendReceiptEmail({
       ],
     })
 
-    return { success: true, messageId: info.messageId }
+    return {
+      success: true,
+      messageId: info.messageId,
+      senderEmail: senderCredentials.user,
+      senderLabel: senderCredentials.label,
+      smtpVaultId: senderCredentials.vaultId,
+    }
   } catch (error) {
     console.error('Receipt email sending failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+      senderEmail: undefined,
+      senderLabel: undefined,
+      smtpVaultId: undefined,
     }
   }
 }

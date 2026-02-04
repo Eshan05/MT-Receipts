@@ -5,6 +5,11 @@ export interface IEmailLog {
   status: 'sent' | 'failed'
   sentAt: Date
   error?: string
+  sentByUserId?: string
+  sentByUsername?: string
+  smtpSender?: string
+  smtpVaultId?: string
+  messageId?: string
 }
 
 export interface IReceiptItem {
@@ -82,6 +87,11 @@ const receiptSchema = new Schema<IReceipt, IReceiptModel>(
         status: { type: String, enum: ['sent', 'failed'], required: true },
         sentAt: { type: Date, default: Date.now },
         error: { type: String },
+        sentByUserId: { type: String },
+        sentByUsername: { type: String },
+        smtpSender: { type: String },
+        smtpVaultId: { type: String },
+        messageId: { type: String },
       },
     ],
     refunded: { type: Boolean, default: false },

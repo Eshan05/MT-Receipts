@@ -69,6 +69,11 @@ export interface ITenantReceipt {
     status: 'sent' | 'failed'
     sentAt: Date
     error?: string
+    sentByUserId?: string
+    sentByUsername?: string
+    smtpSender?: string
+    smtpVaultId?: string
+    messageId?: string
   }>
   refunded: boolean
   refundReason?: string
@@ -191,6 +196,11 @@ const receiptSchema = new Schema<ITenantReceipt>(
         status: { type: String, enum: ['sent', 'failed'], required: true },
         sentAt: { type: Date, default: Date.now },
         error: { type: String },
+        sentByUserId: { type: String },
+        sentByUsername: { type: String },
+        smtpSender: { type: String },
+        smtpVaultId: { type: String },
+        messageId: { type: String },
       },
     ],
     refunded: { type: Boolean, default: false },

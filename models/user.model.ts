@@ -6,6 +6,10 @@ export interface IMembership {
   organizationSlug: string
   role: 'admin' | 'member'
   approvedAt?: Date
+  joinedVia?: 'signup' | 'invite_email' | 'invite_code' | 'manual'
+  invitedBy?: mongoose.Types.ObjectId
+  invitedAt?: Date
+  lastSignedInAt?: Date
 }
 
 export interface IUser extends Document {
@@ -46,6 +50,21 @@ const membershipSchema = new Schema<IMembership>(
       default: 'member',
     },
     approvedAt: {
+      type: Date,
+    },
+    joinedVia: {
+      type: String,
+      enum: ['signup', 'invite_email', 'invite_code', 'manual'],
+      default: 'manual',
+    },
+    invitedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    invitedAt: {
+      type: Date,
+    },
+    lastSignedInAt: {
       type: Date,
     },
   },
