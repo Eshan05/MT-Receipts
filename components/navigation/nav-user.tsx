@@ -6,6 +6,7 @@ import {
   Heart,
   KeyRound,
   LogOut,
+  SettingsIcon,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -28,7 +29,7 @@ import { ContextUser, useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { useState } from 'react'
 import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
-import { OrganizationSettingsDropdown } from '@/components/organization/organization-settings-dropdown'
+import { OrganizationSettingsCredenza } from '@/components/organization/organization-settings-dropdown'
 
 interface NavUserProps {
   user: ContextUser | undefined | null
@@ -39,6 +40,7 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
   const { isMobile } = useSidebar()
   const { logout, currentOrganization } = useAuth()
   const [vaultOpen, setVaultOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const isAdmin = currentOrganization?.role === 'admin'
 
   return (
@@ -95,7 +97,14 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
             <DropdownMenuGroup>
               {currentOrganization && (
                 <>
-                  <OrganizationSettingsDropdown />
+                  <DropdownMenuItem
+                    className='cursor-pointer'
+                    onClick={() => setSettingsOpen(true)}
+                    disabled={!isAdmin}
+                  >
+                    <SettingsIcon className='h-4 w-4' />
+                    Organization Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className='cursor-pointer'
                     onClick={() => onViewReceipts?.()}
@@ -136,6 +145,10 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+      <OrganizationSettingsCredenza
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
       <EmailVaultCredenza open={vaultOpen} onOpenChange={setVaultOpen} />
     </SidebarMenu>
   )

@@ -15,6 +15,7 @@ import {
   Mail,
   UserRoundPlus,
 } from 'lucide-react'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import {
   Credenza,
@@ -42,6 +43,13 @@ import {
 } from '@/components/table/members'
 import useSWR from 'swr'
 import { Field, FieldLabel } from '@/components/ui/field'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 
 const fetcher = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url)
@@ -57,6 +65,10 @@ export default function MembersPage() {
   const [inviteType, setInviteType] = useState<'email' | 'code'>('email')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member')
+  const [inviteMaxUses, setInviteMaxUses] = useState('')
+  const [inviteExpiresAt, setInviteExpiresAt] = useState<Date | undefined>(
+    undefined
+  )
   const [inviteLoading, setInviteLoading] = useState(false)
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
 
@@ -97,6 +109,15 @@ export default function MembersPage() {
       return
     }
 
+    if (
+      inviteType === 'code' &&
+      inviteMaxUses.trim() !== '' &&
+      (!Number.isInteger(Number(inviteMaxUses)) || Number(inviteMaxUses) < 1)
+    ) {
+      toast.error('Max uses must be a whole number greater than 0')
+      return
+    }
+
     setInviteLoading(true)
     try {
       const res = await fetch('/api/invites', {
@@ -107,6 +128,13 @@ export default function MembersPage() {
           organizationSlug: orgSlug,
           email: inviteType === 'email' ? inviteEmail : undefined,
           role: inviteRole,
+          maxUses:
+            inviteType === 'code' && inviteMaxUses.trim() !== ''
+              ? Number(inviteMaxUses)
+              : undefined,
+          expiresAt: inviteExpiresAt
+            ? inviteExpiresAt.toISOString()
+            : undefined,
         }),
       })
 
@@ -261,8 +289,8 @@ export default function MembersPage() {
       <Credenza open={inviteOpen} onOpenChange={setInviteOpen}>
         <CredenzaContent className='sm:max-w-md'>
           <CredenzaHeader>
-            <CredenzaTitle className='flex items-center gap-2'>
-              <UserPlusIcon className='h-4 w-4' />
+            <CredenzaTitle className='flex items-center gap-1'>
+              <UserPlusIcon className='size-3.5' />
               Invite Member
             </CredenzaTitle>
             <CredenzaDescription>
@@ -270,7 +298,7 @@ export default function MembersPage() {
             </CredenzaDescription>
           </CredenzaHeader>
 
-          <CredenzaBody className='space-y-4'>
+          <CredenzaBody className='space-y-1'>
             <Field>
               <FieldLabel className='sr-only'>Invite Type</FieldLabel>
               <Select
@@ -308,6 +336,62 @@ export default function MembersPage() {
               </Field>
             )}
 
+            {inviteType === 'code' && (
+              <Field>
+                <FieldLabel className='sr-only' htmlFor='maxUses'>
+                  Max Uses (Optional)
+                </FieldLabel>
+                <div className='relative'>
+                  <Input
+                    id='maxUses'
+                    type='number'
+                    min={1}
+                    step={1}
+                    value={inviteMaxUses}
+                    onChange={(e) => setInviteMaxUses(e.target.value)}
+                    placeholder='Max uses (optional)'
+                    className='peer ps-7'
+                  />
+                  <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                    <KeyRound size={12} />
+                  </div>
+                </div>
+              </Field>
+            )}
+
+            <Field>
+              <FieldLabel className='sr-only' htmlFor='expiresAt'>
+                Expiry Date (Optional)
+              </FieldLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant='outline'
+                    className={cn(
+                      'w-full justify-start text-left font-normal h-9 text-xs',
+                      !inviteExpiresAt && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className='w-3.5 h-3.5 mr-1.5' />
+                    {inviteExpiresAt ? (
+                      format(inviteExpiresAt, 'PPP')
+                    ) : (
+                      <span>Expiry date (optional)</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className='w-auto p-0' align='start'>
+                  <Calendar
+                    mode='single'
+                    selected={inviteExpiresAt}
+                    captionLayout='dropdown'
+                    onSelect={setInviteExpiresAt}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </Field>
+
             <Field>
               <FieldLabel className='sr-only'>Role</FieldLabel>
               <Select
@@ -335,7 +419,7 @@ export default function MembersPage() {
             </Field>
 
             {generatedCode && (
-              <div className='space-y-2 p-4 bg-muted rounded-lg'>
+              <div className='space-y-1 p-3 bg-muted dark:bg-muted/50 rounded-lg'>
                 <FieldLabel>Shareable Code</FieldLabel>
                 <p className='text-2xl font-mono font-bold tracking-wider'>
                   {generatedCode}
@@ -354,6 +438,8 @@ export default function MembersPage() {
                 setInviteOpen(false)
                 setGeneratedCode(null)
                 setInviteEmail('')
+                setInviteMaxUses('')
+                setInviteExpiresAt(undefined)
               }}
             >
               {generatedCode ? 'Close' : 'Cancel'}
