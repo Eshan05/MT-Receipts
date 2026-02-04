@@ -12,9 +12,12 @@ import {
 } from 'vitest'
 import { NextRequest } from 'next/server'
 import mongoose from 'mongoose'
+import type { IUser } from '@/models/user.model'
+import type { IOrganization } from '@/models/organization.model'
 
 vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -24,7 +27,6 @@ vi.mock('@/lib/auth', async () => {
     clearAuthCookie: vi.fn(),
     clearCurrentOrgCookie: vi.fn(),
     getCurrentOrgSlug: vi.fn(),
-    User: (actual as any).User,
   }
 })
 
@@ -40,9 +42,9 @@ import Organization from '@/models/organization.model'
 import { GET, POST } from '@/app/api/sessions/route'
 
 describe('GET /api/sessions', () => {
-  let testUser: any
-  let org1: any
-  let org2: any
+  let testUser!: IUser
+  let org1!: IOrganization
+  let org2!: IOrganization
 
   beforeAll(async () => {
     await dbConnect()
@@ -187,10 +189,10 @@ describe('GET /api/sessions', () => {
 })
 
 describe('POST /api/sessions (Organization Switch)', () => {
-  let testUser: any
-  let org1: any
-  let org2: any
-  let otherOrg: any
+  let testUser!: IUser
+  let org1!: IOrganization
+  let org2!: IOrganization
+  let otherOrg!: IOrganization
 
   beforeAll(async () => {
     await dbConnect()

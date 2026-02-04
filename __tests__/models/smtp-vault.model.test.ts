@@ -385,7 +385,7 @@ describe('SMTP Vault Model', () => {
           encryptedAppPassword: 'enc',
           authTag: 'tag',
           createdBy: testUser,
-        } as any)
+        } as unknown as Parameters<typeof SMTPVault.create>[0])
       ).rejects.toThrow()
     })
 
@@ -398,7 +398,7 @@ describe('SMTP Vault Model', () => {
           encryptedAppPassword: 'enc',
           iv: 'iv',
           createdBy: testUser,
-        } as any)
+        } as unknown as Parameters<typeof SMTPVault.create>[0])
       ).rejects.toThrow()
     })
   })

@@ -15,11 +15,15 @@ import {
 } from '@/lib/organization-context'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
 import Organization from '@/models/organization.model'
+import mongoose from 'mongoose'
+import type { IOrganization } from '@/models/organization.model'
 
 const mockHeadersFn = vi.fn()
+const mockCookiesFn = vi.fn()
 
 vi.mock('next/headers', () => ({
   headers: () => mockHeadersFn(),
+  cookies: () => mockCookiesFn(),
 }))
 
 vi.mock('@/lib/redis', () => ({
@@ -48,6 +52,10 @@ describe('Organization Context Headers', () => {
 describe('getOrganizationContext', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    mockCookiesFn.mockResolvedValue({
+      get: () => undefined,
+    })
   })
 
   it('returns context when all headers present', async () => {
@@ -138,11 +146,11 @@ describe('resolveOrganization', () => {
     vi.mocked(getCachedOrganization).mockResolvedValueOnce(null)
 
     vi.mocked(Organization.findBySlug).mockResolvedValueOnce({
-      _id: '507f1f77bcf86cd799439011',
+      _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
       slug: 'robotics',
       name: 'Robotics Club',
       status: 'active',
-    } as any)
+    } as unknown as IOrganization)
 
     const result = await resolveOrganization('robotics')
 
@@ -159,11 +167,11 @@ describe('resolveOrganization', () => {
     vi.mocked(getCachedOrganization).mockResolvedValueOnce(null)
 
     vi.mocked(Organization.findBySlug).mockResolvedValueOnce({
-      _id: '507f1f77bcf86cd799439011',
+      _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
       slug: 'tech',
       name: 'Tech Club',
       status: 'active',
-    } as any)
+    } as unknown as IOrganization)
 
     await resolveOrganization('tech')
 
@@ -179,11 +187,11 @@ describe('resolveOrganization', () => {
     vi.mocked(getCachedOrganization).mockResolvedValueOnce(null)
 
     vi.mocked(Organization.findBySlug).mockResolvedValueOnce({
-      _id: '507f1f77bcf86cd799439011',
+      _id: new mongoose.Types.ObjectId('507f1f77bcf86cd799439011'),
       slug: 'pending-org',
       name: 'Pending Org',
       status: 'pending',
-    } as any)
+    } as unknown as IOrganization)
 
     await resolveOrganization('pending-org')
 
@@ -283,38 +291,38 @@ describe('Status Check Functions', () => {
 })
 
 describe('getOrganizationErrorPath', () => {
-  it('returns /org-not-found for null organization', () => {
-    expect(getOrganizationErrorPath(null)).toBe('/org-not-found')
+  it('returns /o/404 for null organization', () => {
+    expect(getOrganizationErrorPath(null)).toBe('/o/404')
   })
 
-  it('returns /org-pending for pending status', () => {
+  it('returns /o/202 for pending status', () => {
     const org: OrganizationContext = {
       id: '1',
       slug: 'pending',
       name: 'Pending',
       status: 'pending',
     }
-    expect(getOrganizationErrorPath(org)).toBe('/org-pending')
+    expect(getOrganizationErrorPath(org)).toBe('/o/202')
   })
 
-  it('returns /org-suspended for suspended status', () => {
+  it('returns /o/403 for suspended status', () => {
     const org: OrganizationContext = {
       id: '1',
       slug: 'suspended',
       name: 'Suspended',
       status: 'suspended',
     }
-    expect(getOrganizationErrorPath(org)).toBe('/org-suspended')
+    expect(getOrganizationErrorPath(org)).toBe('/o/403')
   })
 
-  it('returns /org-deleted for deleted status', () => {
+  it('returns /o/410 for deleted status', () => {
     const org: OrganizationContext = {
       id: '1',
       slug: 'deleted',
       name: 'Deleted',
       status: 'deleted',
     }
-    expect(getOrganizationErrorPath(org)).toBe('/org-deleted')
+    expect(getOrganizationErrorPath(org)).toBe('/o/410')
   })
 
   it('returns null for active status', () => {

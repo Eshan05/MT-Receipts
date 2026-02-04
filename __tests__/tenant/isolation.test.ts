@@ -165,6 +165,13 @@ describe.skipIf(SKIP_MONGODB_SETUP)(
     })
 
     describe('Event isolation', () => {
+      beforeEach(async () => {
+        const models1: TenantModels = await getTenantModels(org1.slug)
+        const models2: TenantModels = await getTenantModels(org2.slug)
+        await models1.Event.deleteMany({})
+        await models2.Event.deleteMany({})
+      })
+
       it('stores event in correct tenant database', async () => {
         const models: TenantModels = await getTenantModels(org1.slug)
         const event = await models.Event.create({

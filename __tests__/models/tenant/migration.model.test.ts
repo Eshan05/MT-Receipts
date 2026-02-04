@@ -82,7 +82,7 @@ describe('Migration Model', () => {
       await expect(
         Migration.create({
           name: '006_no_checksum',
-        } as any)
+        } as unknown as Parameters<typeof Migration.create>[0])
       ).rejects.toThrow()
     })
   })

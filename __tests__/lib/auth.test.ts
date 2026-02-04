@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextResponse } from 'next/server'
 
 describe('Auth Cookie Functions', () => {
   beforeEach(() => {
@@ -10,15 +11,11 @@ describe('Auth Cookie Functions', () => {
 
   describe('setCurrentOrgCookie', () => {
     it('sets the currentOrganization cookie', async () => {
-      const mockSet = vi.fn()
-      const mockResponse = {
-        cookies: {
-          set: mockSet,
-        },
-      }
+      const response = NextResponse.json({ ok: true })
+      const mockSet = vi.spyOn(response.cookies, 'set')
 
       const { setCurrentOrgCookie } = await import('@/lib/auth')
-      await setCurrentOrgCookie('my-org', mockResponse as any)
+      await setCurrentOrgCookie('my-org', response)
 
       expect(mockSet).toHaveBeenCalledWith({
         name: 'currentOrganization',
@@ -32,15 +29,11 @@ describe('Auth Cookie Functions', () => {
 
   describe('clearCurrentOrgCookie', () => {
     it('clears the currentOrganization cookie', async () => {
-      const mockSet = vi.fn()
-      const mockResponse = {
-        cookies: {
-          set: mockSet,
-        },
-      }
+      const response = NextResponse.json({ ok: true })
+      const mockSet = vi.spyOn(response.cookies, 'set')
 
       const { clearCurrentOrgCookie } = await import('@/lib/auth')
-      await clearCurrentOrgCookie(mockResponse as any)
+      await clearCurrentOrgCookie(response)
 
       expect(mockSet).toHaveBeenCalledWith({
         name: 'currentOrganization',

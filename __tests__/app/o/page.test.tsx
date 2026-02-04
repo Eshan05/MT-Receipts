@@ -3,7 +3,21 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type {
+  AnchorHTMLAttributes,
+  ImgHTMLAttributes,
+  PropsWithChildren,
+} from 'react'
 import CreateOrgPage from '@/app/o/page'
+
+type MockNextImageProps = ImgHTMLAttributes<HTMLImageElement> & {
+  src: string
+  alt: string
+}
+
+type MockNextLinkProps = PropsWithChildren<
+  AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }
+>
 
 const mockPush = vi.fn()
 
@@ -20,13 +34,13 @@ vi.mock('@/contexts/AuthContext', () => ({
 }))
 
 vi.mock('next/image', () => ({
-  default: ({ src, alt, className }: any) => (
+  default: ({ src, alt, className }: MockNextImageProps) => (
     <img src={src} alt={alt} className={className} />
   ),
 }))
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, className }: any) => (
+  default: ({ children, href, className }: MockNextLinkProps) => (
     <a href={href} className={className}>
       {children}
     </a>

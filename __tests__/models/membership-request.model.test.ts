@@ -102,7 +102,7 @@ describe('Membership Request Model', () => {
           organizationSlug: 'testorg',
           type: 'invalid',
           invitedBy: testUser,
-        } as any)
+        } as unknown as Parameters<typeof MembershipRequest.create>[0])
       ).rejects.toThrow()
     })
 
@@ -115,7 +115,7 @@ describe('Membership Request Model', () => {
           email: 'test@example.com',
           invitedBy: testUser,
           role: 'superadmin',
-        } as any)
+        } as unknown as Parameters<typeof MembershipRequest.create>[0])
       ).rejects.toThrow()
     })
 
@@ -128,7 +128,7 @@ describe('Membership Request Model', () => {
           email: 'test@example.com',
           invitedBy: testUser,
           status: 'invalid',
-        } as any)
+        } as unknown as Parameters<typeof MembershipRequest.create>[0])
       ).rejects.toThrow()
     })
   })

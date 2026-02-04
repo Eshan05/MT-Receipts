@@ -3,16 +3,30 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type {
+  AnchorHTMLAttributes,
+  ImgHTMLAttributes,
+  PropsWithChildren,
+} from 'react'
 import LandingPage from '@/app/page'
 
+type MockNextImageProps = ImgHTMLAttributes<HTMLImageElement> & {
+  src: string
+  alt: string
+}
+
+type MockNextLinkProps = PropsWithChildren<
+  AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }
+>
+
 vi.mock('next/image', () => ({
-  default: ({ src, alt, className }: any) => (
+  default: ({ src, alt, className }: MockNextImageProps) => (
     <img src={src} alt={alt} className={className} />
   ),
 }))
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, className }: any) => (
+  default: ({ children, href, className }: MockNextLinkProps) => (
     <a href={href} className={className}>
       {children}
     </a>

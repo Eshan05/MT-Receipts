@@ -217,7 +217,7 @@ describe('createRedirectUrl', () => {
       nextUrl: {
         clone: () => mockUrl,
       },
-    } as any
+    }
 
     const url = createRedirectUrl(mockRequest, '/o/404')
     expect(url.pathname).toBe('/o/404')

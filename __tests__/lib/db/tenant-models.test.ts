@@ -57,16 +57,18 @@ describe('Tenant Models Factory', () => {
       const models = await getTenantModels('optest')
 
       const event = await models.Event.create({
-        code: 'EVT001',
+        eventCode: 'EVT001',
+        type: 'seminar',
         name: 'Test Event',
+        items: [],
         startDate: new Date(),
         endDate: new Date(),
       })
 
       expect(event._id).toBeDefined()
-      expect(event.code).toBe('EVT001')
+      expect(event.eventCode).toBe('EVT001')
 
-      const found = await models.Event.findOne({ code: 'EVT001' })
+      const found = await models.Event.findOne({ eventCode: 'EVT001' })
       expect(found).toBeDefined()
       expect(found?.name).toBe('Test Event')
     })
@@ -92,14 +94,16 @@ describe('Tenant Models Factory', () => {
       const modelsB = await getTenantModels('tenant-b')
 
       await modelsA.Event.create({
-        code: 'EVENT-A',
+        eventCode: 'EVENT-A',
+        type: 'seminar',
         name: 'Event in A',
+        items: [],
         startDate: new Date(),
         endDate: new Date(),
       })
 
-      const foundInA = await modelsA.Event.findOne({ code: 'EVENT-A' })
-      const foundInB = await modelsB.Event.findOne({ code: 'EVENT-A' })
+      const foundInA = await modelsA.Event.findOne({ eventCode: 'EVENT-A' })
+      const foundInB = await modelsB.Event.findOne({ eventCode: 'EVENT-A' })
 
       expect(foundInA).toBeDefined()
       expect(foundInB).toBeNull()
@@ -110,18 +114,20 @@ describe('Tenant Models Factory', () => {
       const modelsB = await getTenantModels('receipt-b')
 
       const eventA = await modelsA.Event.create({
-        code: 'EVT-A',
+        eventCode: 'EVT-A',
+        type: 'seminar',
         name: 'Event A',
+        items: [],
         startDate: new Date(),
         endDate: new Date(),
       })
 
       await modelsA.Receipt.create({
         receiptNumber: 'RCP-001',
-        eventId: eventA._id,
-        customerName: 'Customer A',
-        customerEmail: 'a@test.com',
-        amount: 100,
+        event: eventA._id,
+        customer: { name: 'Customer A', email: 'a@test.com' },
+        items: [],
+        totalAmount: 100,
       })
 
       const receiptsInA = await modelsA.Receipt.find({})
