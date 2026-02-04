@@ -29,7 +29,7 @@ Font.register({
   src: getFontPath('ImperialScript-Regular.ttf'),
 })
 
-const createStyles = (primaryColor: string) =>
+const createStyles = (primaryColor: string, secondaryColor?: string) =>
   StyleSheet.create({
     page: {
       padding: 30,
@@ -48,7 +48,7 @@ const createStyles = (primaryColor: string) =>
     receiptTitle: {
       fontSize: 48,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
       letterSpacing: 0.5,
       marginBottom: 15,
     },
@@ -91,7 +91,7 @@ const createStyles = (primaryColor: string) =>
     infoLabel: {
       fontSize: 12,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
       marginBottom: 5,
       textTransform: 'uppercase',
     },
@@ -110,7 +110,7 @@ const createStyles = (primaryColor: string) =>
     infoRowLabel: {
       fontSize: 10,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
       textTransform: 'uppercase',
       marginRight: 10,
     },
@@ -122,9 +122,9 @@ const createStyles = (primaryColor: string) =>
     tableHeader: {
       flexDirection: 'row',
       borderTopWidth: 1.5,
-      borderTopColor: '#25345b',
+      borderTopColor: primaryColor,
       borderBottomWidth: 1.5,
-      borderBottomColor: '#d65147',
+      borderBottomColor: secondaryColor || '#d65147',
       paddingVertical: 4,
       marginTop: 10,
       fontFamily: 'Fjalla One',
@@ -132,7 +132,7 @@ const createStyles = (primaryColor: string) =>
     tableHeaderText: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
       textTransform: 'uppercase',
     },
     colQty: { width: '8%', textAlign: 'center' },
@@ -194,12 +194,12 @@ const createStyles = (primaryColor: string) =>
     grandTotalLabel: {
       fontSize: 13,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
     },
     grandTotalValue: {
       fontSize: 18,
       fontWeight: 'bold',
-      color: '#25345b',
+      color: primaryColor,
     },
     signatureContainer: {
       marginTop: 30, // Reduced space
@@ -227,7 +227,7 @@ const createStyles = (primaryColor: string) =>
     thankYou: {
       fontSize: 48, // Reduced from 64
       fontFamily: 'Dancing Script',
-      color: '#25345b',
+      color: primaryColor,
     },
     termsSection: {
       width: '45%',
@@ -239,7 +239,7 @@ const createStyles = (primaryColor: string) =>
     termsTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#d65147',
+      color: secondaryColor || '#d65147',
       marginBottom: 6,
       textTransform: 'uppercase',
     },
@@ -254,7 +254,7 @@ const createStyles = (primaryColor: string) =>
     notesTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#d65147',
+      color: secondaryColor || '#d65147',
       marginBottom: 6,
       textTransform: 'uppercase',
     },
@@ -277,7 +277,7 @@ export default function ProfessionalTemplate({
   notes,
   qrCodeData,
 }: TemplateProps) {
-  const styles = createStyles(config.primaryColor)
+  const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName || 'ACES'
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const taxRate = 0.0625

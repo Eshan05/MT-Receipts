@@ -3,6 +3,7 @@ import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
+import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
 
 type PopulatedEvent = {
   name: string
@@ -138,6 +139,9 @@ export async function POST(request: NextRequest) {
       receiptNumber: { $in: receiptNumbers },
       refunded: { $ne: true },
     }).populate('event')
+    const organizationBranding = await getOrganizationBrandingBySlug(
+      ctx.organization.slug
+    )
 
     let sentCount = 0
     let failedCount = 0
@@ -171,6 +175,13 @@ export async function POST(request: NextRequest) {
           })),
           totalAmount: receipt.totalAmount,
           paymentMethod: receipt.paymentMethod,
+          organizationName:
+            organizationBranding?.organizationName || ctx.organization.name,
+          organizationLogo: organizationBranding?.logoUrl,
+          primaryColor: organizationBranding?.primaryColor,
+          secondaryColor: organizationBranding?.secondaryColor,
+          emailFromName: organizationBranding?.emailFromName,
+          emailFromAddress: organizationBranding?.emailFromAddress,
           notes: receipt.notes,
           qrCodeData: receipt.qrCodeData,
           templateSlug,

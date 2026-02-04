@@ -14,7 +14,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { RgbaValue } from '@/components/kibo-ui/color-picker'
+import { ColorPickerOutput, RgbaValue } from '@/components/kibo-ui/color-picker'
 import { Button } from '@/components/ui/button'
 import {
   Credenza,
@@ -419,7 +419,10 @@ export function OrganizationSettingsCredenza({
                     <ColorPickerSelection className='h-40 rounded-md' />
                     <ColorPickerHue />
                     <ColorPickerAlpha />
-                    <ColorPickerFormat />
+                    <div className='flex items-center gap-2'>
+                      <ColorPickerOutput />
+                      <ColorPickerFormat />
+                    </div>
                   </ColorPicker>
                 </PopoverContent>
               </Popover>
@@ -458,7 +461,10 @@ export function OrganizationSettingsCredenza({
                     <ColorPickerSelection className='h-40 rounded-md' />
                     <ColorPickerHue />
                     <ColorPickerAlpha />
-                    <ColorPickerFormat />
+                    <div className='flex items-center gap-2'>
+                      <ColorPickerOutput />
+                      <ColorPickerFormat />
+                    </div>
                   </ColorPicker>
                 </PopoverContent>
               </Popover>

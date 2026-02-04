@@ -11,6 +11,7 @@ import type {
 } from '@/lib/templates/types'
 import { getOrganizationContext } from '@/lib/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
+import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
 
 export interface RenderReceiptOptions {
   receiptNumber: string
@@ -53,9 +54,9 @@ interface TenantTemplate {
 
 async function getTemplateConfig(
   templateId?: string | null,
-  slug?: string
+  orgDefaultTemplate?: string
 ): Promise<{ template: TenantTemplate | null; slug: string }> {
-  const requestedSlug = templateId || slug
+  const requestedSlug = templateId || orgDefaultTemplate
 
   if (requestedSlug && requestedSlug in templateRegistry) {
     return {
@@ -113,28 +114,35 @@ async function getTemplateConfig(
 
 function buildConfig(
   template: TenantTemplate | null,
-  orgName?: string
+  orgName?: string,
+  orgBranding?: Awaited<ReturnType<typeof getOrganizationBrandingBySlug>>
 ): TemplateConfig {
   const defaultLogoUrl =
     'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
 
   if (!template) {
     return {
-      primaryColor: '#1E40AF',
+      primaryColor: orgBranding?.primaryColor || '#1E40AF',
+      secondaryColor: orgBranding?.secondaryColor,
       showQrCode: true,
-      organizationName: orgName || 'Organization',
-      logoUrl: defaultLogoUrl,
+      organizationName:
+        orgBranding?.organizationName || orgName || 'Organization',
+      logoUrl: orgBranding?.logoUrl || defaultLogoUrl,
     }
   }
 
   return {
-    primaryColor: template.config.primaryColor,
-    secondaryColor: template.config.secondaryColor,
-    logoUrl: template.config.logoUrl || defaultLogoUrl,
+    primaryColor: orgBranding?.primaryColor || template.config.primaryColor,
+    secondaryColor:
+      orgBranding?.secondaryColor || template.config.secondaryColor,
+    logoUrl: orgBranding?.logoUrl || template.config.logoUrl || defaultLogoUrl,
     showQrCode: template.config.showQrCode,
     footerText: template.config.footerText,
     organizationName:
-      template.config.organizationName || orgName || 'Organization',
+      orgBranding?.organizationName ||
+      template.config.organizationName ||
+      orgName ||
+      'Organization',
   }
 }
 
@@ -162,8 +170,14 @@ export async function renderReceiptPDF(
     })
 
   const organization = await getOrganizationContext()
-  const { template, slug } = await getTemplateConfig(event.templateId)
-  const dbConfig = buildConfig(template, organization?.name)
+  const orgBranding = organization
+    ? await getOrganizationBrandingBySlug(organization.slug)
+    : null
+  const { template, slug } = await getTemplateConfig(
+    event.templateId,
+    orgBranding?.defaultTemplate
+  )
+  const dbConfig = buildConfig(template, organization?.name, orgBranding)
   const config = customConfig || dbConfig
   const TemplateComponent = getTemplateComponent(slug)
 

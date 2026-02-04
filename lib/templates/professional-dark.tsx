@@ -29,7 +29,7 @@ Font.register({
   src: getFontPath('ImperialScript-Regular.ttf'),
 })
 
-const createStyles = (primaryColor: string) =>
+const createStyles = (primaryColor: string, secondaryColor?: string) =>
   StyleSheet.create({
     page: {
       padding: 30,
@@ -91,7 +91,7 @@ const createStyles = (primaryColor: string) =>
     infoLabel: {
       fontSize: 12,
       fontWeight: 'bold',
-      color: '#7dd3fc',
+      color: primaryColor,
       marginBottom: 5,
       textTransform: 'uppercase',
     },
@@ -110,7 +110,7 @@ const createStyles = (primaryColor: string) =>
     infoRowLabel: {
       fontSize: 10,
       fontWeight: 'bold',
-      color: '#7dd3fc',
+      color: primaryColor,
       textTransform: 'uppercase',
       marginRight: 10,
     },
@@ -122,7 +122,7 @@ const createStyles = (primaryColor: string) =>
     tableHeader: {
       flexDirection: 'row',
       borderTopWidth: 1.5,
-      borderTopColor: '#7dd3fc',
+      borderTopColor: primaryColor,
       borderBottomWidth: 1.5,
       borderBottomColor: '#3f3f46',
       paddingVertical: 4,
@@ -202,7 +202,7 @@ const createStyles = (primaryColor: string) =>
     grandTotalValue: {
       fontSize: 18,
       fontWeight: 'bold',
-      color: '#7dd3fc',
+      color: primaryColor,
     },
     signatureContainer: {
       marginTop: 30,
@@ -230,7 +230,7 @@ const createStyles = (primaryColor: string) =>
     thankYou: {
       fontSize: 48,
       fontFamily: 'Dancing Script',
-      color: '#7dd3fc',
+      color: primaryColor,
     },
     termsSection: {
       width: '45%',
@@ -242,7 +242,7 @@ const createStyles = (primaryColor: string) =>
     termsTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#7dd3fc',
+      color: secondaryColor || primaryColor,
       marginBottom: 6,
       textTransform: 'uppercase',
     },
@@ -257,7 +257,7 @@ const createStyles = (primaryColor: string) =>
     notesTitle: {
       fontSize: 9,
       fontWeight: 'bold',
-      color: '#7dd3fc',
+      color: secondaryColor || primaryColor,
       marginBottom: 6,
       textTransform: 'uppercase',
     },
@@ -280,7 +280,7 @@ export default function ProfessionalDarkTemplate({
   notes,
   qrCodeData,
 }: TemplateProps) {
-  const styles = createStyles(config.primaryColor)
+  const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName || 'ACES'
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const taxRate = 0.0625
@@ -298,14 +298,14 @@ export default function ProfessionalDarkTemplate({
                 Association of Computer Engineers{'\n'}
                 RMDSSOE, Pune, MH, India{'\n'}
                 <Link
-                  style={{ color: '#7dd3fc' }}
+                  style={{ color: config.primaryColor }}
                   src='https://aces-rmdssoe.in'
                 >
                   Website
                 </Link>{' '}
                 |{' '}
                 <Link
-                  style={{ color: '#7dd3fc' }}
+                  style={{ color: config.primaryColor }}
                   src='mailto:aces.rmdssoe@sinhgad.edu'
                 >
                   Email

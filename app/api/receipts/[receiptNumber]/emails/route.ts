@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
+import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
 
 type PopulatedEvent = {
   name: string
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { Receipt } = ctx.models
     const body = await request.json().catch(() => ({}))
     const { templateSlug, smtpVaultId } = body
+    const organizationBranding = await getOrganizationBrandingBySlug(
+      ctx.organization.slug
+    )
 
     const receipt = await Receipt.findOne({ receiptNumber }).populate('event')
 
@@ -81,6 +85,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })),
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
+      organizationName:
+        organizationBranding?.organizationName || ctx.organization.name,
+      organizationLogo: organizationBranding?.logoUrl,
+      primaryColor: organizationBranding?.primaryColor,
+      secondaryColor: organizationBranding?.secondaryColor,
+      emailFromName: organizationBranding?.emailFromName,
+      emailFromAddress: organizationBranding?.emailFromAddress,
       notes: receipt.notes,
       qrCodeData: receipt.qrCodeData,
       templateSlug,

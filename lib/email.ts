@@ -102,6 +102,11 @@ export interface SendReceiptOptions {
   totalAmount: number
   paymentMethod?: string
   organizationName?: string
+  organizationLogo?: string
+  primaryColor?: string
+  secondaryColor?: string
+  emailFromName?: string
+  emailFromAddress?: string
   notes?: string
   qrCodeData?: string
   templateSlug?: string
@@ -125,6 +130,11 @@ export async function sendReceiptEmail({
   totalAmount,
   paymentMethod,
   organizationName = 'ACES',
+  organizationLogo,
+  primaryColor,
+  secondaryColor,
+  emailFromName,
+  emailFromAddress,
   notes,
   qrCodeData,
   templateSlug,
@@ -151,6 +161,10 @@ export async function sendReceiptEmail({
         paymentMethod,
         date,
         organizationName,
+        organizationLogo,
+        primaryColor,
+        secondaryColor,
+        emailFromAddress,
       })
     )
 
@@ -200,8 +214,12 @@ export async function sendReceiptEmail({
       },
     })
 
+    const fromName =
+      emailFromName || senderCredentials.label || `${organizationName} Receipts`
+    const fromAddress = emailFromAddress || senderCredentials.user
+
     const info = await transporter.sendMail({
-      from: `"${senderCredentials.label || `${organizationName} Receipts`}" <${senderCredentials.user}>`,
+      from: `"${fromName}" <${fromAddress}>`,
       to,
       subject: `Receipt #${receiptNumber} - ${eventName}`,
       html: emailHtml,

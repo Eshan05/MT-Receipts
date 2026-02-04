@@ -58,6 +58,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       description: organization.description,
       logoUrl: organization.logoUrl,
       status: organization.status,
+      settings: organization.settings,
     })
   } catch (error) {
     console.error('Organization fetch error:', error)
@@ -137,6 +138,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     await organization.save()
+
+    await invalidateCachedOrganization(organization.slug)
+    await setCachedOrganization(organization.slug, {
+      id: organization._id.toString(),
+      slug: organization.slug,
+      name: organization.name,
+      status: organization.status,
+    })
 
     return NextResponse.json({
       message: 'Organization updated successfully',

@@ -1,0 +1,40 @@
+import dbConnect from '@/lib/db-conn'
+import Organization from '@/models/organization.model'
+
+export interface OrganizationBranding {
+  organizationName: string
+  logoUrl?: string
+  primaryColor?: string
+  secondaryColor?: string
+  receiptNumberFormat?: string
+  defaultTemplate?: string
+  emailFromName?: string
+  emailFromAddress?: string
+}
+
+export async function getOrganizationBrandingBySlug(
+  slug: string
+): Promise<OrganizationBranding | null> {
+  await dbConnect()
+
+  const organization = await Organization.findOne({ slug: slug.toLowerCase() })
+    .select('name logoUrl settings')
+    .lean()
+
+  if (!organization) {
+    return null
+  }
+
+  return {
+    organizationName:
+      organization.settings?.organizationName || organization.name,
+    logoUrl: organization.logoUrl || undefined,
+    primaryColor: organization.settings?.primaryColor || undefined,
+    secondaryColor: organization.settings?.secondaryColor || undefined,
+    receiptNumberFormat:
+      organization.settings?.receiptNumberFormat || undefined,
+    defaultTemplate: organization.settings?.defaultTemplate || undefined,
+    emailFromName: organization.settings?.emailFromName || undefined,
+    emailFromAddress: organization.settings?.emailFromAddress || undefined,
+  }
+}

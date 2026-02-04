@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant-route'
 import { generateCustomerInitials } from '@/lib/utils'
 import { sendReceiptEmail } from '@/lib/email'
+import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
+import { formatReceiptNumber } from '@/lib/receipt-number'
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,6 +89,9 @@ export async function POST(request: NextRequest) {
     }
 
     const initials = generateCustomerInitials(customer.name)
+    const organizationBranding = await getOrganizationBrandingBySlug(
+      ctx.organization.slug
+    )
     const sequenceName = `receipt_${event.eventCode}`
     const sequence = await Sequence.findOneAndUpdate(
       { name: sequenceName },
@@ -94,7 +99,17 @@ export async function POST(request: NextRequest) {
       { new: true, upsert: true }
     )
     const sequenceNumber = sequence.value.toString().padStart(5, '0')
-    const receiptNumber = `RCP-${event.eventCode}-${initials}${sequenceNumber}`
+    const receiptNumber = formatReceiptNumber(
+      organizationBranding?.receiptNumberFormat,
+      {
+        eventCode: event.eventCode,
+        initials,
+        sequenceNumber,
+        organizationName: organizationBranding?.organizationName,
+        organizationSlug: ctx.organization.slug,
+        eventType: event.type,
+      }
+    )
 
     const processedItems = items.map(
       (item: {
@@ -155,6 +170,13 @@ export async function POST(request: NextRequest) {
           })),
           totalAmount: receipt.totalAmount,
           paymentMethod: receipt.paymentMethod,
+          organizationName:
+            organizationBranding?.organizationName || ctx.organization.name,
+          organizationLogo: organizationBranding?.logoUrl,
+          primaryColor: organizationBranding?.primaryColor,
+          secondaryColor: organizationBranding?.secondaryColor,
+          emailFromName: organizationBranding?.emailFromName,
+          emailFromAddress: organizationBranding?.emailFromAddress,
           notes: receipt.notes,
           qrCodeData: receipt.qrCodeData,
           smtpVaultId,

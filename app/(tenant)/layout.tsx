@@ -6,6 +6,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { TenantThemeSync } from '@/components/organization/tenant-theme-sync'
 
 export default function TenantLayout({
   children,
@@ -14,6 +15,7 @@ export default function TenantLayout({
 }) {
   return (
     <AuthProvider>
+      <TenantThemeSync />
       <SidebarProvider className='overflow-x-hidden'>
         <AdminSidebar />
         <SidebarInset className='group-has[[data-collapsible=icon]]/sidebar-wrapper:w-10'>

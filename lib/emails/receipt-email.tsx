@@ -36,6 +36,9 @@ interface ReceiptEmailProps {
   date: string
   organizationName?: string
   organizationLogo?: string
+  primaryColor?: string
+  secondaryColor?: string
+  emailFromAddress?: string
 }
 
 export function ReceiptEmail({
@@ -49,6 +52,10 @@ export function ReceiptEmail({
   paymentMethod,
   date,
   organizationName = 'ACES',
+  organizationLogo,
+  primaryColor = '#0f172a',
+  secondaryColor = '#334155',
+  emailFromAddress,
 }: ReceiptEmailProps) {
   const paymentMethodLabels: Record<string, string> = {
     cash: 'Cash',
@@ -66,7 +73,10 @@ export function ReceiptEmail({
         </Preview>
         <Body className='bg-gray-50 font-sans'>
           <Container className='bg-white my-8 mx-auto max-w-xl rounded-lg overflow-hidden shadow-sm'>
-            <Section className='bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-8'>
+            <Section
+              className='px-8 py-8'
+              style={{ backgroundColor: primaryColor }}
+            >
               <Row>
                 <Column>
                   <Heading className='text-white text-2xl font-bold m-0'>
@@ -77,14 +87,24 @@ export function ReceiptEmail({
                   </Text>
                 </Column>
                 <Column className='text-right'>
-                  <Section className='bg-white/10 rounded-lg px-3 py-2 inline-block'>
-                    <Text className='text-white/60 text-xs m-0 uppercase tracking-wider'>
-                      Receipt
-                    </Text>
-                    <Text className='text-white text-lg font-bold m-0 font-mono'>
-                      #{receiptNumber}
-                    </Text>
-                  </Section>
+                  {organizationLogo ? (
+                    <Img
+                      src={organizationLogo}
+                      alt={organizationName}
+                      width='52'
+                      height='52'
+                      className='rounded-full inline-block'
+                    />
+                  ) : (
+                    <Section className='bg-white/10 rounded-lg px-3 py-2 inline-block'>
+                      <Text className='text-white/60 text-xs m-0 uppercase tracking-wider'>
+                        Receipt
+                      </Text>
+                      <Text className='text-white text-lg font-bold m-0 font-mono'>
+                        #{receiptNumber}
+                      </Text>
+                    </Section>
+                  )}
                 </Column>
               </Row>
             </Section>
@@ -187,7 +207,10 @@ export function ReceiptEmail({
               ))}
             </Section>
 
-            <Section className='px-8 py-5 bg-gradient-to-r from-slate-900 to-slate-800'>
+            <Section
+              className='px-8 py-5'
+              style={{ backgroundColor: primaryColor }}
+            >
               <Row>
                 <Column className='w-3/5'>
                   {paymentMethod && (
@@ -227,10 +250,12 @@ export function ReceiptEmail({
                 <Text className='text-slate-500 text-xs m-0 mt-1'>
                   For any queries, please contact us at{' '}
                   <Link
-                    href={`mailto:${organizationName.toLowerCase()}@example.com`}
+                    href={`mailto:${emailFromAddress || `${organizationName.toLowerCase()}@example.com`}`}
                     className='text-slate-700 underline'
+                    style={{ color: secondaryColor }}
                   >
-                    {organizationName.toLowerCase()}@example.com
+                    {emailFromAddress ||
+                      `${organizationName.toLowerCase()}@example.com`}
                   </Link>
                 </Text>
               </Section>
