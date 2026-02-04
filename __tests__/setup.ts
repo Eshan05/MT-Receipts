@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { beforeAll, afterAll } from 'vitest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'

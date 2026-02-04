@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest'
+import 'dotenv/config'
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
