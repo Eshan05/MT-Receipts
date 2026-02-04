@@ -885,9 +885,9 @@ Runs as a one-time operation during the multi-tenancy rollout:
 
 **Goal:** Admin dashboard for organization settings
 
-- [ ] Create `app/(tenant)/settings/organization/page.tsx` - org settings
-- [ ] Create `app/(tenant)/settings/members/page.tsx` - member management
-- [ ] Create `app/(tenant)/settings/email/page.tsx` - SMTP configuration
+- [ ] Create org settings in sidebar
+- [ ] Create member management page
+- [ ] Create SMTP configuration (already in smtp vault)
 - [ ] Create organization selector component (navbar)
 - [ ] Create member invite UI component
 - [ ] Create member role management (admin ↔ member)

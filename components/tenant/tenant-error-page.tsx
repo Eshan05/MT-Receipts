@@ -1,13 +1,18 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Building2Icon,
+  RefreshCwIcon,
   HomeIcon,
   ClockIcon,
   BanIcon,
   Trash2Icon,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 export type TenantErrorType = 'not-found' | 'pending' | 'suspended' | 'deleted'
 
@@ -54,6 +59,35 @@ interface TenantErrorPageProps {
 }
 
 export default function TenantErrorPage({ type }: TenantErrorPageProps) {
+  const router = useRouter()
+  const [isChecking, setIsChecking] = useState(false)
+
+  const recheck = useCallback(async () => {
+    setIsChecking(true)
+    try {
+      const response = await fetch('/api/sessions', { cache: 'no-store' })
+      if (!response.ok) return
+
+      const data = await response.json()
+      if (!data?.authenticated) return
+
+      const targetSlug =
+        data.currentOrganization?.slug ||
+        data.memberships?.[0]?.organizationSlug
+
+      if (targetSlug) {
+        router.replace(`/${targetSlug}/events`)
+      }
+    } catch {
+    } finally {
+      setIsChecking(false)
+    }
+  }, [router])
+
+  useEffect(() => {
+    void recheck()
+  }, [recheck])
+
   const config = ERROR_CONFIGS[type]
   const Icon = config.icon
 
@@ -77,6 +111,17 @@ export default function TenantErrorPage({ type }: TenantErrorPageProps) {
 
           {config.showHomeButton && (
             <div className='flex flex-col gap-4 sm:flex-row'>
+              <Button
+                variant='outline'
+                className='gap-2 w-full sm:w-auto'
+                onClick={() => void recheck()}
+                disabled={isChecking}
+              >
+                <RefreshCwIcon
+                  className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`}
+                />
+                Recheck Access
+              </Button>
               <Link href='/' className='w-full sm:w-auto'>
                 <Button className='gap-2 w-full'>
                   <HomeIcon className='h-4 w-4' />

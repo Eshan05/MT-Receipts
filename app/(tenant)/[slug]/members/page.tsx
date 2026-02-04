@@ -1,9 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { UserPlusIcon, Loader2Icon } from 'lucide-react'
+import {
+  ArrowRight,
+  UserPlusIcon,
+  Loader2Icon,
+  CalendarIcon,
+  KeyRound,
+  Mail,
+  UserRoundPlus,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Credenza,
@@ -30,12 +38,18 @@ import {
   type Member,
   type Invite,
 } from '@/components/table/members'
+import useSWR from 'swr'
+
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}`)
+  }
+  return response.json() as Promise<T>
+}
 
 export default function MembersPage() {
   const { currentOrganization, user } = useAuth()
-  const [members, setMembers] = useState<Member[]>([])
-  const [invites, setInvites] = useState<Invite[]>([])
-  const [loading, setLoading] = useState(true)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteType, setInviteType] = useState<'email' | 'code'>('email')
   const [inviteEmail, setInviteEmail] = useState('')
@@ -47,34 +61,31 @@ export default function MembersPage() {
   const orgSlug = currentOrganization?.slug
   const currentUserId = user?.id
 
-  useEffect(() => {
-    if (orgSlug) {
-      void loadData()
-    }
-  }, [orgSlug])
+  const membersEndpoint = orgSlug
+    ? `/api/organizations/${orgSlug}/members`
+    : null
+  const invitesEndpoint = orgSlug
+    ? `/api/organizations/${orgSlug}/invites`
+    : null
 
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      const [membersRes, invitesRes] = await Promise.all([
-        fetch(`/api/organizations/${orgSlug}/members`),
-        fetch(`/api/organizations/${orgSlug}/invites`),
-      ])
+  const {
+    data: membersData,
+    isLoading: membersLoading,
+    mutate: mutateMembers,
+  } = useSWR<{ members: Member[] }>(membersEndpoint, fetcher)
 
-      if (membersRes.ok) {
-        const data = await membersRes.json()
-        setMembers(data.members || [])
-      }
+  const {
+    data: invitesData,
+    isLoading: invitesLoading,
+    mutate: mutateInvites,
+  } = useSWR<{ invites: Invite[] }>(invitesEndpoint, fetcher)
 
-      if (invitesRes.ok) {
-        const data = await invitesRes.json()
-        setInvites(data.invites || [])
-      }
-    } catch {
-      toast.error('Failed to load members')
-    } finally {
-      setLoading(false)
-    }
+  const members = useMemo(() => membersData?.members || [], [membersData])
+  const invites = useMemo(() => invitesData?.invites || [], [invitesData])
+  const loading = membersLoading || invitesLoading
+
+  const refreshData = async () => {
+    await Promise.all([mutateMembers(), mutateInvites()])
   }
 
   const handleInvite = async () => {
@@ -104,7 +115,7 @@ export default function MembersPage() {
           toast.success('Invitation sent!')
           setInviteOpen(false)
         }
-        void loadData()
+        await refreshData()
       } else {
         const data = await res.json()
         toast.error(data.error || 'Failed to send invitation')
@@ -127,7 +138,9 @@ export default function MembersPage() {
   const columns = createColumns({
     isAdmin,
     currentUserId,
-    onUpdate: loadData,
+    onUpdate: () => {
+      void refreshData()
+    },
   })
 
   return (
@@ -158,57 +171,83 @@ export default function MembersPage() {
             data={members}
             isAdmin={isAdmin}
             currentUserId={currentUserId}
-            onUpdate={loadData}
+            onUpdate={() => {
+              void refreshData()
+            }}
           />
 
           {invites.length > 0 && (
             <div className='space-y-4'>
               <h2 className='text-lg font-semibold'>Pending Invitations</h2>
-              <div className='rounded-lg border'>
-                <div className='overflow-x-auto'>
-                  <table className='w-full'>
-                    <thead>
-                      <tr className='border-b'>
-                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
-                          Type
-                        </th>
-                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
-                          Email / Code
-                        </th>
-                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
-                          Role
-                        </th>
-                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
-                          Status
-                        </th>
-                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
-                          Created
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invites.map((invite) => (
-                        <tr key={invite._id} className='border-b last:border-0'>
-                          <td className='p-4'>
-                            <Badge variant='outline'>{invite.type}</Badge>
-                          </td>
-                          <td className='p-4'>
-                            {invite.type === 'email'
-                              ? invite.email
-                              : invite.code}
-                          </td>
-                          <td className='p-4'>{invite.role}</td>
-                          <td className='p-4'>
-                            <Badge variant='secondary'>{invite.status}</Badge>
-                          </td>
-                          <td className='p-4'>
-                            {new Date(invite.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                {invites.map((invite) => {
+                  const isEmailInvite = invite.type === 'email'
+                  const contactLabel = isEmailInvite
+                    ? invite.email
+                    : invite.code
+
+                  return (
+                    <div
+                      key={invite._id}
+                      className='rounded-lg overflow-hidden bg-muted/30 hover:bg-muted/50 transition-colors border-l-2 border-border'
+                    >
+                      <div className='px-3 py-1.5 flex items-center justify-between bg-muted/60'>
+                        <div className='flex items-center gap-1.5'>
+                          {isEmailInvite ? (
+                            <Mail className='h-3 w-3 text-muted-foreground' />
+                          ) : (
+                            <KeyRound className='h-3 w-3 text-muted-foreground' />
+                          )}
+                          <span className='text-xs font-medium capitalize'>
+                            {invite.type}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-1.5'>
+                          <Badge variant='secondary' className='capitalize h-5'>
+                            {invite.status}
+                          </Badge>
+                          <span className='text-tiny text-muted-foreground capitalize'>
+                            {invite.role}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className='p-3'>
+                        <div className='flex items-start gap-2.5'>
+                          <div className='mt-0.5 p-1.5 rounded-md bg-background'>
+                            {isEmailInvite ? (
+                              <Mail className='h-4 w-4 text-muted-foreground' />
+                            ) : (
+                              <KeyRound className='h-4 w-4 text-muted-foreground' />
+                            )}
+                          </div>
+                          <div className='flex-1 min-w-0'>
+                            <h3 className='font-medium text-sm truncate'>
+                              {contactLabel || '-'}
+                            </h3>
+                            <p className='text-xs text-muted-foreground line-clamp-1 mt-0.5'>
+                              Invited by {invite.invitedByName || 'Unknown'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className='flex items-center justify-between mt-3 pt-2 border-t border-border/30'>
+                          <div className='flex items-center gap-3 text-2xs text-muted-foreground'>
+                            <span className='flex items-center gap-1'>
+                              <UserRoundPlus className='h-3 w-3' />
+                              {invite.invitedByName || 'Unknown'}
+                            </span>
+                            <span className='flex items-center gap-1'>
+                              <CalendarIcon className='h-3 w-3' />
+                              {new Date(invite.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <ArrowRight className='w-3.5 h-3.5 text-muted-foreground/50' />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

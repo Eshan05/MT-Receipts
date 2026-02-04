@@ -5,7 +5,14 @@ export const memberSchema = z.object({
   username: z.string(),
   email: z.string(),
   role: z.enum(['admin', 'member']),
+  joinedVia: z
+    .enum(['signup', 'invite_email', 'invite_code', 'manual'])
+    .default('manual'),
+  invitedById: z.string().optional(),
+  invitedByName: z.string().optional(),
+  invitedAt: z.coerce.date().optional(),
   joinedAt: z.coerce.date(),
+  lastSignedInAt: z.coerce.date().optional(),
 })
 
 export const inviteSchema = z.object({
@@ -19,6 +26,8 @@ export const inviteSchema = z.object({
   expiresAt: z.coerce.date().optional(),
   maxUses: z.number().optional(),
   usedCount: z.number().optional(),
+  invitedById: z.string().optional(),
+  invitedByName: z.string().optional(),
 })
 
 export type Member = z.infer<typeof memberSchema>

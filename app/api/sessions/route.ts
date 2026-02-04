@@ -32,6 +32,25 @@ type SessionMembership = {
   role: 'admin' | 'member'
 }
 
+async function markMembershipLastSignedIn(
+  userId: string,
+  organizationSlug?: string
+): Promise<void> {
+  if (!organizationSlug) return
+
+  await User.updateOne(
+    {
+      _id: userId,
+      'memberships.organizationSlug': organizationSlug,
+    },
+    {
+      $set: {
+        'memberships.$.lastSignedInAt': new Date(),
+      },
+    }
+  )
+}
+
 export async function POST(request: Request) {
   try {
     await dbConnect()
@@ -96,6 +115,9 @@ export async function POST(request: Request) {
         name: memberships[0].organizationName,
         role: memberships[0].role,
       }
+
+      user.currentOrganizationSlug = memberships[0].organizationSlug
+      await user.save()
     }
 
     const response = NextResponse.json(
@@ -116,6 +138,10 @@ export async function POST(request: Request) {
 
     if (currentOrganization) {
       await setCurrentOrgCookie(currentOrganization.slug, response)
+      await markMembershipLastSignedIn(
+        user._id.toString(),
+        currentOrganization.slug
+      )
     }
 
     return response
@@ -168,6 +194,7 @@ async function handleOrgSwitch(organizationSlug: string) {
 
   user.currentOrganizationSlug = organizationSlug
   await user.save()
+  await markMembershipLastSignedIn(user._id.toString(), organizationSlug)
 
   const response = NextResponse.json({
     message: 'Organization switched',
@@ -259,6 +286,29 @@ export async function GET() {
         name: memberships[0].organizationName,
         role: memberships[0].role,
       }
+
+      user.currentOrganizationSlug = memberships[0].organizationSlug
+      await user.save()
+    }
+
+    if (currentOrganization) {
+      await markMembershipLastSignedIn(
+        user._id.toString(),
+        currentOrganization.slug
+      )
+      const response = NextResponse.json({
+        authenticated: true,
+        user: {
+          id: user._id,
+          email: user.email,
+          username: user.username,
+          isSuperAdmin: user.isSuperAdmin,
+        },
+        memberships,
+        currentOrganization,
+      })
+      await setCurrentOrgCookie(currentOrganization.slug, response)
+      return response
     }
 
     return NextResponse.json({
