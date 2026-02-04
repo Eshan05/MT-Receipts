@@ -20,6 +20,7 @@ export interface IOrganizationLimits {
 export type OrganizationStatus = 'pending' | 'active' | 'suspended' | 'deleted'
 
 export interface IOrganization extends Document {
+  _id: mongoose.Types.ObjectId
   slug: string
   name: string
   description?: string

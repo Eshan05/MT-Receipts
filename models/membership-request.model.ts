@@ -9,6 +9,7 @@ export type MembershipRequestStatus =
   | 'cancelled'
 
 export interface IMembershipRequest extends Document {
+  _id: mongoose.Types.ObjectId
   organizationId: mongoose.Types.ObjectId
   organizationSlug: string
   type: InviteType
@@ -110,8 +111,9 @@ membershipRequestSchema.index({ expiresAt: 1 }, { sparse: true })
 membershipRequestSchema.statics.findValidByCode = async function (
   code: string
 ) {
+  const normalizedCode = code.trim().toUpperCase()
   return this.findOne({
-    code: code,
+    code: normalizedCode,
     type: 'code',
     status: 'pending',
     $or: [

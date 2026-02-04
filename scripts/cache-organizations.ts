@@ -14,7 +14,7 @@ async function main() {
 
   for (const org of orgs) {
     await setCachedOrganization(org.slug, {
-      id: (org._id as any).toString(),
+      id: org._id.toString(),
       slug: org.slug,
       name: org.name,
       status: org.status,
