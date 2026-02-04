@@ -148,20 +148,21 @@ export default function MembersPage() {
 
   return (
     <div className='container mx-auto py-6 space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-2xl font-bold'>Members</h1>
-          <p className='text-muted-foreground'>
-            Manage your organization's members and invitations
-          </p>
+      <header className='mb-6'>
+        <div className='flex justify-between items-center gap-4 my-2'>
+          <h1 className='text-4xl shadow-heading font-bold'>Members</h1>
+          {isAdmin && (
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlusIcon className='' />
+              Invite Member
+            </Button>
+          )}
         </div>
-        {isAdmin && (
-          <Button onClick={() => setInviteOpen(true)}>
-            <UserPlusIcon className='h-4 w-4 mr-2' />
-            Invite Member
-          </Button>
-        )}
-      </div>
+        <p className='text-base text-muted-foreground max-w-md text-justify leading-5.5'>
+          Manage your organization's members and invitations. Only admins can
+          invite new members, or accept applications.
+        </p>
+      </header>
 
       {loading ? (
         <div className='flex items-center justify-center h-64'>

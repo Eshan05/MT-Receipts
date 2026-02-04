@@ -90,7 +90,7 @@ export function createColumns({
                 {member.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className='flex flex-col min-w-0 flex-1'>
+            <div className='flex flex-col min-w-0 flex-1 max-w-40'>
               <div className='flex items-center gap-1 min-w-0'>
                 <User className='size-3 text-muted-foreground shrink-0' />
                 <span className='truncate text-sm font-medium'>
