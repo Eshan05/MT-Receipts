@@ -149,6 +149,8 @@ export async function POST(request: Request) {
       organizationSlug: organization.slug,
       role: 'admin',
       approvedAt: new Date(),
+      joinedVia: 'signup',
+      lastSignedInAt: new Date(),
     })
     await user.save()
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
+import dbConnect from '@/lib/db-conn'
+import User from '@/models/user.model'
 
 type PopulatedEvent = {
   name: string
@@ -19,6 +21,95 @@ function isPopulatedEvent(value: unknown): value is PopulatedEvent {
     typeof v.eventCode === 'string' &&
     typeof v.type === 'string'
   )
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
+
+    const { Receipt } = ctx.models
+    const { searchParams } = new URL(request.url)
+    const parsedLimit = Number.parseInt(searchParams.get('limit') || '100', 10)
+    const limit = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(parsedLimit, 1), 300)
+      : 100
+
+    type ReceiptEmailLogResult = {
+      receiptNumber: string
+      emailLog: {
+        sentTo: string
+        status: 'sent' | 'failed'
+        sentAt: Date
+        sentByUserId?: string
+        sentByUsername?: string
+        smtpSender?: string
+        smtpVaultId?: string
+        messageId?: string
+      }
+    }
+
+    const rows = (await Receipt.aggregate([
+      { $unwind: '$emailLog' },
+      { $match: { 'emailLog.status': 'sent' } },
+      { $sort: { 'emailLog.sentAt': -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          receiptNumber: 1,
+          emailLog: 1,
+        },
+      },
+    ])) as ReceiptEmailLogResult[]
+
+    const senderIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.emailLog.sentByUserId)
+          .filter((value): value is string => Boolean(value))
+      )
+    )
+
+    const senderNameMap = new Map<string, string>()
+    if (senderIds.length > 0) {
+      await dbConnect()
+      const users = await User.find({ _id: { $in: senderIds } })
+        .select('username')
+        .lean()
+      for (const user of users) {
+        senderNameMap.set(user._id.toString(), user.username)
+      }
+    }
+
+    return NextResponse.json({
+      logs: rows.map((row, index) => {
+        const senderId = row.emailLog.sentByUserId
+        const senderName =
+          row.emailLog.sentByUsername ||
+          (senderId ? senderNameMap.get(senderId) : undefined)
+
+        return {
+          id: `${row.receiptNumber}-${row.emailLog.sentAt?.toString() || index}`,
+          receiptNumber: row.receiptNumber,
+          sentTo: row.emailLog.sentTo,
+          sentAt: row.emailLog.sentAt,
+          sentByUserId: senderId,
+          sentByName: senderName || 'Unknown',
+          smtpSender: row.emailLog.smtpSender || 'Unknown',
+          smtpVaultId: row.emailLog.smtpVaultId,
+          messageId: row.emailLog.messageId,
+          downloadUrl: `/api/receipts/${row.receiptNumber}?format=pdf`,
+        }
+      }),
+    })
+  } catch (error) {
+    console.error('Error fetching receipt email activity:', error)
+    return NextResponse.json(
+      { message: 'Failed to fetch receipt email activity' },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -93,6 +184,11 @@ export async function POST(request: NextRequest) {
             sentTo: receipt.customer.email,
             status: 'sent',
             sentAt: new Date(),
+            sentByUserId: ctx.user.id,
+            sentByUsername: ctx.user.username,
+            smtpSender: result.senderEmail,
+            smtpVaultId: result.smtpVaultId,
+            messageId: result.messageId,
           })
           await receipt.save()
           sentCount++
@@ -102,6 +198,10 @@ export async function POST(request: NextRequest) {
             status: 'failed',
             sentAt: new Date(),
             error: result.error,
+            sentByUserId: ctx.user.id,
+            sentByUsername: ctx.user.username,
+            smtpSender: result.senderEmail,
+            smtpVaultId: result.smtpVaultId,
           })
           await receipt.save()
           failedCount++

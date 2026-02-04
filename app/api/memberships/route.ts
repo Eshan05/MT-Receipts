@@ -71,6 +71,10 @@ export async function POST(request: Request) {
       organizationSlug: invite.organizationSlug,
       role: invite.role,
       approvedAt: new Date(),
+      joinedVia: invite.type === 'code' ? 'invite_code' : 'invite_email',
+      invitedBy: invite.invitedBy,
+      invitedAt: invite.createdAt,
+      lastSignedInAt: new Date(),
     })
     await user.save()
 

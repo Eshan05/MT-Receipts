@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db-conn'
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
+import MembershipRequest from '@/models/membership-request.model'
 
 interface RouteParams {
   params: Promise<{ slug: string }>
@@ -54,18 +55,91 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     const members = await User.find({
       'memberships.organizationId': organization._id,
-    }).select('username email memberships')
+    }).select('username email memberships lastSignIn createdAt')
+
+    const acceptedInvites = await MembershipRequest.find({
+      organizationId: organization._id,
+      status: 'accepted',
+      acceptedBy: { $exists: true },
+    })
+      .select('acceptedBy invitedBy type acceptedAt createdAt')
+      .sort({ acceptedAt: -1, createdAt: -1 })
+      .lean()
+
+    const latestInviteByAcceptedUser = new Map<
+      string,
+      (typeof acceptedInvites)[number]
+    >()
+    for (const invite of acceptedInvites) {
+      const acceptedById = invite.acceptedBy?.toString()
+      if (!acceptedById || latestInviteByAcceptedUser.has(acceptedById)) {
+        continue
+      }
+      latestInviteByAcceptedUser.set(acceptedById, invite)
+    }
+
+    const inviterIds = new Set<string>()
+    for (const member of members) {
+      const membershipData = member.memberships.find(
+        (m) => m.organizationId.toString() === organization._id.toString()
+      )
+      if (membershipData?.invitedBy) {
+        inviterIds.add(membershipData.invitedBy.toString())
+      }
+    }
+
+    for (const invite of acceptedInvites) {
+      if (invite.invitedBy) {
+        inviterIds.add(invite.invitedBy.toString())
+      }
+    }
+
+    const inviters = inviterIds.size
+      ? await User.find({ _id: { $in: Array.from(inviterIds) } })
+          .select('username')
+          .lean()
+      : []
+
+    const inviterNameMap = new Map<string, string>()
+    for (const inviter of inviters) {
+      inviterNameMap.set(inviter._id.toString(), inviter.username)
+    }
 
     const formattedMembers = members.map((member) => {
       const orgMembership = member.memberships.find(
         (m) => m.organizationId.toString() === organization._id.toString()
       )
+
+      const inviteData = latestInviteByAcceptedUser.get(member._id.toString())
+      const joinedVia =
+        orgMembership?.joinedVia ||
+        (inviteData?.type === 'code'
+          ? 'invite_code'
+          : inviteData?.type === 'email'
+            ? 'invite_email'
+            : 'manual')
+
+      const invitedById =
+        orgMembership?.invitedBy?.toString() ||
+        inviteData?.invitedBy?.toString()
+
       return {
         userId: member._id,
         username: member.username,
         email: member.email,
         role: orgMembership?.role || 'member',
-        joinedAt: orgMembership?.approvedAt,
+        joinedAt:
+          orgMembership?.approvedAt ||
+          inviteData?.acceptedAt ||
+          inviteData?.createdAt ||
+          member.createdAt,
+        joinedVia,
+        invitedById,
+        invitedByName: invitedById
+          ? inviterNameMap.get(invitedById)
+          : undefined,
+        invitedAt: orgMembership?.invitedAt || inviteData?.createdAt,
+        lastSignedInAt: orgMembership?.lastSignedInAt || member.lastSignIn,
       }
     })
 
