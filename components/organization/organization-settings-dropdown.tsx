@@ -63,6 +63,17 @@ interface FormatToken {
   label?: string
 }
 
+interface ExampleData {
+  eventCode: string
+  initials: string
+  seq: string
+  orgCode: string
+  year: string
+  yy: string
+  month: string
+  type: string
+}
+
 const PLACEHOLDER_TOKENS: { value: string; label: string }[] = [
   { value: '{eventCode}', label: 'Event Code' },
   { value: '{initials}', label: 'Initials' },
@@ -105,6 +116,28 @@ function tokensToFormat(tokens: FormatToken[]): string {
   return tokens.map((t) => t.value).join('')
 }
 
+function renderFormatExample(format: string, data: ExampleData): string {
+  return format
+    .replaceAll('{eventCode}', data.eventCode)
+    .replaceAll('{initials}', data.initials)
+    .replaceAll('{seq}', data.seq)
+    .replaceAll('{orgCode}', data.orgCode)
+    .replaceAll('{year}', data.year)
+    .replaceAll('{yy}', data.yy)
+    .replaceAll('{month}', data.month)
+    .replaceAll('{type}', data.type)
+}
+
+function areTokenListsEqual(a: FormatToken[], b: FormatToken[]): boolean {
+  if (a.length !== b.length) return false
+  for (let index = 0; index < a.length; index++) {
+    if (a[index].type !== b[index].type || a[index].value !== b[index].value) {
+      return false
+    }
+  }
+  return true
+}
+
 export function OrganizationSettingsCredenza({
   open,
   onOpenChange,
@@ -120,6 +153,39 @@ export function OrganizationSettingsCredenza({
     receiptNumberFormat: 'RCP-{eventCode}-{initials}{seq}',
   })
   const [formatTokens, setFormatTokens] = useState<FormatToken[]>([])
+
+  const exampleRows: ExampleData[] = [
+    {
+      eventCode: 'HACK2026',
+      initials: 'AR',
+      seq: '00017',
+      orgCode: 'ACES',
+      year: '2026',
+      yy: '26',
+      month: '02',
+      type: 'HAC',
+    },
+    {
+      eventCode: 'WORKSHOP07',
+      initials: 'MK',
+      seq: '00129',
+      orgCode: 'ROBO',
+      year: '2026',
+      yy: '26',
+      month: '11',
+      type: 'WRK',
+    },
+    {
+      eventCode: 'MEETUPX',
+      initials: 'SJ',
+      seq: '00003',
+      orgCode: 'TECH',
+      year: '2027',
+      yy: '27',
+      month: '01',
+      type: 'MET',
+    },
+  ]
 
   const isAdmin = currentOrganization?.role === 'admin'
 
@@ -193,6 +259,18 @@ export function OrganizationSettingsCredenza({
   const handleReorder = (newTokens: FormatToken[]) => {
     setFormatTokens(newTokens)
     setSettings({ ...settings, receiptNumberFormat: tokensToFormat(newTokens) })
+  }
+
+  const handleReceiptFormatChange = (value: string) => {
+    setSettings((previous) => ({
+      ...previous,
+      receiptNumberFormat: value,
+    }))
+
+    const parsedTokens = parseFormatTokens(value)
+    setFormatTokens((previous) =>
+      areTokenListsEqual(previous, parsedTokens) ? previous : parsedTokens
+    )
   }
 
   const saveSettings = async () => {
@@ -395,12 +473,7 @@ export function OrganizationSettingsCredenza({
               <Input
                 id='receiptFormat'
                 value={settings.receiptNumberFormat}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    receiptNumberFormat: e.target.value,
-                  })
-                }
+                onChange={(e) => handleReceiptFormatChange(e.target.value)}
                 placeholder='RCP-{eventCode}-{initials}{seq}'
                 readOnly={!isAdmin}
                 className='peer ps-7'
@@ -413,26 +486,43 @@ export function OrganizationSettingsCredenza({
             {isAdmin && (
               <div className='mt-3 space-y-2'>
                 <div className='text-xs font-medium text-muted-foreground'>
-                  Drag to reorder or add placeholders:
+                  Drag to reorder, or add placeholders:
+                </div>
+
+                <div className='rounded-md border bg-muted/20 p-2'>
+                  <p className='text-2xs text-muted-foreground mb-1'>
+                    Examples
+                  </p>
+                  <div className='space-y-1'>
+                    {exampleRows.map((example, index) => (
+                      <p key={index} className='text-xs font-mono break-all'>
+                        {renderFormatExample(
+                          settings.receiptNumberFormat,
+                          example
+                        )}
+                      </p>
+                    ))}
+                  </div>
                 </div>
 
                 <Reorder.Group
                   axis='x'
                   values={formatTokens}
                   onReorder={handleReorder}
-                  className='flex flex-wrap gap-1.5 min-h-8 p-2 bg-muted/30 rounded-md border border-dashed'
+                  className='flex flex-nowrap items-start gap-1.5 min-h-10 p-2 bg-muted/30 rounded-md border border-dashed overflow-x-auto no-scrollbar'
                 >
                   {formatTokens.map((token) => (
                     <Reorder.Item
                       key={token.id}
                       value={token}
-                      className='cursor-grab active:cursor-grabbing'
+                      className='cursor-grab active:cursor-grabbing shrink-0'
                     >
                       {token.type === 'placeholder' ? (
                         <motion.div
                           className='inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md border border-primary/20'
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
+                          whileDrag={{ zIndex: 20 }}
                         >
                           <GripVertical className='w-3 h-3 opacity-50' />
                           <span>{token.label}</span>
@@ -449,6 +539,7 @@ export function OrganizationSettingsCredenza({
                           className='inline-flex items-center gap-1 bg-background text-xs rounded-md border'
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
+                          whileDrag={{ zIndex: 20 }}
                         >
                           <GripVertical className='w-3 h-3 opacity-50 ml-1' />
                           <input
@@ -457,7 +548,7 @@ export function OrganizationSettingsCredenza({
                             onChange={(e) =>
                               updateTokenValue(token.id, e.target.value)
                             }
-                            className='w-auto min-w-4 max-w-20 px-1 py-1 bg-transparent outline-none text-center'
+                            className='w-auto min-w-8 max-w-24 px-1 py-1 bg-transparent outline-none text-center'
                             placeholder='...'
                           />
                           <button
