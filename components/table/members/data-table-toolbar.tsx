@@ -3,10 +3,18 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table } from '@tanstack/react-table'
-import { Search, X, ShieldIcon, UserIcon } from 'lucide-react'
+import {
+  Search,
+  X,
+  ShieldIcon,
+  UserIcon,
+  KeyRound,
+  MailPlus,
+  UserPlus,
+  UserRoundPlus,
+} from 'lucide-react'
 import { DataTableFacetedFilter } from '../data-table-faceted-filter'
 import { DataTableViewOptions } from '../data-table-view-options'
-import { Member } from './schema'
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
@@ -17,17 +25,45 @@ const roleOptions = [
   { label: 'Member', value: 'member', icon: UserIcon },
 ]
 
+const joinedViaOptions = [
+  { label: 'Code', value: 'invite_code', icon: KeyRound },
+  { label: 'Email', value: 'invite_email', icon: MailPlus },
+  { label: 'Signup', value: 'signup', icon: UserPlus },
+  { label: 'Manual', value: 'manual', icon: UserIcon },
+]
+
 const idToName: Record<string, string> = {
   user: 'User',
   email: 'Email',
   role: 'Role',
+  invitedByName: 'Invited By',
+  joinedVia: 'Joined Via',
   joinedAt: 'Joined',
+  lastSignedInAt: 'Last Signed In',
 }
 
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0
+
+  const inviterOptions = Array.from(
+    new Set(
+      table
+        .getPreFilteredRowModel()
+        .rows.map(
+          (row) =>
+            (row.original as { invitedByName?: string }).invitedByName || ''
+        )
+        .filter(Boolean)
+    )
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({
+      label: name,
+      value: name,
+      icon: UserRoundPlus,
+    }))
 
   return (
     <div className='flex items-center justify-between gap-2'>
@@ -63,6 +99,20 @@ export function DataTableToolbar<TData>({
             column={table.getColumn('role')}
             title='Role'
             options={roleOptions}
+          />
+        )}
+        {table.getColumn('joinedVia') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('joinedVia')}
+            title='Joined Via'
+            options={joinedViaOptions}
+          />
+        )}
+        {table.getColumn('invitedByName') && inviterOptions.length > 0 && (
+          <DataTableFacetedFilter
+            column={table.getColumn('invitedByName')}
+            title='Invited By'
+            options={inviterOptions}
           />
         )}
         {isFiltered && (

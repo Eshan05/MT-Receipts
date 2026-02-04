@@ -1,13 +1,9 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import {
-  CalendarDaysIcon,
-  ChartArea,
-  FileTextIcon,
-  Newspaper,
-} from 'lucide-react'
+import { CalendarDaysIcon, ChartArea, Newspaper } from 'lucide-react'
 import * as React from 'react'
+import useSWR from 'swr'
 
 import { NavMain } from '@/components/navigation/nav-main'
 import { NavProjects } from '@/components/navigation/nav-projects'
@@ -21,16 +17,37 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ReceiptActivityCredenza } from '@/components/navigation/receipt-activity-credenza'
+
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}`)
+  }
+  return response.json() as Promise<T>
+}
 
 export default function AdminSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const { user, currentOrganization } = useAuth()
-  const [recentEvents, setRecentEvents] = React.useState<
-    { name: string; url: string; eventCode: string }[]
-  >([])
+  const [receiptLogOpen, setReceiptLogOpen] = React.useState(false)
 
   const orgSlug = currentOrganization?.slug
+
+  const { data: recentEventsData } = useSWR<{
+    events: { name: string; eventCode: string }[]
+  }>(orgSlug ? '/api/events?limit=5' : null, fetcher)
+
+  const recentEvents = React.useMemo(
+    () =>
+      (recentEventsData?.events || []).map((event) => ({
+        name: event.name,
+        url: `/${orgSlug}/events/${event.eventCode}`,
+        eventCode: event.eventCode,
+      })),
+    [recentEventsData, orgSlug]
+  )
 
   const navItems = React.useMemo(() => {
     if (!orgSlug) {
@@ -48,11 +65,6 @@ export default function AdminSidebar({
         icon: ChartArea,
       },
       {
-        title: 'View Receipts',
-        url: `/${orgSlug}/templates`,
-        icon: FileTextIcon,
-      },
-      {
         title: 'Make Receipts',
         url: `/${orgSlug}/receipts`,
         icon: Newspaper,
@@ -60,46 +72,30 @@ export default function AdminSidebar({
     ]
   }, [orgSlug])
 
-  React.useEffect(() => {
-    async function fetchRecentEvents() {
-      if (!orgSlug) return
-      try {
-        const res = await fetch(`/api/events?limit=5`)
-        const data = await res.json()
-        if (data.events) {
-          setRecentEvents(
-            data.events.map((event: { name: string; eventCode: string }) => ({
-              name: event.name,
-              url: `/${orgSlug}/events/${event.eventCode}`,
-              eventCode: event.eventCode,
-            }))
-          )
-        }
-      } catch (e) {
-        console.error('Failed to fetch recent events:', e)
-      }
-    }
-    fetchRecentEvents()
-  }, [orgSlug])
-
   return (
-    <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader>
-        <NavOrganization />
-      </SidebarHeader>
-      <SidebarContent>
-        {orgSlug && (
-          <>
-            <NavMain items={navItems} />
-            <NavProjects projects={recentEvents} />
-          </>
-        )}
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} />
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+    <>
+      <Sidebar collapsible='icon' {...props}>
+        <SidebarHeader>
+          <NavOrganization />
+        </SidebarHeader>
+        <SidebarContent>
+          {orgSlug && (
+            <>
+              <NavMain items={navItems} />
+              <NavProjects projects={recentEvents} />
+            </>
+          )}
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser user={user} onViewReceipts={() => setReceiptLogOpen(true)} />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+      <ReceiptActivityCredenza
+        open={receiptLogOpen}
+        onOpenChange={setReceiptLogOpen}
+      />
+    </>
   )
 }
 

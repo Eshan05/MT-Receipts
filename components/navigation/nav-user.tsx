@@ -2,6 +2,7 @@
 
 import {
   ChevronsUpDown,
+  FileTextIcon,
   Heart,
   KeyRound,
   LogOut,
@@ -30,7 +31,12 @@ import { useState } from 'react'
 import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
 import { OrganizationSettingsDropdown } from '@/components/organization/organization-settings-dropdown'
 
-export function NavUser({ user }: { user: ContextUser | undefined | null }) {
+interface NavUserProps {
+  user: ContextUser | undefined | null
+  onViewReceipts?: () => void
+}
+
+export function NavUser({ user, onViewReceipts }: NavUserProps) {
   const { isMobile } = useSidebar()
   const { logout, currentOrganization } = useAuth()
   const [vaultOpen, setVaultOpen] = useState(false)
@@ -99,6 +105,13 @@ export function NavUser({ user }: { user: ContextUser | undefined | null }) {
                       <UsersIcon className='h-4 w-4' />
                       Members
                     </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className='cursor-pointer'
+                    onClick={() => onViewReceipts?.()}
+                  >
+                    <FileTextIcon className='h-4 w-4' />
+                    View Receipts
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className='cursor-pointer'

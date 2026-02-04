@@ -8,11 +8,15 @@ import { Member } from './schema'
 import { ColumnDef } from '@tanstack/react-table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
+  Clock,
   ShieldIcon,
   UserIcon,
   Mail,
   Calendar,
-  MoreHorizontal,
+  UserRoundPlus,
+  KeyRound,
+  MailPlus,
+  UserPlus,
 } from 'lucide-react'
 import { formatTime } from '@/utils/formatters'
 
@@ -27,6 +31,19 @@ export function createColumns({
   currentUserId,
   onUpdate,
 }: ColumnOptions): ColumnDef<Member>[] {
+  const joinedViaLabel = (value: Member['joinedVia']) => {
+    switch (value) {
+      case 'invite_code':
+        return 'Code'
+      case 'invite_email':
+        return 'Email'
+      case 'signup':
+        return 'Signup'
+      default:
+        return 'Manual'
+    }
+  }
+
   const columns: ColumnDef<Member>[] = [
     {
       id: 'select',
@@ -134,20 +151,99 @@ export function createColumns({
     {
       accessorKey: 'joinedAt',
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Joined' />
+        <DataTableColumnHeader column={column} title='Joined Via' />
       ),
       cell: ({ row }) => {
+        const joinedVia = row.original.joinedVia
         const date = row.original.joinedAt
         const formatted = formatTime(
           typeof date === 'string' ? date : date?.toISOString() || '',
           false
         )
+
+        const Icon =
+          joinedVia === 'invite_code'
+            ? KeyRound
+            : joinedVia === 'invite_email'
+              ? MailPlus
+              : joinedVia === 'signup'
+                ? UserPlus
+                : UserIcon
+
+        return (
+          <div className='flex flex-col gap-0.5 text-xs'>
+            <Badge variant='outline' className='w-fit'>
+              <Icon className='size-3 mr-1' />
+              {joinedViaLabel(joinedVia)}
+            </Badge>
+            <div className='flex items-center gap-1 text-muted-foreground'>
+              <Calendar className='size-3 text-muted-foreground' />
+              <span className='font-mono text-muted-foreground'>
+                {formatted.date}
+              </span>
+            </div>
+          </div>
+        )
+      },
+      enableSorting: true,
+      enableHiding: true,
+    },
+    {
+      accessorKey: 'invitedByName',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Invited By' />
+      ),
+      cell: ({ row }) => {
+        const invitedByName = row.original.invitedByName
         return (
           <div className='flex items-center gap-1 text-xs'>
-            <Calendar className='size-3 text-muted-foreground' />
-            <span className='font-mono text-muted-foreground'>
-              {formatted.date}
-            </span>
+            <UserRoundPlus className='size-3 text-muted-foreground' />
+            <span>{invitedByName || '-'}</span>
+          </div>
+        )
+      },
+      enableSorting: true,
+      enableHiding: true,
+      filterFn: (row, id, value) => {
+        const rowValue = (row.getValue(id) as string | undefined) || ''
+        const filterValue = value as string[]
+        if (!filterValue || filterValue.length === 0) return true
+        return filterValue.includes(rowValue)
+      },
+    },
+    {
+      accessorKey: 'joinedVia',
+      header: () => null,
+      cell: () => null,
+      enableSorting: false,
+      enableHiding: true,
+      filterFn: (row, id, value) => {
+        const rowValue = row.getValue(id) as string
+        const filterValue = value as string[]
+        if (!filterValue || filterValue.length === 0) return true
+        return filterValue.includes(rowValue)
+      },
+    },
+    {
+      accessorKey: 'lastSignedInAt',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Last Signed In' />
+      ),
+      cell: ({ row }) => {
+        const date = row.original.lastSignedInAt
+        if (!date) {
+          return <span className='text-muted-foreground text-xs'>Never</span>
+        }
+
+        const formatted = formatTime(
+          typeof date === 'string' ? date : date?.toISOString() || '',
+          false
+        )
+
+        return (
+          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+            <Clock className='size-3 text-muted-foreground' />
+            <span className='font-mono'>{formatted.date}</span>
           </div>
         )
       },

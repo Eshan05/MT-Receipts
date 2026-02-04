@@ -10,7 +10,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod'
 import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -73,6 +73,34 @@ function AuthPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const signupDisabled = process.env.NEXT_PUBLIC_DISABLE_SIGNUP === 'true'
 
+  const resolveRedirectPath = useCallback(
+    (data?: {
+      currentOrganization?: { slug?: string }
+      memberships?: { organizationSlug?: string }[]
+    }) => {
+      const hasExplicitRedirect =
+        !!redirectPath &&
+        redirectPath !== '/' &&
+        redirectPath !== '/v' &&
+        !redirectPath.startsWith('/o/')
+
+      if (hasExplicitRedirect) {
+        return redirectPath
+      }
+
+      const slug =
+        data?.currentOrganization?.slug ||
+        data?.memberships?.[0]?.organizationSlug
+
+      if (slug) {
+        return `/${slug}/events`
+      }
+
+      return '/o'
+    },
+    [redirectPath]
+  )
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', password: '' },
@@ -93,10 +121,10 @@ function AuthPageContent() {
     const checkAuth = async () => {
       const response = await fetch('/api/sessions')
       const data = await response.json()
-      if (data.authenticated) router.replace(redirectPath)
+      if (data.authenticated) router.replace(resolveRedirectPath(data))
     }
     checkAuth()
-  }, [router, redirectPath])
+  }, [router, resolveRedirectPath])
 
   useEffect(() => {
     if (signupDisabled && isSignUp) setIsSignUp(false)
@@ -116,7 +144,7 @@ function AuthPageContent() {
         return
       }
       toast.success(data.message || 'Success!')
-      router.push(redirectPath)
+      router.push(resolveRedirectPath(data))
     } catch (error) {
       if (error instanceof Error)
         toast.error(error.message || 'An error occurred')
