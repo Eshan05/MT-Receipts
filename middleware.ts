@@ -66,7 +66,7 @@ function isAuthenticatedRoute(pathname: string): boolean {
 }
 
 async function checkAuth(request: NextRequest): Promise<NextResponse | null> {
-  const token = await getTokenServer()
+  const token = await getTokenServer(request)
 
   if (!token) {
     const url = request.nextUrl.clone()
@@ -95,7 +95,7 @@ async function handlePublicReceiptView(
 async function handleSuperAdminRoutes(
   request: NextRequest
 ): Promise<NextResponse> {
-  const token = await getTokenServer()
+  const token = await getTokenServer(request)
 
   if (!token) {
     const url = request.nextUrl.clone()
