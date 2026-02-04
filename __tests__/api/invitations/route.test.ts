@@ -15,9 +15,13 @@ import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import MembershipRequest from '@/models/membership-request.model'
+import type { IUser } from '@/models/user.model'
+import type { IOrganization } from '@/models/organization.model'
+import type { IMembershipRequest } from '@/models/membership-request.model'
 
 vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -28,13 +32,13 @@ vi.mock('@/lib/auth', async () => {
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 
 describe('GET /api/invitations', () => {
-  let testUser: any
-  let otherUser: any
-  let organization1: any
-  let organization2: any
-  let invite1: any
-  let invite2: any
-  let invite3ForOtherUser: any
+  let testUser!: IUser
+  let otherUser!: IUser
+  let organization1!: IOrganization
+  let organization2!: IOrganization
+  let invite1!: IMembershipRequest
+  let invite2!: IMembershipRequest
+  let invite3ForOtherUser!: IMembershipRequest
 
   beforeAll(async () => {
     await dbConnect()
@@ -126,7 +130,9 @@ describe('GET /api/invitations', () => {
   describe('Get User Invitations', () => {
     it('returns empty array when user has no invitations', async () => {
       vi.mocked(getTokenServer).mockResolvedValue('token')
-      vi.mocked(verifyAuthToken).mockResolvedValue({ email: otherUser.email })
+      vi.mocked(verifyAuthToken).mockResolvedValue({
+        email: `no-invites-${Date.now()}@test.local`,
+      })
 
       const response = await GET()
       expect(response.status).toBe(200)
@@ -141,11 +147,11 @@ describe('GET /api/invitations', () => {
 
       const response = await GET()
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as Array<{ organizationId: string }>
       expect(Array.isArray(data)).toBe(true)
       expect(data.length).toBe(2)
 
-      const orgIds = data.map((inv: any) => inv.organizationId)
+      const orgIds = data.map((inv) => inv.organizationId)
       expect(orgIds).toContain(organization1._id.toString())
       expect(orgIds).toContain(organization2._id.toString())
     })
@@ -156,12 +162,20 @@ describe('GET /api/invitations', () => {
 
       const response = await GET()
       expect(response.status).toBe(200)
-      const data = await response.json()
+      const data = (await response.json()) as Array<{
+        organizationId: string
+        organizationName: string
+        organizationSlug: string
+        role: string
+      }>
 
       const invite = data.find(
-        (inv: any) => inv.organizationId === organization1._id.toString()
+        (inv) => inv.organizationId === organization1._id.toString()
       )
       expect(invite).toBeDefined()
+      if (!invite) {
+        throw new Error('Expected invitation for organization1 to exist')
+      }
       expect(invite.organizationName).toBe(organization1.name)
       expect(invite.organizationSlug).toBe(organization1.slug)
       expect(invite.role).toBe('member')
