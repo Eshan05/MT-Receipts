@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant-route'
 import { generateCustomerInitials } from '@/lib/utils'
+import { sendReceiptEmail } from '@/lib/email'
 
 export async function GET(request: NextRequest) {
   try {
@@ -133,14 +134,59 @@ export async function POST(request: NextRequest) {
 
     if (shouldSendEmail) {
       try {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/receipts/${receiptNumber}/emails`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ smtpVaultId }),
-          }
-        )
+        const result = await sendReceiptEmail({
+          to: receipt.customer.email,
+          receiptNumber: receipt.receiptNumber,
+          customerName: receipt.customer.name,
+          customerPhone: receipt.customer.phone,
+          customerAddress: receipt.customer.address,
+          eventName: event.name,
+          eventCode: event.eventCode,
+          eventType: event.type,
+          eventLocation: event.location,
+          eventStartDate: event.startDate?.toISOString(),
+          eventEndDate: event.endDate?.toISOString(),
+          items: receipt.items.map((item) => ({
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.total,
+          })),
+          totalAmount: receipt.totalAmount,
+          paymentMethod: receipt.paymentMethod,
+          notes: receipt.notes,
+          qrCodeData: receipt.qrCodeData,
+          smtpVaultId,
+        })
+
+        if (result.success) {
+          receipt.emailSent = true
+          receipt.emailSentAt = new Date()
+          receipt.emailLog.push({
+            sentTo: receipt.customer.email,
+            status: 'sent',
+            sentAt: new Date(),
+            sentByUserId: ctx.user.id,
+            sentByUsername: ctx.user.username,
+            smtpSender: result.senderEmail,
+            smtpVaultId: result.smtpVaultId,
+            messageId: result.messageId,
+          })
+        } else {
+          receipt.emailLog.push({
+            sentTo: receipt.customer.email,
+            status: 'failed',
+            sentAt: new Date(),
+            error: result.error,
+            sentByUserId: ctx.user.id,
+            sentByUsername: ctx.user.username,
+            smtpSender: result.senderEmail,
+            smtpVaultId: result.smtpVaultId,
+          })
+        }
+
+        await receipt.save()
       } catch (emailError) {
         console.error('Failed to send email:', emailError)
       }

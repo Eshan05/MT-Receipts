@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrganizationContext } from '@/lib/organization-context'
-import { getTenantModels } from '@/lib/db/tenant-models'
+import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 
 type PopulatedEvent = {
@@ -30,15 +29,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { receiptNumber } = await params
 
-    const organization = await getOrganizationContext()
-    if (!organization) {
-      return NextResponse.json(
-        { message: 'Organization context not found' },
-        { status: 400 }
-      )
-    }
+    const ctx = await getTenantContext()
+    if (ctx instanceof NextResponse) return ctx
 
-    const { Receipt } = await getTenantModels(organization.slug)
+    const { Receipt } = ctx.models
     const body = await request.json().catch(() => ({}))
     const { templateSlug, smtpVaultId } = body
 
@@ -100,6 +94,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         sentTo: receipt.customer.email,
         status: 'sent',
         sentAt: new Date(),
+        sentByUserId: ctx.user.id,
+        sentByUsername: ctx.user.username,
+        smtpSender: result.senderEmail,
+        smtpVaultId: result.smtpVaultId,
+        messageId: result.messageId,
       })
       await receipt.save()
 
@@ -113,6 +112,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         status: 'failed',
         sentAt: new Date(),
         error: result.error,
+        sentByUserId: ctx.user.id,
+        sentByUsername: ctx.user.username,
+        smtpSender: result.senderEmail,
+        smtpVaultId: result.smtpVaultId,
       })
       await receipt.save()
 

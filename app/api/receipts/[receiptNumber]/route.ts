@@ -167,8 +167,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const { Receipt, Event } = await getTenantModels(organization.slug)
     const acceptHeader = request.headers.get('accept') || ''
+    const wantsPdf =
+      request.nextUrl.searchParams.get('format')?.toLowerCase() === 'pdf'
 
-    if (acceptHeader.includes('application/pdf')) {
+    if (acceptHeader.includes('application/pdf') || wantsPdf) {
       const receipt = await Receipt.findOne({ receiptNumber }).lean()
       if (!receipt) {
         return NextResponse.json(
