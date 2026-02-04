@@ -67,8 +67,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const targetMembership = targetUser.memberships.find(
-      (m) =>
-        m.organizationId.toString() === (organization._id as any).toString()
+      (m) => m.organizationId.toString() === organization._id.toString()
     )
     if (!targetMembership) {
       return NextResponse.json(
@@ -136,8 +135,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     targetUser.memberships = targetUser.memberships.filter(
-      (m) =>
-        m.organizationId.toString() !== (organization._id as any).toString()
+      (m) => m.organizationId.toString() !== organization._id.toString()
     )
     await targetUser.save()
 

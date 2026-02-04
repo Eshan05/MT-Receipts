@@ -45,7 +45,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     await setCachedOrganization(organization.slug, {
-      id: (organization._id as any).toString(),
+      id: organization._id.toString(),
       slug: organization.slug,
       name: organization.name,
       status: organization.status,

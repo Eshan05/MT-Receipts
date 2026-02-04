@@ -8,7 +8,65 @@ interface RouteParams {
   params: Promise<{ receiptNumber: string }>
 }
 
-function formatPublicReceipt(receipt: any, event: any) {
+type ReceiptItem = {
+  name: string
+  description?: string
+  quantity: number
+  price: number
+  total: number
+}
+
+type ReceiptCustomer = {
+  name: string
+  email: string
+  phone?: string
+  address?: string
+}
+
+type ReceiptLean = {
+  _id?: unknown
+  receiptNumber: string
+  customer: ReceiptCustomer
+  items: ReceiptItem[]
+  totalAmount: number
+  paymentMethod?: string
+  notes?: string
+  refunded: boolean
+  refundReason?: string
+  refundedAt?: Date
+  emailSent: boolean
+  emailSentAt?: Date
+  emailError?: string
+  emailLog?: unknown
+  createdAt: Date
+  updatedAt?: Date
+  event?: unknown
+}
+
+type PopulatedEvent = {
+  _id?: { toString(): string }
+  name: string
+  eventCode: string
+  type: string
+  location?: string
+  startDate?: Date
+  endDate?: Date
+}
+
+function isPopulatedEvent(value: unknown): value is PopulatedEvent {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.name === 'string' &&
+    typeof v.eventCode === 'string' &&
+    typeof v.type === 'string'
+  )
+}
+
+function formatPublicReceipt(
+  receipt: ReceiptLean,
+  event: PopulatedEvent | null
+) {
   return {
     valid: true,
     receipt: {
@@ -19,7 +77,7 @@ function formatPublicReceipt(receipt: any, event: any) {
         phone: receipt.customer.phone,
         address: receipt.customer.address,
       },
-      items: receipt.items.map((item: any) => ({
+      items: receipt.items.map((item) => ({
         name: item.name,
         description: item.description,
         quantity: item.quantity,
@@ -47,7 +105,10 @@ function formatPublicReceipt(receipt: any, event: any) {
   }
 }
 
-function formatPrivateReceipt(receipt: any, event: any) {
+function formatPrivateReceipt(
+  receipt: ReceiptLean,
+  event: PopulatedEvent | null
+) {
   return {
     receipt: {
       _id: receipt._id,
@@ -182,7 +243,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         'event',
         isAuth ? '' : 'name eventCode type location startDate endDate'
       )
-      .lean()
+      .lean<ReceiptLean>()
 
     if (!receipt) {
       return NextResponse.json(
@@ -191,11 +252,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const event = isPopulatedEvent(receipt.event) ? receipt.event : null
+
     if (isAuth) {
-      return NextResponse.json(formatPrivateReceipt(receipt, receipt.event))
+      return NextResponse.json(formatPrivateReceipt(receipt, event))
     }
 
-    return NextResponse.json(formatPublicReceipt(receipt, receipt.event))
+    return NextResponse.json(formatPublicReceipt(receipt, event))
   } catch (error) {
     console.error('Error fetching receipt:', error)
     return NextResponse.json(

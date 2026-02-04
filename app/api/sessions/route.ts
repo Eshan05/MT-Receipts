@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
+import type { IUser } from '@/models/user.model'
 import {
   setAuthCookie,
   clearAuthCookie,
@@ -23,6 +24,13 @@ const switchOrgSchema = z.object({
   action: z.literal('switch'),
   organizationSlug: z.string().min(1),
 })
+
+type SessionMembership = {
+  organizationId: string
+  organizationSlug: string
+  organizationName: string
+  role: 'admin' | 'member'
+}
 
 export async function POST(request: Request) {
   try {
@@ -69,7 +77,7 @@ export async function POST(request: Request) {
 
     if (user.currentOrganizationSlug && memberships.length > 0) {
       const currentMembership = memberships.find(
-        (m: any) => m.organizationSlug === user.currentOrganizationSlug
+        (m) => m.organizationSlug === user.currentOrganizationSlug
       )
       if (currentMembership) {
         currentOrganization = {
@@ -175,26 +183,28 @@ async function handleOrgSwitch(organizationSlug: string) {
   return response
 }
 
-async function buildMemberships(user: any) {
+async function buildMemberships(
+  user: Pick<IUser, 'memberships'>
+): Promise<SessionMembership[]> {
   if (!user.memberships || user.memberships.length === 0) {
     return []
   }
 
-  const orgIds = user.memberships.map((m: any) => m.organizationId)
+  const orgIds = user.memberships.map((m) => m.organizationId)
   const orgs = await Organization.find({ _id: { $in: orgIds } })
 
   for (const org of orgs) {
     await setCachedOrganization(org.slug, {
-      id: (org._id as any).toString(),
+      id: org._id.toString(),
       slug: org.slug,
       name: org.name,
       status: org.status,
     })
   }
 
-  return user.memberships.map((m: any) => {
+  return user.memberships.map((m) => {
     const org = orgs.find(
-      (o: any) => o._id.toString() === m.organizationId.toString()
+      (o) => o._id.toString() === m.organizationId.toString()
     )
     return {
       organizationId: m.organizationId.toString(),
@@ -230,7 +240,7 @@ export async function GET() {
     let currentOrganization = null
     if (user.currentOrganizationSlug && memberships.length > 0) {
       const currentMembership = memberships.find(
-        (m: any) => m.organizationSlug === user.currentOrganizationSlug
+        (m) => m.organizationSlug === user.currentOrganizationSlug
       )
       if (currentMembership) {
         currentOrganization = {

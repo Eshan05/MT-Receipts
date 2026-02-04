@@ -3,6 +3,25 @@ import { getOrganizationContext } from '@/lib/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
 import { sendReceiptEmail } from '@/lib/email'
 
+type PopulatedEvent = {
+  name: string
+  eventCode: string
+  type: string
+  location?: string
+  startDate?: Date
+  endDate?: Date
+}
+
+function isPopulatedEvent(value: unknown): value is PopulatedEvent {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.name === 'string' &&
+    typeof v.eventCode === 'string' &&
+    typeof v.type === 'string'
+  )
+}
+
 interface RouteParams {
   params: Promise<{ receiptNumber: string }>
 }
@@ -39,7 +58,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const event = receipt.event as any
+    const event: unknown = receipt.event
+    if (!isPopulatedEvent(event)) {
+      return NextResponse.json(
+        { message: 'Receipt event not found' },
+        { status: 404 }
+      )
+    }
 
     const result = await sendReceiptEmail({
       to: receipt.customer.email,
@@ -53,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       eventLocation: event.location,
       eventStartDate: event.startDate?.toISOString(),
       eventEndDate: event.endDate?.toISOString(),
-      items: receipt.items.map((item: any) => ({
+      items: receipt.items.map((item) => ({
         name: item.name,
         description: item.description,
         quantity: item.quantity,

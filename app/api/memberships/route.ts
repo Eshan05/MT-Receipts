@@ -12,7 +12,7 @@ const createMembershipSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const token = await getTokenServer()
+    const token = await getTokenServer(request)
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -37,8 +37,9 @@ export async function POST(request: Request) {
     }
 
     const { inviteCode } = validationResult.data
+    const normalizedCode = inviteCode.trim().toUpperCase()
 
-    const invite = await MembershipRequest.findValidByCode(inviteCode)
+    const invite = await MembershipRequest.findValidByCode(normalizedCode)
     if (!invite) {
       return NextResponse.json(
         { error: 'Invalid or expired invite code' },
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     }
 
     user.memberships.push({
-      organizationId: invite.organizationId as any,
+      organizationId: invite.organizationId,
       organizationSlug: invite.organizationSlug,
       role: invite.role,
       approvedAt: new Date(),
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     if (invite.usedCount >= (invite.maxUses || 1)) {
       invite.status = 'accepted'
     }
-    invite.acceptedBy = user._id as any
+    invite.acceptedBy = user._id
     invite.acceptedAt = new Date()
     await invite.save()
 

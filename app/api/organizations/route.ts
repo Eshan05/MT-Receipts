@@ -93,7 +93,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const token = await getTokenServer()
+    const token = await getTokenServer(request)
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
     await user.save()
 
     await setCachedOrganization(organization.slug, {
-      id: (organization._id as any).toString(),
+      id: organization._id.toString(),
       slug: organization.slug,
       name: organization.name,
       status: organization.status,

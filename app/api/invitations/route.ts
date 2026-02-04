@@ -33,7 +33,7 @@ export async function GET() {
 
     const invitations = emailInvites.map((invite) => {
       const org = orgs.find(
-        (o: any) => o._id.toString() === invite.organizationId.toString()
+        (o) => o._id.toString() === invite.organizationId.toString()
       )
       return {
         id: invite._id,

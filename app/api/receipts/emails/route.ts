@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 
+type PopulatedEvent = {
+  name: string
+  eventCode: string
+  type: string
+  location?: string
+  startDate?: Date
+  endDate?: Date
+}
+
+function isPopulatedEvent(value: unknown): value is PopulatedEvent {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.name === 'string' &&
+    typeof v.eventCode === 'string' &&
+    typeof v.type === 'string'
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ctx = await getTenantContext()
@@ -35,7 +54,10 @@ export async function POST(request: NextRequest) {
 
     for (const receipt of receipts) {
       try {
-        const event = receipt.event as any
+        const event: unknown = receipt.event
+        if (!isPopulatedEvent(event)) {
+          throw new Error('Receipt is missing populated event data')
+        }
 
         const result = await sendReceiptEmail({
           to: receipt.customer.email,
@@ -49,7 +71,7 @@ export async function POST(request: NextRequest) {
           eventLocation: event.location,
           eventStartDate: event.startDate?.toISOString(),
           eventEndDate: event.endDate?.toISOString(),
-          items: receipt.items.map((item: any) => ({
+          items: receipt.items.map((item) => ({
             name: item.name,
             description: item.description,
             quantity: item.quantity,
