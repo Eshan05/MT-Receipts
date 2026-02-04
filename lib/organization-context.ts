@@ -46,7 +46,7 @@ export async function getOrganizationContext(): Promise<OrganizationContext | nu
     }
 
     const orgContext: OrganizationContext = {
-      id: (org._id as any).toString(),
+      id: org._id.toString(),
       slug: org.slug,
       name: org.name,
       status: org.status,
@@ -77,19 +77,28 @@ export async function resolveOrganizationFromCache(
     }
 
     const orgContext: OrganizationContext = {
-      id: (org._id as any).toString(),
+      id: org._id.toString(),
       slug: org.slug,
       name: org.name,
       status: org.status,
     }
 
-    await setCachedOrganization(slug, orgContext)
+    if (orgContext.status === 'active') {
+      await setCachedOrganization(slug, orgContext)
+    }
 
     return orgContext
   } catch (error) {
     console.error('Failed to resolve organization:', error)
     return null
   }
+}
+
+// Back-compat alias (used by scripts/tests/middleware)
+export async function resolveOrganization(
+  slug: string
+): Promise<OrganizationContext | null> {
+  return resolveOrganizationFromCache(slug)
 }
 
 export function isOrganizationActive(org: OrganizationContext | null): boolean {

@@ -35,7 +35,9 @@ async function resolveSenderCredentials(
 
   if (selectedVault) {
     const decryptedPassword = decryptSmtpAppPassword(
-      selectedVault.encryptedAppPassword
+      selectedVault.encryptedAppPassword,
+      selectedVault.iv,
+      selectedVault.authTag
     )
 
     await SMTPVault.findByIdAndUpdate(selectedVault._id, {

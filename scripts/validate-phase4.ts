@@ -177,7 +177,7 @@ async function validateInviteCreation() {
     })
 
     adminUser.memberships.push({
-      organizationId: org._id as any,
+      organizationId: org._id,
       organizationSlug: org.slug,
       role: 'admin',
       approvedAt: new Date(),

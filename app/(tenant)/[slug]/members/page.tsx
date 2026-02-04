@@ -3,31 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import {
-  Building2Icon,
-  MoreHorizontalIcon,
-  ShieldIcon,
-  UserIcon,
-  UserPlusIcon,
-  Loader2Icon,
-} from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+import { UserPlusIcon, Loader2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import {
   Credenza,
   CredenzaBody,
@@ -46,30 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-interface Member {
-  userId: string
-  username: string
-  email: string
-  role: 'admin' | 'member'
-  joinedAt: string
-}
-
-interface Invite {
-  _id: string
-  type: 'email' | 'code'
-  email?: string
-  code?: string
-  role: 'admin' | 'member'
-  status: string
-  createdAt: string
-  expiresAt?: string
-  maxUses?: number
-  usedCount?: number
-}
+import { Badge } from '@/components/ui/badge'
+import {
+  DataTable,
+  createColumns,
+  type Member,
+  type Invite,
+} from '@/components/table/members'
 
 export default function MembersPage() {
-  const { currentOrganization } = useAuth()
+  const { currentOrganization, user } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,6 +45,7 @@ export default function MembersPage() {
 
   const isAdmin = currentOrganization?.role === 'admin'
   const orgSlug = currentOrganization?.slug
+  const currentUserId = user?.id
 
   useEffect(() => {
     if (orgSlug) {
@@ -152,57 +116,6 @@ export default function MembersPage() {
     }
   }
 
-  const handleRoleChange = async (
-    userId: string,
-    newRole: 'admin' | 'member'
-  ) => {
-    try {
-      const res = await fetch(
-        `/api/organizations/${orgSlug}/members/${userId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: newRole }),
-        }
-      )
-
-      if (res.ok) {
-        toast.success('Role updated')
-        void loadData()
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to update role')
-      }
-    } catch {
-      toast.error('Failed to update role')
-    }
-  }
-
-  const handleRemoveMember = async (userId: string) => {
-    try {
-      const res = await fetch(
-        `/api/organizations/${orgSlug}/members/${userId}`,
-        {
-          method: 'DELETE',
-        }
-      )
-
-      if (res.ok) {
-        toast.success('Member removed')
-        void loadData()
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to remove member')
-      }
-    } catch {
-      toast.error('Failed to remove member')
-    }
-  }
-
-  const getAvatar = (name: string) => {
-    return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}`
-  }
-
   if (!orgSlug) {
     return (
       <div className='flex items-center justify-center h-64'>
@@ -210,6 +123,12 @@ export default function MembersPage() {
       </div>
     )
   }
+
+  const columns = createColumns({
+    isAdmin,
+    currentUserId,
+    onUpdate: loadData,
+  })
 
   return (
     <div className='container mx-auto py-6 space-y-6'>
@@ -234,119 +153,62 @@ export default function MembersPage() {
         </div>
       ) : (
         <>
-          <div className='rounded-lg border'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
-                  {isAdmin && <TableHead className='w-12'></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((member) => (
-                  <TableRow key={member.userId}>
-                    <TableCell>
-                      <div className='flex items-center gap-2'>
-                        <Avatar className='h-8 w-8'>
-                          <AvatarImage src={getAvatar(member.username)} />
-                          <AvatarFallback>
-                            {member.username.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className='font-medium'>{member.username}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{member.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          member.role === 'admin' ? 'default' : 'secondary'
-                        }
-                      >
-                        {member.role === 'admin' ? (
-                          <ShieldIcon className='h-3 w-3 mr-1' />
-                        ) : (
-                          <UserIcon className='h-3 w-3 mr-1' />
-                        )}
-                        {member.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(member.joinedAt).toLocaleDateString()}
-                    </TableCell>
-                    {isAdmin && (
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant='ghost' size='icon-sm'>
-                              <MoreHorizontalIcon className='h-4 w-4' />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align='end'>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleRoleChange(
-                                  member.userId,
-                                  member.role === 'admin' ? 'member' : 'admin'
-                                )
-                              }
-                            >
-                              Change to{' '}
-                              {member.role === 'admin' ? 'Member' : 'Admin'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className='text-destructive'
-                              onClick={() => handleRemoveMember(member.userId)}
-                            >
-                              Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={members}
+            isAdmin={isAdmin}
+            currentUserId={currentUserId}
+            onUpdate={loadData}
+          />
 
           {invites.length > 0 && (
             <div className='space-y-4'>
               <h2 className='text-lg font-semibold'>Pending Invitations</h2>
               <div className='rounded-lg border'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Email / Code</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invites.map((invite) => (
-                      <TableRow key={invite._id}>
-                        <TableCell>
-                          <Badge variant='outline'>{invite.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {invite.type === 'email' ? invite.email : invite.code}
-                        </TableCell>
-                        <TableCell>{invite.role}</TableCell>
-                        <TableCell>
-                          <Badge variant='secondary'>{invite.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(invite.createdAt).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className='overflow-x-auto'>
+                  <table className='w-full'>
+                    <thead>
+                      <tr className='border-b'>
+                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
+                          Type
+                        </th>
+                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
+                          Email / Code
+                        </th>
+                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
+                          Role
+                        </th>
+                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
+                          Status
+                        </th>
+                        <th className='h-10 px-4 text-left align-middle font-medium text-muted-foreground'>
+                          Created
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invites.map((invite) => (
+                        <tr key={invite._id} className='border-b last:border-0'>
+                          <td className='p-4'>
+                            <Badge variant='outline'>{invite.type}</Badge>
+                          </td>
+                          <td className='p-4'>
+                            {invite.type === 'email'
+                              ? invite.email
+                              : invite.code}
+                          </td>
+                          <td className='p-4'>{invite.role}</td>
+                          <td className='p-4'>
+                            <Badge variant='secondary'>{invite.status}</Badge>
+                          </td>
+                          <td className='p-4'>
+                            {new Date(invite.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

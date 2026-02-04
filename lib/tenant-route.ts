@@ -70,7 +70,7 @@ export async function getTenantContext(): Promise<
     organization,
     models,
     user: {
-      id: (user._id as any).toString(),
+      id: user._id.toString(),
       email: user.email,
       username: user.username,
       isSuperAdmin: user.isSuperAdmin || false,

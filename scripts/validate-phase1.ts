@@ -421,8 +421,10 @@ async function validateTenantModels() {
     logTest('Template model exists', !!models.Template)
 
     const event = await models.Event.create({
-      code: `EVT${Date.now()}`.slice(0, 10),
+      eventCode: `EVT${Date.now().toString().slice(-6)}`.slice(0, 10),
+      type: 'seminar',
       name: 'Test Event',
+      items: [],
       startDate: new Date(),
       endDate: new Date(),
     })
@@ -430,10 +432,10 @@ async function validateTenantModels() {
 
     const receipt = await models.Receipt.create({
       receiptNumber: `RCP-${Date.now()}`,
-      eventId: event._id,
-      customerName: 'Test Customer',
-      customerEmail: 'customer@test.com',
-      amount: 100,
+      event: event._id,
+      customer: { name: 'Test Customer', email: 'customer@test.com' },
+      items: [],
+      totalAmount: 100,
     })
     logTest('Create receipt in tenant DB', true, `ID: ${receipt._id}`)
 
@@ -469,17 +471,19 @@ async function validateTenantIsolation() {
     const modelsB = await getTenantModels('tenant-b')
 
     const eventA = await modelsA.Event.create({
-      code: 'EVENT-A',
+      eventCode: 'EVENT-A',
+      type: 'seminar',
       name: 'Event in Tenant A',
+      items: [],
       startDate: new Date(),
       endDate: new Date(),
     })
     logTest('Create event in tenant A', true)
 
-    const foundInA = await modelsA.Event.findOne({ code: 'EVENT-A' })
+    const foundInA = await modelsA.Event.findOne({ eventCode: 'EVENT-A' })
     logTest('Event found in tenant A', !!foundInA)
 
-    const foundInB = await modelsB.Event.findOne({ code: 'EVENT-A' })
+    const foundInB = await modelsB.Event.findOne({ eventCode: 'EVENT-A' })
     logTest('Event NOT found in tenant B', !foundInB)
 
     await modelsA.Event.deleteMany({})

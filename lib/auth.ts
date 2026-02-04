@@ -41,10 +41,46 @@ export async function verifyAuthToken(
   }
 }
 
-export async function getTokenServer(): Promise<string | undefined> {
-  const cookieStore = await cookies()
-  const authToken = cookieStore.get('authToken')
-  return authToken?.value
+function readCookieFromHeader(
+  cookieHeader: string | null,
+  name: string
+): string | undefined {
+  if (!cookieHeader) return undefined
+
+  const parts = cookieHeader.split(';')
+  for (const part of parts) {
+    const [rawKey, ...rest] = part.trim().split('=')
+    if (!rawKey) continue
+    const key = rawKey.trim()
+    if (key !== name) continue
+    const value = rest.join('=')
+    return value ? decodeURIComponent(value) : ''
+  }
+
+  return undefined
+}
+
+export async function getTokenServer(
+  request?: Request
+): Promise<string | undefined> {
+  const fromHeader = readCookieFromHeader(
+    request?.headers?.get('cookie') ?? request?.headers?.get('Cookie') ?? null,
+    'authToken'
+  )
+  if (fromHeader) return fromHeader
+
+  const authHeader = request?.headers?.get('authorization')
+  if (authHeader?.toLowerCase().startsWith('bearer ')) {
+    const token = authHeader.slice(7).trim()
+    if (token) return token
+  }
+
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get('authToken')?.value
+  } catch {
+    return undefined
+  }
 }
 
 export async function setAuthCookie(email: string, response: NextResponse) {
@@ -68,10 +104,21 @@ export async function clearAuthCookie(response: NextResponse) {
   })
 }
 
-export async function getCurrentOrgSlug(): Promise<string | undefined> {
-  const cookieStore = await cookies()
-  const orgCookie = cookieStore.get(CURRENT_ORG_COOKIE)
-  return orgCookie?.value
+export async function getCurrentOrgSlug(
+  request?: Request
+): Promise<string | undefined> {
+  const fromHeader = readCookieFromHeader(
+    request?.headers?.get('cookie') ?? request?.headers?.get('Cookie') ?? null,
+    CURRENT_ORG_COOKIE
+  )
+  if (fromHeader) return fromHeader
+
+  try {
+    const cookieStore = await cookies()
+    return cookieStore.get(CURRENT_ORG_COOKIE)?.value
+  } catch {
+    return undefined
+  }
 }
 
 export async function setCurrentOrgCookie(

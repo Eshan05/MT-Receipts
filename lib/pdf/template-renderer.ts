@@ -192,8 +192,9 @@ export async function renderReceiptPDF(
     qrCodeData,
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stream = await renderToStream(TemplateComponent(props) as any)
+  const stream = await renderToStream(
+    TemplateComponent(props) as Parameters<typeof renderToStream>[0]
+  )
 
   return {
     stream,

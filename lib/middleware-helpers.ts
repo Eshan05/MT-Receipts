@@ -66,7 +66,10 @@ export function extractSlugFromPath(pathname: string): string | null {
   return firstSegment.toLowerCase()
 }
 
-export function createRedirectUrl(request: NextRequest, path: string): URL {
+export function createRedirectUrl(
+  request: { nextUrl: { clone(): URL } },
+  path: string
+): URL {
   const url = request.nextUrl.clone()
   url.pathname = path
   return url
