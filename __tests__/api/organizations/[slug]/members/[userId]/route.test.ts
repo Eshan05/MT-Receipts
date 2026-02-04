@@ -18,9 +18,12 @@ import {
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
+import type { IUser } from '@/models/user.model'
+import type { IOrganization } from '@/models/organization.model'
 
 vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -31,11 +34,11 @@ vi.mock('@/lib/auth', async () => {
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 
 describe('PATCH /api/organizations/[slug]/members/[userId]', () => {
-  let adminUser: any
-  let memberUser: any
-  let otherAdminUser: any
-  let nonMemberUser: any
-  let organization: any
+  let adminUser!: IUser
+  let memberUser!: IUser
+  let otherAdminUser!: IUser
+  let nonMemberUser!: IUser
+  let organization!: IOrganization
 
   beforeAll(async () => {
     await dbConnect()
@@ -293,10 +296,10 @@ describe('PATCH /api/organizations/[slug]/members/[userId]', () => {
 })
 
 describe('DELETE /api/organizations/[slug]/members/[userId]', () => {
-  let adminUser: any
-  let memberUser: any
-  let nonMemberUser: any
-  let organization: any
+  let adminUser!: IUser
+  let memberUser!: IUser
+  let nonMemberUser!: IUser
+  let organization!: IOrganization
 
   beforeAll(async () => {
     await dbConnect()
@@ -426,7 +429,7 @@ describe('DELETE /api/organizations/[slug]/members/[userId]', () => {
     vi.mocked(getTokenServer).mockResolvedValue('token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: adminUser.email })
 
-    const tempMemberId = (tempMember as any)._id.toString()
+    const tempMemberId = tempMember._id.toString()
     const request = new NextRequest(
       `http://localhost:3000/api/organizations/${organization.slug}/members/${tempMemberId}`,
       { method: 'DELETE' }

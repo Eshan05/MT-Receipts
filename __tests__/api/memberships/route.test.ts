@@ -16,9 +16,13 @@ import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import MembershipRequest from '@/models/membership-request.model'
+import type { IUser } from '@/models/user.model'
+import type { IOrganization } from '@/models/organization.model'
+import type { IMembershipRequest } from '@/models/membership-request.model'
 
 vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -29,13 +33,13 @@ vi.mock('@/lib/auth', async () => {
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 
 describe('POST /api/memberships', () => {
-  let adminUser: any
-  let newUser: any
-  let existingMemberUser: any
-  let organization: any
-  let validCodeInvite: any
-  let expiredCodeInvite: any
-  let usedUpCodeInvite: any
+  let adminUser!: IUser
+  let newUser!: IUser
+  let existingMemberUser!: IUser
+  let organization!: IOrganization
+  let validCodeInvite!: IMembershipRequest
+  let expiredCodeInvite!: IMembershipRequest
+  let usedUpCodeInvite!: IMembershipRequest
 
   beforeAll(async () => {
     await dbConnect()

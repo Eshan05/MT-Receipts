@@ -15,9 +15,12 @@ import { GET } from '@/app/api/organizations/[slug]/members/route'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
+import type { IUser } from '@/models/user.model'
+import type { IOrganization } from '@/models/organization.model'
 
 vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -28,10 +31,10 @@ vi.mock('@/lib/auth', async () => {
 import { getTokenServer, verifyAuthToken } from '@/lib/auth'
 
 describe('GET /api/organizations/[slug]/members', () => {
-  let adminUser: any
-  let memberUser: any
-  let nonMemberUser: any
-  let organization: any
+  let adminUser!: IUser
+  let memberUser!: IUser
+  let nonMemberUser!: IUser
+  let organization!: IOrganization
 
   beforeAll(async () => {
     await dbConnect()
@@ -171,22 +174,36 @@ describe('GET /api/organizations/[slug]/members', () => {
       params: Promise.resolve({ slug: organization.slug }),
     })
     expect(response.status).toBe(200)
-    const data = await response.json()
+    const data = (await response.json()) as {
+      members: Array<{
+        userId: string
+        username: string
+        email: string
+        role: 'admin' | 'member'
+        joinedAt?: string
+      }>
+    }
     expect(data.members).toHaveLength(2)
 
     const admin = data.members.find(
-      (m: any) => m.userId.toString() === adminUser._id.toString()
+      (m) => m.userId.toString() === adminUser._id.toString()
     )
     expect(admin).toBeDefined()
+    if (!admin) {
+      throw new Error('Expected admin user to exist in members list')
+    }
     expect(admin.username).toBe(adminUser.username)
     expect(admin.email).toBe(adminUser.email)
     expect(admin.role).toBe('admin')
     expect(admin.joinedAt).toBeDefined()
 
     const member = data.members.find(
-      (m: any) => m.userId.toString() === memberUser._id.toString()
+      (m) => m.userId.toString() === memberUser._id.toString()
     )
     expect(member).toBeDefined()
+    if (!member) {
+      throw new Error('Expected member user to exist in members list')
+    }
     expect(member.role).toBe('member')
   })
 

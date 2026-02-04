@@ -9,9 +9,10 @@ import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { setAuthCookie } from '@/lib/auth'
 import { cookies } from 'next/headers'
+import type { IUser } from '@/models/user.model'
 
 describe('Organizations API', () => {
-  let testUser: any
+  let testUser!: IUser
   let testUserEmail: string
 
   beforeAll(async () => {
@@ -62,8 +63,9 @@ describe('Organizations API', () => {
     })
 
     it('returns available: true for valid available slug', async () => {
+      const suffix = Date.now().toString(36).slice(-8)
       const request = new NextRequest(
-        `http://localhost:3000/api/organizations?slug=test-available-${Date.now()}`
+        `http://localhost:3000/api/organizations?slug=ta-${suffix}`
       )
       const response = await GET(request)
       expect(response.status).toBe(200)
