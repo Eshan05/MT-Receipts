@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import {
   ArrowRight,
+  MailIcon,
+  ShieldIcon,
+  UserIcon,
   UserPlusIcon,
   Loader2Icon,
   CalendarIcon,
@@ -23,7 +26,6 @@ import {
   CredenzaTitle,
 } from '@/components/ui/credenza'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -39,6 +41,7 @@ import {
   type Invite,
 } from '@/components/table/members'
 import useSWR from 'swr'
+import { Field, FieldLabel } from '@/components/ui/field'
 
 const fetcher = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url)
@@ -267,8 +270,8 @@ export default function MembersPage() {
           </CredenzaHeader>
 
           <CredenzaBody className='space-y-4'>
-            <div className='space-y-2'>
-              <Label>Invite Type</Label>
+            <Field>
+              <FieldLabel className='sr-only'>Invite Type</FieldLabel>
               <Select
                 value={inviteType}
                 onValueChange={(v) => setInviteType(v as 'email' | 'code')}
@@ -281,23 +284,31 @@ export default function MembersPage() {
                   <SelectItem value='code'>Shareable Code</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
             {inviteType === 'email' && (
-              <div className='space-y-2'>
-                <Label htmlFor='email'>Email Address</Label>
-                <Input
-                  id='email'
-                  type='email'
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder='user@example.com'
-                />
-              </div>
+              <Field>
+                <FieldLabel className='sr-only' htmlFor='email'>
+                  Email Address
+                </FieldLabel>
+                <div className='relative'>
+                  <Input
+                    id='email'
+                    type='email'
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder='user@example.com'
+                    className='peer ps-7'
+                  />
+                  <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                    <MailIcon size={12} />
+                  </div>
+                </div>
+              </Field>
             )}
 
-            <div className='space-y-2'>
-              <Label>Role</Label>
+            <Field>
+              <FieldLabel className='sr-only'>Role</FieldLabel>
               <Select
                 value={inviteRole}
                 onValueChange={(v) => setInviteRole(v as 'admin' | 'member')}
@@ -306,15 +317,25 @@ export default function MembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='member'>Member</SelectItem>
-                  <SelectItem value='admin'>Admin</SelectItem>
+                  <SelectItem value='member'>
+                    <span className='inline-flex items-center gap-1.5'>
+                      <UserIcon className='h-3.5 w-3.5' />
+                      Member
+                    </span>
+                  </SelectItem>
+                  <SelectItem value='admin'>
+                    <span className='inline-flex items-center gap-1.5'>
+                      <ShieldIcon className='h-3.5 w-3.5' />
+                      Admin
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
 
             {generatedCode && (
               <div className='space-y-2 p-4 bg-muted rounded-lg'>
-                <Label>Shareable Code</Label>
+                <FieldLabel>Shareable Code</FieldLabel>
                 <p className='text-2xl font-mono font-bold tracking-wider'>
                   {generatedCode}
                 </p>

@@ -17,6 +17,7 @@ import {
   KeyRound,
   MailPlus,
   UserPlus,
+  User,
 } from 'lucide-react'
 import { formatTime } from '@/utils/formatters'
 
@@ -90,12 +91,21 @@ export function createColumns({
               </AvatarFallback>
             </Avatar>
             <div className='flex flex-col min-w-0 flex-1'>
-              <span className='truncate text-sm font-medium'>
-                {member.username}
-              </span>
-              {member.userId === currentUserId && (
+              <div className='flex items-center gap-1 min-w-0'>
+                <User className='size-3 text-muted-foreground shrink-0' />
+                <span className='truncate text-sm font-medium'>
+                  {member.username}
+                </span>
+              </div>
+              {/* {member.userId === currentUserId && (
                 <span className='text-xs text-muted-foreground'>(you)</span>
-              )}
+              )} */}
+              <div className='flex items-center gap-1 min-w-0'>
+                <Mail className='size-3 text-muted-foreground shrink-0' />
+                <span className='truncate text-2xs text-muted-foreground'>
+                  {member.email}
+                </span>
+              </div>
             </div>
           </div>
         )
@@ -131,11 +141,11 @@ export function createColumns({
         return (
           <Badge variant={role === 'admin' ? 'default' : 'secondary'}>
             {role === 'admin' ? (
-              <ShieldIcon className='h-3 w-3 mr-1' />
+              <ShieldIcon className='h-3 w-3' />
             ) : (
-              <UserIcon className='h-3 w-3 mr-1' />
+              <UserIcon className='h-3 w-3' />
             )}
-            {role}
+            {role.charAt(0).toUpperCase() + role.slice(1)}
           </Badge>
         )
       },
@@ -149,7 +159,7 @@ export function createColumns({
       },
     },
     {
-      accessorKey: 'joinedAt',
+      accessorKey: 'joinedVia',
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title='Joined Via' />
       ),
@@ -176,17 +186,17 @@ export function createColumns({
               <Icon className='size-3 mr-1' />
               {joinedViaLabel(joinedVia)}
             </Badge>
-            <div className='flex items-center gap-1 text-muted-foreground'>
-              <Calendar className='size-3 text-muted-foreground' />
-              <span className='font-mono text-muted-foreground'>
-                {formatted.date}
-              </span>
-            </div>
           </div>
         )
       },
       enableSorting: true,
       enableHiding: true,
+      filterFn: (row, id, value) => {
+        const rowValue = row.getValue(id) as string
+        const filterValue = value as string[]
+        if (!filterValue || filterValue.length === 0) return true
+        return filterValue.includes(rowValue)
+      },
     },
     {
       accessorKey: 'invitedByName',
@@ -211,18 +221,40 @@ export function createColumns({
         return filterValue.includes(rowValue)
       },
     },
+
     {
-      accessorKey: 'joinedVia',
-      header: () => null,
-      cell: () => null,
-      enableSorting: false,
-      enableHiding: true,
-      filterFn: (row, id, value) => {
-        const rowValue = row.getValue(id) as string
-        const filterValue = value as string[]
-        if (!filterValue || filterValue.length === 0) return true
-        return filterValue.includes(rowValue)
+      accessorKey: 'joinedAt',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Joined At' />
+      ),
+      cell: ({ row }) => {
+        const isRelative = false
+        const date = row.original.joinedAt
+        if (!date) {
+          return <span className='text-muted-foreground text-xs'>Unknown</span>
+        }
+
+        const formatted = formatTime(
+          typeof date === 'string' ? date : date?.toISOString() || '',
+          isRelative
+        )
+
+        return (
+          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+            <div className='flex flex-col text-muted-foreground!'>
+              <span className='font-mono'>
+                {formatted.date}
+                {!isRelative ? ',' : ''}
+              </span>
+              {!isRelative && date && (
+                <span className='opacity-70'>{formatted.time}</span>
+              )}
+            </div>
+          </div>
+        )
       },
+      enableSorting: true,
+      enableHiding: true,
     },
     {
       accessorKey: 'lastSignedInAt',
@@ -230,6 +262,7 @@ export function createColumns({
         <DataTableColumnHeader column={column} title='Last Signed In' />
       ),
       cell: ({ row }) => {
+        const isRelative = false
         const date = row.original.lastSignedInAt
         if (!date) {
           return <span className='text-muted-foreground text-xs'>Never</span>
@@ -237,13 +270,20 @@ export function createColumns({
 
         const formatted = formatTime(
           typeof date === 'string' ? date : date?.toISOString() || '',
-          false
+          isRelative
         )
 
         return (
           <div className='flex items-center gap-1 text-xs text-muted-foreground'>
-            <Clock className='size-3 text-muted-foreground' />
-            <span className='font-mono'>{formatted.date}</span>
+            <div className='flex flex-col text-muted-foreground!'>
+              <span className='font-mono'>
+                {formatted.date}
+                {!isRelative ? ',' : ''}
+              </span>
+              {!isRelative && date && (
+                <span className='opacity-70'>{formatted.time}</span>
+              )}
+            </div>
           </div>
         )
       },

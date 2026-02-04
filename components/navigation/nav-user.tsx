@@ -6,7 +6,6 @@ import {
   Heart,
   KeyRound,
   LogOut,
-  UsersIcon,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -97,15 +96,6 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
               {currentOrganization && (
                 <>
                   <OrganizationSettingsDropdown />
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href={`/${currentOrganization.slug}/members`}
-                      className='cursor-pointer'
-                    >
-                      <UsersIcon className='h-4 w-4' />
-                      Members
-                    </Link>
-                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className='cursor-pointer'
                     onClick={() => onViewReceipts?.()}

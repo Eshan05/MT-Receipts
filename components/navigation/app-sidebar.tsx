@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { CalendarDaysIcon, ChartArea, Newspaper } from 'lucide-react'
+import { CalendarDaysIcon, ChartArea, Newspaper, UsersIcon } from 'lucide-react'
 import * as React from 'react'
 import useSWR from 'swr'
 
@@ -63,6 +63,11 @@ export default function AdminSidebar({
         title: 'Admin Dashboard',
         url: `/${orgSlug}/dashboard`,
         icon: ChartArea,
+      },
+      {
+        title: 'Members',
+        url: `/${orgSlug}/members`,
+        icon: UsersIcon,
       },
       {
         title: 'Make Receipts',

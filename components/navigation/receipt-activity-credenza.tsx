@@ -45,7 +45,9 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  Clock,
   Mail,
+  Receipt,
   RefreshCw,
   Search,
   UserIcon,
@@ -63,6 +65,42 @@ interface ReceiptEmailLogEntry {
   sentByName: string
   smtpSender: string
   downloadUrl: string
+}
+
+function SenderLikeCell({
+  value,
+  fallbackLabel,
+}: {
+  value: string
+  fallbackLabel?: string
+}) {
+  const safeValue = value || fallbackLabel || 'Unknown'
+  const inferredName = safeValue.includes('@')
+    ? safeValue.split('@')[0]
+    : safeValue
+  const avatarUrl = `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(safeValue)}`
+
+  return (
+    <div className='flex items-center gap-2 min-w-24 max-w-'>
+      <img
+        src={avatarUrl}
+        alt={safeValue}
+        className='size-7 rounded-full shrink-0 bg-muted'
+      />
+      <div className='flex flex-col min-w-0 flex-1'>
+        <div className='flex items-center gap-1 min-w-0'>
+          <UserIcon className='size-3 text-muted-foreground shrink-0' />
+          <span className='truncate text-xs font-medium'>{inferredName}</span>
+        </div>
+        <div className='flex items-center gap-1 min-w-0'>
+          <Mail className='size-3 text-muted-foreground shrink-0' />
+          <span className='truncate text-2xs text-muted-foreground'>
+            {safeValue}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 interface Props {
@@ -126,35 +164,43 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Receipt #' />
         ),
-        cell: ({ row }) => (
-          <span className='font-mono text-xs'>
-            {row.original.receiptNumber}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const receiptNumber = row.original.receiptNumber
+          const date = row.original.sentAt
+          const formatted = formatTime(
+            typeof date === 'string' ? date : date?.toISOString() || '',
+            true
+          )
+
+          return (
+            <div className='flex flex-col gap-0.5'>
+              <div className='flex items-center gap-1'>
+                <Receipt className='size-3 text-muted-foreground' />
+                <span className='font-mono text-xs'>
+                  {receiptNumber || '-'}
+                </span>
+              </div>
+              <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+                <Clock className='size-3' />
+                <span>{formatted.date}</span>
+              </div>
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'sentTo',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Sent To' />
         ),
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1 text-xs'>
-            <Mail className='size-3 text-muted-foreground' />
-            <span className='truncate max-w-56'>{row.original.sentTo}</span>
-          </div>
-        ),
+        cell: ({ row }) => <SenderLikeCell value={row.original.sentTo} />,
       },
       {
         accessorKey: 'sentByName',
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Sent By' />
         ),
-        cell: ({ row }) => (
-          <div className='flex items-center gap-1 text-xs'>
-            <UserIcon className='size-3 text-muted-foreground' />
-            <span>{row.original.sentByName}</span>
-          </div>
-        ),
+        cell: ({ row }) => <SenderLikeCell value={row.original.sentByName} />,
         filterFn: (row, id, value) => {
           const rowValue = row.getValue(id) as string
           const filterValue = value as string[]
@@ -168,9 +214,10 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
           <DataTableColumnHeader column={column} title='SMTP Sender' />
         ),
         cell: ({ row }) => (
-          <Badge variant='outline' className='text-xs font-normal'>
-            {row.original.smtpSender}
-          </Badge>
+          <SenderLikeCell
+            value={row.original.smtpSender}
+            fallbackLabel='Unknown Sender'
+          />
         ),
         filterFn: (row, id, value) => {
           const rowValue = row.getValue(id) as string
@@ -185,14 +232,26 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
           <DataTableColumnHeader column={column} title='Sent At' />
         ),
         cell: ({ row }) => {
-          const value = row.original.sentAt
+          const date = row.original.sentAt
+          if (!date) return <span className='text-muted-foreground'>-</span>
+
+          const isRelative = false
           const formatted = formatTime(
-            typeof value === 'string' ? value : value?.toISOString() || '',
-            false
+            typeof date === 'string' ? date : date?.toISOString() || '',
+            isRelative
           )
+
           return (
-            <div className='text-xs text-muted-foreground'>
-              <span className='font-mono'>{formatted.date}</span>
+            <div className='flex items-center gap-1 text-xs'>
+              <div className='flex flex-col text-muted-foreground!'>
+                <span className='font-mono'>
+                  {formatted.date}
+                  {!isRelative ? ',' : ''}
+                </span>
+                {!isRelative && (
+                  <span className='opacity-70'>{formatted.time}</span>
+                )}
+              </div>
             </div>
           )
         },
@@ -204,7 +263,6 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
           <Button variant='outline' size='sm' asChild className='h-7 gap-1'>
             <a href={row.original.downloadUrl} target='_blank' rel='noreferrer'>
               <Download className='size-3' />
-              Download
             </a>
           </Button>
         ),
@@ -331,7 +389,7 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
 
   return (
     <Credenza open={open} onOpenChange={onOpenChange}>
-      <CredenzaContent className='sm:max-w-6xl'>
+      <CredenzaContent className='sm:max-w-4xl'>
         <CredenzaHeader>
           <CredenzaTitle>Receipt Delivery Log</CredenzaTitle>
           <CredenzaDescription>
@@ -435,7 +493,7 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
                     <TableRow>
                       <TableCell
                         colSpan={columns.length}
-                        className='h-24 text-center'
+                        className='h-18 text-center'
                       >
                         Loading delivery logs...
                       </TableCell>
@@ -457,7 +515,7 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
                     <TableRow>
                       <TableCell
                         colSpan={columns.length}
-                        className='h-24 text-center'
+                        className='h-18 text-center'
                       >
                         No delivery logs found.
                       </TableCell>
