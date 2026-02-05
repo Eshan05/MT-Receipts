@@ -20,6 +20,9 @@ export default defineConfig({
           globals: true,
           environment: 'node',
           setupFiles: ['./__tests__/setup.ts'],
+          pool: 'forks',
+          fileParallelism: false,
+          maxWorkers: 1,
           include: [
             '__tests__/models/**/*.test.ts',
             '__tests__/lib/db/**/*.test.ts',
