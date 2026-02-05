@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { sendEmail } from '@/lib/email'
 import { render } from '@react-email/components'
 import OrganizationInviteEmail from '@/lib/emails/organization-invite-email'
+import { enforceMaxUsersForInvite } from '@/lib/quota-enforcement'
 
 const createInviteSchema = z.object({
   type: z.enum(['email', 'code']),
@@ -111,6 +112,12 @@ export async function POST(request: Request) {
         )
       }
 
+      const quotaCheck = await enforceMaxUsersForInvite({
+        organizationId: organization._id,
+        slotsToReserve: 1,
+      })
+      if (quotaCheck) return quotaCheck
+
       const invite = await MembershipRequest.create({
         organizationId: organization._id,
         organizationSlug: organization.slug,
@@ -159,6 +166,12 @@ export async function POST(request: Request) {
     }
 
     const code = nanoid(10).toUpperCase()
+
+    const quotaCheck = await enforceMaxUsersForInvite({
+      organizationId: organization._id,
+      slotsToReserve: maxUses || 1,
+    })
+    if (quotaCheck) return quotaCheck
 
     const invite = await MembershipRequest.create({
       organizationId: organization._id,

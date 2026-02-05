@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getTenantContext } from '@/lib/tenant-route'
+import { enforceMaxEvents } from '@/lib/quota-enforcement'
 
 const PAGE_SIZE = 12
 
@@ -118,6 +119,9 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       )
     }
+
+    const quotaCheck = await enforceMaxEvents(ctx)
+    if (quotaCheck) return quotaCheck
 
     const newEvent = await Event.create({
       ...data,

@@ -5,6 +5,7 @@ import MembershipRequest from '@/models/membership-request.model'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'
+import { enforceMaxUsersForJoin } from '@/lib/quota-enforcement'
 
 const createMembershipSchema = z.object({
   inviteCode: z.string().min(1),
@@ -54,6 +55,11 @@ export async function POST(request: Request) {
         { status: 404 }
       )
     }
+
+    const quotaCheck = await enforceMaxUsersForJoin({
+      organizationId: invite.organizationId,
+    })
+    if (quotaCheck) return quotaCheck
 
     const existingMembership = user.memberships.find(
       (m) => m.organizationId.toString() === invite.organizationId.toString()

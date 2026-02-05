@@ -4,6 +4,7 @@ import { generateCustomerInitials } from '@/lib/utils'
 import { sendReceiptEmail } from '@/lib/email'
 import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
 import { formatReceiptNumber } from '@/lib/receipt-number'
+import { enforceMaxReceipts } from '@/lib/quota-enforcement'
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,6 +88,9 @@ export async function POST(request: NextRequest) {
     if (!event) {
       return NextResponse.json({ message: 'Event not found' }, { status: 404 })
     }
+
+    const quotaCheck = await enforceMaxReceipts(ctx)
+    if (quotaCheck) return quotaCheck
 
     const initials = generateCustomerInitials(customer.name)
     const organizationBranding = await getOrganizationBrandingBySlug(
