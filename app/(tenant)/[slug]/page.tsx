@@ -6,6 +6,6 @@ export default function OrgRootPage({
   params: Promise<{ slug: string }>
 }) {
   return params.then(({ slug }) => {
-    redirect(`/${slug}/events`)
+    redirect(`/${slug}/dashboard`)
   })
 }

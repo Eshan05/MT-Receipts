@@ -143,7 +143,7 @@ async function ReceiptContent({ receiptNumber }: { receiptNumber: string }) {
                 />
                 <div>
                   <div className='font-medium text-xs'>ACES</div>
-                  <div className='text-[10px] text-zinc-500'>
+                  <div className='text-tiny text-zinc-500'>
                     Receipt Verification
                   </div>
                 </div>
