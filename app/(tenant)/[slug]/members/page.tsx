@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import {
   ArrowRight,
+  Trash2,
   MailIcon,
   ShieldIcon,
   UserIcon,
@@ -158,6 +159,28 @@ export default function MembersPage() {
     }
   }
 
+  const handleDeleteInvite = async (invite: Invite) => {
+    const codeOrId = invite.code || invite._id
+
+    try {
+      const response = await fetch(`/api/invites/${codeOrId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || 'Failed to delete invite')
+      }
+
+      toast.success('Invitation deleted')
+      await refreshData()
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete invite'
+      )
+    }
+  }
+
   if (!orgSlug) {
     return (
       <div className='flex items-center justify-center h-64'>
@@ -274,7 +297,19 @@ export default function MembersPage() {
                               {new Date(invite.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <ArrowRight className='w-3.5 h-3.5 text-muted-foreground/50' />
+                          <div className='flex items-center gap-1'>
+                            <Button
+                              size='sm'
+                              variant='ghost'
+                              className='h-6 px-2 text-destructive hover:text-destructive'
+                              onClick={() => {
+                                void handleDeleteInvite(invite)
+                              }}
+                            >
+                              <Trash2 className='w-3.5 h-3.5' />
+                            </Button>
+                            <ArrowRight className='w-3.5 h-3.5 text-muted-foreground/50' />
+                          </div>
                         </div>
                       </div>
                     </div>
