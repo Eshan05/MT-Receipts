@@ -88,6 +88,7 @@ export interface ReceiptItem {
 export interface SendReceiptOptions {
   to: string
   receiptNumber: string
+  organizationSlug?: string
   customerName: string
   customerPhone?: string
   customerAddress?: string
@@ -116,6 +117,7 @@ export interface SendReceiptOptions {
 export async function sendReceiptEmail({
   to,
   receiptNumber,
+  organizationSlug,
   customerName,
   customerPhone,
   customerAddress,
@@ -172,7 +174,7 @@ export async function sendReceiptEmail({
     if (!finalQrCodeData) {
       finalQrCodeData = await generateReceiptQRCode(
         receiptNumber,
-        organizationName
+        organizationSlug
       )
     }
 

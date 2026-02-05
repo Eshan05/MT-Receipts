@@ -32,6 +32,10 @@ vi.mock('@/models/organization.model', () => ({
 }))
 
 import { getSuperAdminContext } from '@/lib/superadmin-route'
+import {
+  invalidateCachedOrganization,
+  setCachedOrganization,
+} from '@/lib/redis'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
 import { PATCH, DELETE } from '@/app/api/admins/organizations/[slug]/route'
@@ -70,6 +74,13 @@ describe('/api/admins/organizations/[slug]', () => {
 
     expect(response.status).toBe(200)
     expect(save).toHaveBeenCalledOnce()
+    expect(invalidateCachedOrganization).toHaveBeenCalledOnce()
+    expect(invalidateCachedOrganization).toHaveBeenCalledWith('aces')
+    expect(setCachedOrganization).toHaveBeenCalledOnce()
+    expect(setCachedOrganization).toHaveBeenCalledWith(
+      'aces',
+      expect.objectContaining({ id: 'org-1', slug: 'aces', name: 'ACES' })
+    )
 
     const data = await response.json()
     expect(data.organization.limits.maxUsers).toBe(25)
@@ -100,9 +111,69 @@ describe('/api/admins/organizations/[slug]', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(save).toHaveBeenCalledOnce()
     expect(org.status).toBe('deleted')
     expect(org.deletedAt).toBeInstanceOf(Date)
     expect(org.restoresBefore).toBeInstanceOf(Date)
+    expect(invalidateCachedOrganization).toHaveBeenCalledOnce()
+    expect(invalidateCachedOrganization).toHaveBeenCalledWith('aces')
+    expect(setCachedOrganization).toHaveBeenCalledOnce()
+    expect(setCachedOrganization).toHaveBeenCalledWith(
+      'aces',
+      expect.objectContaining({
+        id: 'org-1',
+        slug: 'aces',
+        name: 'ACES',
+        status: 'deleted',
+      })
+    )
+  })
+
+  it('restores organization via PATCH action=restore', async () => {
+    const save = vi.fn().mockResolvedValue(undefined)
+
+    const org: any = {
+      _id: { toString: () => 'org-1' },
+      slug: 'aces',
+      name: 'ACES',
+      status: 'deleted',
+      limits: { maxEvents: 10, maxReceiptsPerMonth: 100, maxUsers: 25 },
+      deletedAt: new Date('2025-01-01T00:00:00.000Z'),
+      restoresBefore: new Date('2025-02-01T00:00:00.000Z'),
+      save,
+    }
+
+    vi.mocked(Organization.findBySlug).mockResolvedValue(org)
+
+    const response = await PATCH(
+      new NextRequest('http://localhost:3000/api/admins/organizations/aces', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'restore' }),
+      }),
+      { params: Promise.resolve({ slug: 'aces' }) }
+    )
+
+    expect(response.status).toBe(200)
+    expect(save).toHaveBeenCalledOnce()
+
+    expect(org.status).toBe('active')
+    expect(org.deletedAt).toBeUndefined()
+    expect(org.restoresBefore).toBeUndefined()
+
+    const data = await response.json()
+    expect(data.organization.status).toBe('active')
+    expect(invalidateCachedOrganization).toHaveBeenCalledOnce()
+    expect(invalidateCachedOrganization).toHaveBeenCalledWith('aces')
+    expect(setCachedOrganization).toHaveBeenCalledOnce()
+    expect(setCachedOrganization).toHaveBeenCalledWith(
+      'aces',
+      expect.objectContaining({
+        id: 'org-1',
+        slug: 'aces',
+        name: 'ACES',
+        status: 'active',
+      })
+    )
   })
 
   it('hard deletes only deleted organizations', async () => {

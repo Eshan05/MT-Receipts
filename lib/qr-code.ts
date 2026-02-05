@@ -69,10 +69,12 @@ export async function generateQRCodeBase64(
 
 export async function generateReceiptQRCode(
   receiptNumber: string,
-  organizationName?: string
+  organizationSlug?: string
 ): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const verifyUrl = `${baseUrl}/v/${receiptNumber}`
+  const verifyUrl = organizationSlug
+    ? `${baseUrl}/v/${organizationSlug}/${receiptNumber}`
+    : `${baseUrl}/v/${receiptNumber}`
 
   return generateQRCodeBase64({
     data: verifyUrl,

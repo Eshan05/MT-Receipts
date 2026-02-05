@@ -309,7 +309,7 @@ async function main(): Promise<void> {
   const orgName =
     options.config?.organizationName || defaultConfig.organizationName || 'ACES'
 
-  const qrCodeData = await generateReceiptQRCode(receiptNumber, orgName)
+  const qrCodeData = await generateReceiptQRCode(receiptNumber)
 
   const props: TemplateProps = {
     receiptNumber,
