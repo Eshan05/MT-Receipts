@@ -60,11 +60,20 @@ const settingsSchema = new Schema<IOrganizationSettings>(
   { _id: false }
 )
 
+const DEFAULT_LIMITS: IOrganizationLimits = {
+  maxEvents: 10,
+  maxReceiptsPerMonth: 100,
+  maxUsers: 25,
+}
+
 const limitsSchema = new Schema<IOrganizationLimits>(
   {
-    maxEvents: { type: Number, default: -1 },
-    maxReceiptsPerMonth: { type: Number, default: -1 },
-    maxUsers: { type: Number, default: -1 },
+    maxEvents: { type: Number, default: DEFAULT_LIMITS.maxEvents },
+    maxReceiptsPerMonth: {
+      type: Number,
+      default: DEFAULT_LIMITS.maxReceiptsPerMonth,
+    },
+    maxUsers: { type: Number, default: DEFAULT_LIMITS.maxUsers },
   },
   { _id: false }
 )
@@ -106,7 +115,7 @@ const organizationSchema = new Schema<IOrganization, IOrganizationModel>(
     },
     limits: {
       type: limitsSchema,
-      default: () => ({ maxEvents: -1, maxReceiptsPerMonth: -1, maxUsers: -1 }),
+      default: () => ({ ...DEFAULT_LIMITS }),
     },
     status: {
       type: String,

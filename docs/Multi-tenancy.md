@@ -948,7 +948,7 @@ Runs as a one-time operation during the multi-tenancy rollout:
   - [ ] Member invites (maxUsers)
 - [ ] Create usage tracking (counts per org)
 - [ ] Create usage dashboard for org admins
-- [ ] Create usage warning emails (optional)
+- [ ] Create usage warning emails (optional) (should do)
 
 ### Phase 10: Deletion & Restoration (Week 5)
 

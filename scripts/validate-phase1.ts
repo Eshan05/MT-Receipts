@@ -233,10 +233,10 @@ async function validateOrganizationModel() {
     logTest('Slug lowercased', org.slug === slug.toLowerCase())
     logTest('Status defaults to pending', org.status === 'pending')
     logTest(
-      'Limits default to -1 (unlimited)',
-      org.limits.maxEvents === -1 &&
-        org.limits.maxReceiptsPerMonth === -1 &&
-        org.limits.maxUsers === -1
+      'Limits default to finite values',
+      org.limits.maxEvents === 10 &&
+        org.limits.maxReceiptsPerMonth === 100 &&
+        org.limits.maxUsers === 25
     )
     logTest('Settings have defaults', !!org.settings.primaryColor)
 
