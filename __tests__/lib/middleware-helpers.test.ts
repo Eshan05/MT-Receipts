@@ -32,8 +32,9 @@ describe('Path Constants', () => {
 
   describe('SUPERADMIN_PATHS', () => {
     it('contains superadmin paths', () => {
+      expect(SUPERADMIN_PATHS).toContain('/s')
       expect(SUPERADMIN_PATHS).toContain('/superadmin')
-      expect(SUPERADMIN_PATHS).toContain('/api/superadmins')
+      expect(SUPERADMIN_PATHS).toContain('/api/admins')
     })
   })
 
@@ -114,13 +115,20 @@ describe('isPublicPath', () => {
 
 describe('isSuperAdminPath', () => {
   it('returns true for superadmin path', () => {
+    expect(isSuperAdminPath('/s')).toBe(true)
+    expect(isSuperAdminPath('/s/dashboard')).toBe(true)
     expect(isSuperAdminPath('/superadmin')).toBe(true)
     expect(isSuperAdminPath('/superadmin/organizations')).toBe(true)
   })
 
   it('returns true for superadmin api routes', () => {
-    expect(isSuperAdminPath('/api/superadmins')).toBe(true)
-    expect(isSuperAdminPath('/api/superadmins/organizations')).toBe(true)
+    expect(isSuperAdminPath('/api/admins')).toBe(true)
+    expect(isSuperAdminPath('/api/admins/organizations')).toBe(true)
+  })
+
+  it('does not match unrelated /s-prefixed paths', () => {
+    expect(isSuperAdminPath('/signup')).toBe(false)
+    expect(isSuperAdminPath('/sessions')).toBe(false)
   })
 
   it('returns false for tenant paths', () => {
@@ -136,6 +144,7 @@ describe('isNonTenantPath', () => {
   it('returns true for non-tenant segments', () => {
     expect(isNonTenantPath('v')).toBe(true)
     expect(isNonTenantPath('api')).toBe(true)
+    expect(isNonTenantPath('s')).toBe(true)
     expect(isNonTenantPath('superadmin')).toBe(true)
     expect(isNonTenantPath('login')).toBe(true)
     expect(isNonTenantPath('o')).toBe(true)
@@ -192,6 +201,7 @@ describe('extractSlugFromPath', () => {
 
   it('returns null for non-tenant paths', () => {
     expect(extractSlugFromPath('/v/RC-001')).toBe(null)
+    expect(extractSlugFromPath('/s/dashboard')).toBe(null)
     expect(extractSlugFromPath('/api/users')).toBe(null)
     expect(extractSlugFromPath('/superadmin')).toBe(null)
     expect(extractSlugFromPath('/login')).toBe(null)
@@ -251,7 +261,7 @@ describe('isApiRoute', () => {
   it('returns true for api routes', () => {
     expect(isApiRoute('/api/users')).toBe(true)
     expect(isApiRoute('/api/sessions')).toBe(true)
-    expect(isApiRoute('/api/superadmins/organizations')).toBe(true)
+    expect(isApiRoute('/api/admins/organizations')).toBe(true)
   })
 
   it('returns false for non-api routes', () => {
