@@ -9,6 +9,7 @@ import {
   Trash2,
   Settings,
   Users,
+  Gauge,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +24,7 @@ import { toast } from 'sonner'
 import { useState } from 'react'
 import { OrganizationSettingsCredenza } from '@/components/organization/organization-settings-dropdown'
 import { SuperadminOrganizationMembersCredenza } from '@/components/organization/superadmin-organization-members-credenza'
+import { SuperadminOrganizationLimitsCredenza } from '@/components/organization/superadmin-organization-limits-credenza'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -41,6 +43,7 @@ export function DataTableRowActions<TData>({
   const organization = row.original as OrganizationRow
   const [configOpen, setConfigOpen] = useState(false)
   const [membersOpen, setMembersOpen] = useState(false)
+  const [limitsOpen, setLimitsOpen] = useState(false)
 
   return (
     <>
@@ -58,6 +61,10 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem onClick={() => setMembersOpen(true)}>
             <Users className='mr-1 size-3.5' />
             View Members
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setLimitsOpen(true)}>
+            <Gauge className='mr-1 size-3.5' />
+            View Limits
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setConfigOpen(true)}>
             <Settings className='mr-1 size-3.5' />
@@ -174,6 +181,13 @@ export function DataTableRowActions<TData>({
       <SuperadminOrganizationMembersCredenza
         open={membersOpen}
         onOpenChange={setMembersOpen}
+        slug={organization.slug}
+        orgName={organization.name}
+      />
+
+      <SuperadminOrganizationLimitsCredenza
+        open={limitsOpen}
+        onOpenChange={setLimitsOpen}
         slug={organization.slug}
         orgName={organization.name}
       />

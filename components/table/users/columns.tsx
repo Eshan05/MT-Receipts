@@ -95,17 +95,17 @@ export function createColumns(): ColumnDef<UserRow>[] {
         return (
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant='outline' size='sm' className='h-7 gap-1.5'>
+              <Button variant='outline' size='sm' className='font-mono gap-1.5'>
                 <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
-                {user.membershipCount} org
-                {user.membershipCount === 1 ? '' : 's'}
+                {user.membershipCount}
+                {user.membershipCount === 1 ? '' : ''}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className='w-72 p-1.5'>
-              <div className='px-2 py-1.5 border-b border-border/50'>
+            <PopoverContent className='w-72 p-1.5 gap-1'>
+              <div className='px-2 py-1 border-b border-border/50'>
                 <p className='text-xs font-medium'>Memberships</p>
               </div>
-              <div className='space-y-1 p-1'>
+              <div className='space-y-1 px-1'>
                 {user.memberships.length === 0 ? (
                   <p className='text-xs text-muted-foreground'>
                     No memberships

@@ -39,9 +39,9 @@ describe('Organization Model', () => {
       expect(org.slug).toBe('testorg')
       expect(org.name).toBe('Test Organization')
       expect(org.status).toBe('pending')
-      expect(org.limits.maxEvents).toBe(-1)
-      expect(org.limits.maxReceiptsPerMonth).toBe(-1)
-      expect(org.limits.maxUsers).toBe(-1)
+      expect(org.limits.maxEvents).toBe(10)
+      expect(org.limits.maxReceiptsPerMonth).toBe(100)
+      expect(org.limits.maxUsers).toBe(25)
     })
 
     it('lowercases slug automatically', async () => {
@@ -298,16 +298,16 @@ describe('Organization Model', () => {
   })
 
   describe('limits', () => {
-    it('defaults to unlimited (-1) for all limits', async () => {
+    it('defaults to finite limits for all limits', async () => {
       const org = await Organization.create({
         slug: 'default-limits',
         name: 'Test',
         createdBy: testUser,
       })
 
-      expect(org.limits.maxEvents).toBe(-1)
-      expect(org.limits.maxReceiptsPerMonth).toBe(-1)
-      expect(org.limits.maxUsers).toBe(-1)
+      expect(org.limits.maxEvents).toBe(10)
+      expect(org.limits.maxReceiptsPerMonth).toBe(100)
+      expect(org.limits.maxUsers).toBe(25)
     })
 
     it('can set custom limits', async () => {
