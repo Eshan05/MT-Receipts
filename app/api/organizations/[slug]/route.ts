@@ -12,7 +12,12 @@ import { z } from 'zod'
 const updateOrganizationSchema = z.object({
   name: z.string().min(3).max(100).trim().optional(),
   description: z.string().max(500).trim().optional(),
-  logoUrl: z.string().url().trim().optional(),
+  logoUrl: z.preprocess((value) => {
+    if (typeof value === 'string' && value.trim() === '') {
+      return undefined
+    }
+    return value
+  }, z.string().url().trim().optional()),
   settings: z
     .object({
       primaryColor: z.string().optional(),

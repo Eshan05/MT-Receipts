@@ -134,7 +134,9 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     )
-    await setAuthCookie(email, response)
+    await setAuthCookie(email, response, {
+      isSuperAdmin: !!user.isSuperAdmin,
+    })
 
     if (currentOrganization) {
       await setCurrentOrgCookie(currentOrganization.slug, response)
@@ -307,11 +309,14 @@ export async function GET() {
         memberships,
         currentOrganization,
       })
+      await setAuthCookie(user.email, response, {
+        isSuperAdmin: !!user.isSuperAdmin,
+      })
       await setCurrentOrgCookie(currentOrganization.slug, response)
       return response
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: true,
       user: {
         id: user._id,
@@ -322,6 +327,10 @@ export async function GET() {
       memberships,
       currentOrganization,
     })
+    await setAuthCookie(user.email, response, {
+      isSuperAdmin: !!user.isSuperAdmin,
+    })
+    return response
   } catch (error) {
     console.error('Session verification error:', error)
     return NextResponse.json({ authenticated: false }, { status: 401 })

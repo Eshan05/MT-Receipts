@@ -24,6 +24,16 @@ const createOrganizationSchema = z.object({
     .min(3, { error: 'Name must be at least 3 characters' })
     .max(100, { error: 'Name must be at most 100 characters' })
     .trim(),
+  description: z
+    .string()
+    .min(3, { error: 'Description must be at least 3 characters' })
+    .max(500, { error: 'Description must be at most 500 characters' })
+    .trim(),
+  expectedMembers: z
+    .number()
+    .int({ error: 'Expected members must be a whole number' })
+    .min(1, { error: 'Expected members must be at least 1' })
+    .max(100000, { error: 'Expected members is too large' }),
   slug: z
     .string()
     .min(3, { error: 'Slug must be at least 3 characters' })
@@ -120,7 +130,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { name, slug } = validationResult.data
+    const { name, slug, description, expectedMembers } = validationResult.data
 
     if (isSlugReserved(slug)) {
       return NextResponse.json(
@@ -140,6 +150,8 @@ export async function POST(request: Request) {
     const organization = await Organization.create({
       slug,
       name,
+      description,
+      expectedMembers,
       status: 'pending',
       createdBy: user._id,
     })

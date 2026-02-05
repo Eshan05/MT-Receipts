@@ -24,6 +24,7 @@ export interface IOrganization extends Document {
   slug: string
   name: string
   description?: string
+  expectedMembers?: number
   logoUrl?: string
   settings: IOrganizationSettings
   limits: IOrganizationLimits
@@ -90,6 +91,10 @@ const organizationSchema = new Schema<IOrganization, IOrganizationModel>(
       type: String,
       trim: true,
       maxlength: 500,
+    },
+    expectedMembers: {
+      type: Number,
+      min: 1,
     },
     logoUrl: {
       type: String,
