@@ -8,6 +8,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, Suspense } from 'react'
@@ -21,6 +22,8 @@ import {
   KeyRoundIcon,
   Link2Icon,
   Loader2Icon,
+  Text,
+  Users,
   XCircleIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -34,6 +37,27 @@ const createOrgSchema = z.object({
     .min(3, { error: 'Name must be at least 3 characters' })
     .max(100, { error: 'Name must be at most 100 characters' })
     .trim(),
+  description: z
+    .string()
+    .min(3, { error: 'Description must be at least 3 characters' })
+    .max(500, { error: 'Description must be at most 500 characters' })
+    .trim(),
+  expectedMembers: z
+    .string()
+    .trim()
+    .min(1, { error: 'Expected members is required' })
+    .refine((value) => Number.isFinite(Number(value)), {
+      error: 'Expected members must be a number',
+    })
+    .refine((value) => Number.isInteger(Number(value)), {
+      error: 'Expected members must be a whole number',
+    })
+    .refine((value) => Number(value) >= 1, {
+      error: 'Expected members must be at least 1',
+    })
+    .refine((value) => Number(value) <= 100000, {
+      error: 'Expected members is too large',
+    }),
   slug: z
     .string()
     .min(3, { error: 'Slug must be at least 3 characters' })
@@ -66,7 +90,7 @@ function CreateOrgContent() {
 
   const form = useForm<z.infer<typeof createOrgSchema>>({
     resolver: zodResolver(createOrgSchema),
-    defaultValues: { name: '', slug: '' },
+    defaultValues: { name: '', description: '', expectedMembers: '', slug: '' },
     mode: 'onChange',
   })
 
@@ -146,7 +170,10 @@ function CreateOrgContent() {
       const response = await fetch('/api/organizations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          expectedMembers: Number(values.expectedMembers),
+        }),
       })
 
       const data = await response.json()
@@ -206,6 +233,62 @@ function CreateOrgContent() {
                     />
                     <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
                       <Building2Icon aria-hidden='true' size={12} />
+                    </div>
+                  </div>
+                  {fieldState.error && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='description'
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Organization Description</FieldLabel>
+                  <p className='text-2xs text-muted-foreground -mt-1.5'>
+                    This will appear in your application.
+                  </p>
+                  <div className='relative'>
+                    <Textarea
+                      {...field}
+                      rows={3}
+                      placeholder='Briefly describe your organization'
+                      aria-invalid={fieldState.invalid}
+                      className='peer ps-7 resize-none'
+                    />
+                    <div className='pointer-events-none absolute top-2.5 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
+                      <Text aria-hidden='true' size={12} />
+                    </div>
+                  </div>
+                  {fieldState.error && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='expectedMembers'
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Expected Members</FieldLabel>
+                  <p className='text-2xs text-muted-foreground -mt-1.5'>
+                    Rough estimate for your initial team size.
+                  </p>
+                  <div className='relative'>
+                    <Input
+                      {...field}
+                      inputMode='numeric'
+                      placeholder='e.g. 25'
+                      aria-invalid={fieldState.invalid}
+                      className='peer ps-7'
+                    />
+                    <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80 peer-disabled:opacity-50'>
+                      <Users aria-hidden='true' size={12} />
                     </div>
                   </div>
                   {fieldState.error && (

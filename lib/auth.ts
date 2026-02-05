@@ -12,10 +12,14 @@ if (!process.env.JWT_SECRET) console.warn('JWT_SECRET')
 
 const CURRENT_ORG_COOKIE = 'currentOrganization'
 
-export async function createSessionToken(email: string): Promise<string> {
+export async function createSessionToken(
+  email: string,
+  claims?: { isSuperAdmin?: boolean }
+): Promise<string> {
   const payload: JWTPayload = {
     email: email,
     jti: nanoid(),
+    ...(claims?.isSuperAdmin ? { isSuperAdmin: true } : {}),
   }
 
   const token = await new SignJWT(payload)
@@ -83,8 +87,12 @@ export async function getTokenServer(
   }
 }
 
-export async function setAuthCookie(email: string, response: NextResponse) {
-  const token = await createSessionToken(email)
+export async function setAuthCookie(
+  email: string,
+  response: NextResponse,
+  claims?: { isSuperAdmin?: boolean }
+) {
+  const token = await createSessionToken(email, claims)
   response.cookies.set({
     name: 'authToken',
     value: token,

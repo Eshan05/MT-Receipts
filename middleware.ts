@@ -19,25 +19,12 @@ import {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (isStaticPath(pathname)) {
-    return NextResponse.next()
-  }
+  if (isStaticPath(pathname)) return NextResponse.next()
+  if (isPublicPath(pathname)) return NextResponse.next()
 
-  if (isApiRoute(pathname)) {
-    return NextResponse.next()
-  }
+  if (isPublicReceiptView(pathname)) return handlePublicReceiptView(request)
 
-  if (isPublicPath(pathname)) {
-    return NextResponse.next()
-  }
-
-  if (isPublicReceiptView(pathname)) {
-    return handlePublicReceiptView(request)
-  }
-
-  if (isSuperAdminPath(pathname)) {
-    return handleSuperAdminRoutes(request)
-  }
+  if (isSuperAdminPath(pathname)) return handleSuperAdminRoutes(request)
 
   const slug = extractSlugFromPath(pathname)
 
@@ -105,7 +92,6 @@ async function handleSuperAdminRoutes(
   }
 
   const verifiedToken = await verifyAuthToken(token)
-
   if (!verifiedToken || !verifiedToken.isSuperAdmin) {
     const url = request.nextUrl.clone()
     url.pathname = '/'

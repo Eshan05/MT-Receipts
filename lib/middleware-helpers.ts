@@ -11,13 +11,14 @@ export const PUBLIC_PATHS = [
   '/api/users',
 ]
 
-export const SUPERADMIN_PATHS = ['/superadmin', '/api/superadmins']
+export const SUPERADMIN_PATHS = ['/s', '/superadmin', '/api/admins']
 
 export const STATIC_PATHS = ['/favicon.ico', '/_next', '/api']
 
 export const NON_TENANT_PATHS = [
   'v',
   'api',
+  's',
   'superadmin',
   'login',
   'signup',
@@ -39,7 +40,9 @@ export function isPublicPath(pathname: string): boolean {
 }
 
 export function isSuperAdminPath(pathname: string): boolean {
-  return SUPERADMIN_PATHS.some((saPath) => pathname.startsWith(saPath))
+  return SUPERADMIN_PATHS.some(
+    (saPath) => pathname === saPath || pathname.startsWith(`${saPath}/`)
+  )
 }
 
 export function isNonTenantPath(firstSegment: string): boolean {

@@ -901,7 +901,7 @@ Runs as a one-time operation during the multi-tenancy rollout:
 - [ ] Create `app/(superadmin)/organizations/page.tsx` - all orgs list
 - [ ] Create `app/(superadmin)/organizations/[slug]/page.tsx` - manage org
 - [ ] Create `app/(superadmin)/users/page.tsx` - all users list
-- [ ] Create `app/(superadmin)/deleted/page.tsx` - deleted orgs (restorable)
+- [ ] Create `app/(superadmin)/deleted/page.tsx` - deleted orgs (restorable) [NOTE: NO NEED TO MAKE SEPARATE PAGE, CAN BE A FILTER ON THE ORGANIZATIONS PAGE]
 - [ ] Create `app/api/superadmin/organizations/route.ts`
 - [ ] Create `app/api/superadmin/organizations/[slug]/route.ts`:
   - PATCH: Approve, suspend, update limits
