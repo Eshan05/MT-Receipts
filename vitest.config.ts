@@ -50,6 +50,7 @@ export default defineConfig({
             '__tests__/lib/auth.test.ts',
             '__tests__/lib/receipt-number.test.ts',
             '__tests__/lib/organization-branding.test.ts',
+            '__tests__/lib/b2-s3.test.ts',
             '__tests__/api/superadmin/**/*.test.ts',
           ],
           testTimeout: 30000,

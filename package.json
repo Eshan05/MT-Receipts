@@ -29,6 +29,7 @@
     "bun": ">=1.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
     "@hookform/resolvers": "^5.2.2",
     "@loskir/styled-qr-code-node": "^1.5.2",
     "@react-email/components": "^1.0.7",
