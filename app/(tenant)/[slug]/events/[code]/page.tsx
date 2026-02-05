@@ -120,6 +120,7 @@ function exportToJSON(entries: EventEntry[], eventCode: string) {
 export default function EventEntriesPage() {
   const params = useParams()
   const code = params.code as string
+  const slug = params.slug as string
 
   const [event, setEvent] = useState<IEvent | null>(null)
   const [entries, setEntries] = useState<EventEntry[]>([])
@@ -214,7 +215,7 @@ export default function EventEntriesPage() {
             {error || 'Event not found'}
           </p>
           <Button asChild>
-            <Link href='/events'>
+            <Link href={`/${slug}/events`}>
               <ArrowLeft className='w-4 h-4 mr-2' />
               Back to Events
             </Link>
@@ -233,7 +234,7 @@ export default function EventEntriesPage() {
         <div className='flex justify-between items-center gap-4 my-2'>
           <div className='flex items-center gap-2'>
             <Button variant='ghost' size='icon' asChild>
-              <Link href='/events'>
+              <Link href={`/${slug}/events`}>
                 <ArrowLeft className='w-4 h-4' />
               </Link>
             </Button>

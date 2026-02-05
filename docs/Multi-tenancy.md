@@ -702,7 +702,7 @@ const gzip = createGzip()
 
 ### Scheduled Backup Job
 
-**Cron Endpoint (`app/api/cron/backup-tenants/route.ts`):**
+**Cron Endpoint (`app/api/crons/backup-tenants/route.ts`):**
 
 - Verifies `CRON_SECRET` authorization header
 - Iterates all active tenants
@@ -965,7 +965,7 @@ Runs as a one-time operation during the multi-tenancy rollout:
 **Goal:** Production readiness
 
 - [ ] Create seed data for testing multiple orgs
-- [ ] Create data migration script for existing ACES deployment (`scripts/migrate-existing-data.ts`)
+- [ ] Create data migration script for existing ACES deployment (`scripts/migrate-existing-data.ts`) (Already migrated)
 - [ ] Test cross-tenant isolation thoroughly
 - [ ] Test super admin flows
 - [ ] Test invite flows (email and code)
@@ -973,7 +973,7 @@ Runs as a one-time operation during the multi-tenancy rollout:
 - [ ] Performance test with multiple databases
 - [ ] Create admin documentation
 - [ ] Create user documentation
-- [ ] Deploy staging environment
+- [ ] Deploy staging environment (Not needed)
 - [ ] Production deployment
 
 ---
@@ -1045,7 +1045,7 @@ ORGANIZATION_RETENTION_DAYS=30
   ],
   "crons": [
     {
-      "path": "/api/cron/purge-deleted-orgs",
+      "path": "/api/crons/purge-deleted-orgs",
       "schedule": "0 3 * * *"
     } // Actually cron jobs aren't available in Hobby. But it's for an idea, we can use another service
   ]

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       const { generateReceiptQRCode } = await import('@/lib/qr-code')
       qrCodeData = await generateReceiptQRCode(
         receiptNumber,
-        config.organizationName || ctx.organization.name
+        ctx.organization.slug
       )
     }
 

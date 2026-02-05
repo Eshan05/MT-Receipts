@@ -72,6 +72,7 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
@@ -110,6 +111,9 @@ interface EntryCounts {
 }
 
 export default function EventsPage() {
+  const params = useParams()
+  const slug = params.slug as string
+
   const [itemCounts, setItemCounts] = useState<ItemCounts>({})
   const [entryCounts, setEntryCounts] = useState<EntryCounts>({})
   const [open, setOpen] = useState(false)
@@ -276,7 +280,7 @@ export default function EventsPage() {
   const handleShareEvent = (e: React.MouseEvent, event: IEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const url = `${window.location.origin}/events/${event.eventCode}`
+    const url = `${window.location.origin}/${slug}/events/${event.eventCode}`
     navigator.clipboard.writeText(url)
     toast.success('Link copied to clipboard')
   }

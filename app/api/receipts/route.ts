@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
         const result = await sendReceiptEmail({
           to: receipt.customer.email,
           receiptNumber: receipt.receiptNumber,
+          organizationSlug: ctx.organization.slug,
           customerName: receipt.customer.name,
           customerPhone: receipt.customer.phone,
           customerAddress: receipt.customer.address,

@@ -152,9 +152,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       organization.restoresBefore = undefined
       break
     case 'delete': {
+      const retentionDaysRaw = process.env.ORGANIZATION_RETENTION_DAYS
+      const retentionDaysParsed = retentionDaysRaw
+        ? Number.parseInt(retentionDaysRaw, 10)
+        : 30
+      const retentionDays =
+        Number.isFinite(retentionDaysParsed) && retentionDaysParsed > 0
+          ? retentionDaysParsed
+          : 30
+
       const deletedAt = new Date()
       const restoresBefore = new Date(deletedAt)
-      restoresBefore.setDate(restoresBefore.getDate() + 30)
+      restoresBefore.setDate(restoresBefore.getDate() + retentionDays)
 
       organization.status = 'deleted'
       organization.deletedAt = deletedAt

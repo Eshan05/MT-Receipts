@@ -51,7 +51,7 @@ import { PDFViewer } from '@react-pdf/renderer'
 import { getTemplateComponent, getAllTemplateInfo } from '@/lib/templates'
 import { useMemo } from 'react'
 import { IEvent } from '@/models/event.model'
-import { EntryForm } from '@/app/(root)/events/[code]/_components/entry-form'
+import { EntryForm } from '@/app/(tenant)/[slug]/events/[code]/_components/entry-form'
 import {
   Select,
   SelectContent,

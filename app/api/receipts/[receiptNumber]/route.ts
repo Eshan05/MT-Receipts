@@ -192,7 +192,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const { generateReceiptQRCode } = await import('@/lib/qr-code')
         qrCodeData = await generateReceiptQRCode(
           receiptNumber,
-          organization.name
+          organization.slug
         )
       }
 
