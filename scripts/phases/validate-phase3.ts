@@ -4,10 +4,10 @@ import {
   getCurrentOrgSlug,
   setCurrentOrgCookie,
   clearCurrentOrgCookie,
-} from '../lib/auth'
+} from '../../lib/auth'
 import { NextResponse } from 'next/server'
-import { isSlugReserved } from '../lib/reserved-slugs'
-import Organization from '../models/organization.model'
+import { isSlugReserved } from '../../lib/reserved-slugs'
+import Organization from '../../models/organization.model'
 import User from '@/models/user.model'
 import dbConnect from '@/lib/db-conn'
 import fs from 'fs'

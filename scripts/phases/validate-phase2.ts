@@ -5,21 +5,21 @@ import {
   getCachedOrganization,
   setCachedOrganization,
   invalidateCachedOrganization,
-} from '../lib/redis'
+} from '../../lib/redis'
 import {
   isStaticPath,
   isPublicPath,
   isSuperAdminPath,
   extractSlugFromPath,
   isReservedSlug,
-} from '../lib/middleware-helpers'
+} from '../../lib/middleware-helpers'
 import {
   resolveOrganization,
   getOrganizationErrorPath,
-} from '../lib/organization-context'
-import Organization from '../models/organization.model'
-import User from '../models/user.model'
-import { getMasterConnection } from '../lib/db/conn'
+} from '../../lib/organization-context'
+import Organization from '../../models/organization.model'
+import User from '../../models/user.model'
+import { getMasterConnection } from '../../lib/db/conn'
 
 const COLORS = {
   green: '\x1b[32m',

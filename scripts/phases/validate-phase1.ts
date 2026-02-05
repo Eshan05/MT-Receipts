@@ -1,20 +1,24 @@
 import 'dotenv/config'
 import mongoose from 'mongoose'
-import User from '../models/user.model'
-import Organization from '../models/organization.model'
-import MembershipRequest from '../models/membership-request.model'
-import SMTPVault from '../models/smtp-vault.model'
-import { getMasterConnection, resetMasterConnection } from '../lib/db/conn'
+import User from '../../models/user.model'
+import Organization from '../../models/organization.model'
+import MembershipRequest from '../../models/membership-request.model'
+import SMTPVault from '../../models/smtp-vault.model'
+import { getMasterConnection, resetMasterConnection } from '../../lib/db/conn'
 import {
   getTenantConnection,
   closeTenantConnection,
   clearAllTenantConnections,
-} from '../lib/db/tenant'
-import { getTenantModels, clearModelCache } from '../lib/db/tenant-models'
+} from '../../lib/db/tenant'
+import { getTenantModels, clearModelCache } from '../../lib/db/tenant-models'
 import Migration, {
   createMigrationModel,
-} from '../models/tenant/migration.model'
-import { encrypt, decrypt, validateEncryptionConfig } from '../lib/encryption'
+} from '../../models/tenant/migration.model'
+import {
+  encrypt,
+  decrypt,
+  validateEncryptionConfig,
+} from '../../lib/encryption'
 
 const COLORS = {
   green: '\x1b[32m',
