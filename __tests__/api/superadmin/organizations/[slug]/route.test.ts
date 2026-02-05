@@ -53,7 +53,7 @@ describe('/api/admins/organizations/[slug]', () => {
       slug: 'aces',
       name: 'ACES',
       status: 'active',
-      limits: { maxEvents: -1, maxReceiptsPerMonth: -1, maxUsers: -1 },
+      limits: { maxEvents: 10, maxReceiptsPerMonth: 100, maxUsers: 25 },
       save,
     } as never)
 
@@ -83,7 +83,7 @@ describe('/api/admins/organizations/[slug]', () => {
       slug: 'aces',
       name: 'ACES',
       status: 'active',
-      limits: { maxEvents: -1, maxReceiptsPerMonth: -1, maxUsers: -1 },
+      limits: { maxEvents: 10, maxReceiptsPerMonth: 100, maxUsers: 25 },
       deletedAt: undefined,
       restoresBefore: undefined,
       save,

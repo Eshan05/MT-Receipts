@@ -166,6 +166,34 @@ describe('POST /api/memberships', () => {
   })
 
   describe('Join Organization', () => {
+    it('returns 403 when organization maxUsers is reached', async () => {
+      const limitedUser = await User.create({
+        username: `mem-limit-${Date.now()}`,
+        email: `mem-limit-${Date.now()}@test.local`,
+        passhash: 'hashedpassword',
+        memberships: [],
+      })
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': 2,
+      })
+
+      vi.mocked(getTokenServer).mockResolvedValue('token')
+      vi.mocked(verifyAuthToken).mockResolvedValue({ email: limitedUser.email })
+
+      const request = new NextRequest('http://localhost:3000/api/memberships', {
+        method: 'POST',
+        body: JSON.stringify({ inviteCode: 'VALIDCODE1' }),
+      })
+      const response = await POST(request)
+      expect(response.status).toBe(403)
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': -1,
+      })
+      await User.findByIdAndDelete(limitedUser._id)
+    })
+
     it('returns 404 for invalid invite code', async () => {
       vi.mocked(getTokenServer).mockResolvedValue('token')
       vi.mocked(verifyAuthToken).mockResolvedValue({ email: newUser.email })

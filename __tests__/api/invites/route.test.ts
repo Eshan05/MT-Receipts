@@ -355,4 +355,90 @@ describe('POST /api/invites', () => {
       expect(data.error).toContain('pending')
     })
   })
+
+  describe('Limits', () => {
+    it('returns 403 when maxUsers would be exceeded (email invite)', async () => {
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': 2,
+      })
+
+      vi.mocked(getTokenServer).mockResolvedValue('admin-token')
+      vi.mocked(verifyAuthToken).mockResolvedValue({ email: adminUser.email })
+
+      const request = new NextRequest('http://localhost:3000/api/invites', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'email',
+          organizationSlug: organization.slug,
+          email: `over-limit-${Date.now()}@test.local`,
+        }),
+      })
+      const response = await POST(request)
+      expect(response.status).toBe(403)
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': -1,
+      })
+    })
+
+    it('returns 403 when maxUsers would be exceeded (code invite reserves maxUses slots)', async () => {
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': 4,
+      })
+
+      vi.mocked(getTokenServer).mockResolvedValue('admin-token')
+      vi.mocked(verifyAuthToken).mockResolvedValue({ email: adminUser.email })
+
+      const request = new NextRequest('http://localhost:3000/api/invites', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'code',
+          organizationSlug: organization.slug,
+          maxUses: 3,
+        }),
+      })
+      const response = await POST(request)
+      expect(response.status).toBe(403)
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': -1,
+      })
+    })
+
+    it('counts pending code invite remaining uses toward maxUsers', async () => {
+      await MembershipRequest.create({
+        organizationId: organization._id,
+        organizationSlug: organization.slug,
+        type: 'code',
+        code: `PENDING${Date.now()}`.slice(0, 10).toUpperCase(),
+        invitedBy: adminUser._id,
+        role: 'member',
+        status: 'pending',
+        maxUses: 5,
+        usedCount: 2,
+      })
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': 5,
+      })
+
+      vi.mocked(getTokenServer).mockResolvedValue('admin-token')
+      vi.mocked(verifyAuthToken).mockResolvedValue({ email: adminUser.email })
+
+      const request = new NextRequest('http://localhost:3000/api/invites', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'email',
+          organizationSlug: organization.slug,
+          email: `blocked-${Date.now()}@test.local`,
+        }),
+      })
+      const response = await POST(request)
+      expect(response.status).toBe(403)
+
+      await Organization.findByIdAndUpdate(organization._id, {
+        'limits.maxUsers': -1,
+      })
+    })
+  })
 })

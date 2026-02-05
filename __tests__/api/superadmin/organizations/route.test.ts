@@ -63,7 +63,7 @@ describe('GET /api/admins/organizations', () => {
         description: 'desc',
         logoUrl: '',
         status: 'active',
-        limits: { maxEvents: -1, maxReceiptsPerMonth: -1, maxUsers: -1 },
+        limits: { maxEvents: 10, maxReceiptsPerMonth: 100, maxUsers: 25 },
         settings: { primaryColor: '#123456' },
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         approvedAt: undefined,
