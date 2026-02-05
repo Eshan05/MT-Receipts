@@ -34,14 +34,20 @@ import { OrganizationSettingsCredenza } from '@/components/organization/organiza
 interface NavUserProps {
   user: ContextUser | undefined | null
   onViewReceipts?: () => void
+  mode?: 'tenant' | 'superadmin'
 }
 
-export function NavUser({ user, onViewReceipts }: NavUserProps) {
+export function NavUser({
+  user,
+  onViewReceipts,
+  mode = 'tenant',
+}: NavUserProps) {
   const { isMobile } = useSidebar()
   const { logout, currentOrganization } = useAuth()
   const [vaultOpen, setVaultOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const isAdmin = currentOrganization?.role === 'admin'
+  const isSuperAdminMode = mode === 'superadmin'
 
   return (
     <SidebarMenu>
@@ -95,7 +101,7 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              {currentOrganization && (
+              {!isSuperAdminMode && currentOrganization && (
                 <>
                   <DropdownMenuItem
                     className='cursor-pointer'
@@ -121,6 +127,14 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
                   </DropdownMenuItem>
                 </>
               )}
+              {isSuperAdminMode && (
+                <DropdownMenuItem asChild>
+                  <Link href='/s/dashboard' className='cursor-pointer'>
+                    <SettingsIcon className='h-4 w-4' />
+                    Superadmin Dashboard
+                  </Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -145,11 +159,15 @@ export function NavUser({ user, onViewReceipts }: NavUserProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <OrganizationSettingsCredenza
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      />
-      <EmailVaultCredenza open={vaultOpen} onOpenChange={setVaultOpen} />
+      {!isSuperAdminMode && (
+        <>
+          <OrganizationSettingsCredenza
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+          />
+          <EmailVaultCredenza open={vaultOpen} onOpenChange={setVaultOpen} />
+        </>
+      )}
     </SidebarMenu>
   )
 }

@@ -29,6 +29,7 @@ export default defineConfig({
             '__tests__/api/**/*.test.ts',
             '__tests__/tenant/**/*.test.ts',
           ],
+          exclude: ['__tests__/api/superadmin/**/*.test.ts'],
           testTimeout: 300000,
           hookTimeout: 600000,
           maxConcurrency: 1,
@@ -44,6 +45,9 @@ export default defineConfig({
           include: [
             '__tests__/lib/middleware-helpers.test.ts',
             '__tests__/lib/auth.test.ts',
+            '__tests__/lib/receipt-number.test.ts',
+            '__tests__/lib/organization-branding.test.ts',
+            '__tests__/api/superadmin/**/*.test.ts',
           ],
           testTimeout: 30000,
         },
