@@ -25,12 +25,16 @@ interface ColumnOptions {
   isAdmin: boolean
   currentUserId?: string
   onUpdate?: () => void
+  mode?: 'tenant' | 'superadmin'
+  organizationSlug?: string
 }
 
 export function createColumns({
   isAdmin,
   currentUserId,
   onUpdate,
+  mode = 'tenant',
+  organizationSlug,
 }: ColumnOptions): ColumnDef<Member>[] {
   const joinedViaLabel = (value: Member['joinedVia']) => {
     switch (value) {
@@ -301,6 +305,8 @@ export function createColumns({
           isAdmin={isAdmin}
           currentUserId={currentUserId}
           onUpdate={onUpdate}
+          mode={mode}
+          organizationSlug={organizationSlug}
         />
       ),
     })

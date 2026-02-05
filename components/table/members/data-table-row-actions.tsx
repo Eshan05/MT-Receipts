@@ -30,6 +30,8 @@ interface DataTableRowActionsProps<TData> {
   isAdmin: boolean
   currentUserId?: string
   onUpdate?: () => void
+  mode?: 'tenant' | 'superadmin'
+  organizationSlug?: string
 }
 
 export function DataTableRowActions<TData>({
@@ -37,21 +39,25 @@ export function DataTableRowActions<TData>({
   isAdmin,
   currentUserId,
   onUpdate,
+  mode = 'tenant',
+  organizationSlug,
 }: DataTableRowActionsProps<TData>) {
   const [isRemoveOpen, setIsRemoveOpen] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
   const member = row.original as Member
   const { currentOrganization } = useAuth()
-  const orgSlug = currentOrganization?.slug
+  const targetSlug = organizationSlug ?? currentOrganization?.slug
+  const apiBase =
+    mode === 'superadmin' ? '/api/admins/organizations' : '/api/organizations'
 
   const isCurrentUser = member.userId === currentUserId
 
   const handleRoleChange = async (newRole: 'admin' | 'member') => {
-    if (!orgSlug) return
+    if (!targetSlug) return
 
     try {
       const res = await fetch(
-        `/api/organizations/${orgSlug}/members/${member.userId}`,
+        `${apiBase}/${targetSlug}/members/${member.userId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -72,12 +78,12 @@ export function DataTableRowActions<TData>({
   }
 
   const handleRemove = async () => {
-    if (!orgSlug) return
+    if (!targetSlug) return
 
     setIsRemoving(true)
     try {
       const res = await fetch(
-        `/api/organizations/${orgSlug}/members/${member.userId}`,
+        `${apiBase}/${targetSlug}/members/${member.userId}`,
         {
           method: 'DELETE',
         }

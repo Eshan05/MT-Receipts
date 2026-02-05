@@ -54,6 +54,9 @@ interface OrganizationSettings {
 interface OrganizationSettingsCredenzaProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  mode?: 'tenant' | 'superadmin'
+  organizationSlug?: string
+  onUpdated?: () => void
 }
 
 interface FormatToken {
@@ -141,6 +144,9 @@ function areTokenListsEqual(a: FormatToken[], b: FormatToken[]): boolean {
 export function OrganizationSettingsCredenza({
   open,
   onOpenChange,
+  mode = 'tenant',
+  organizationSlug,
+  onUpdated,
 }: OrganizationSettingsCredenzaProps) {
   const { currentOrganization } = useAuth()
   const [loading, setLoading] = useState(false)
@@ -187,23 +193,32 @@ export function OrganizationSettingsCredenza({
     },
   ]
 
-  const isAdmin = currentOrganization?.role === 'admin'
+  const isSuperadminMode = mode === 'superadmin'
+  const targetSlug = organizationSlug ?? currentOrganization?.slug
+  const canEdit = isSuperadminMode
+    ? true
+    : currentOrganization?.role === 'admin'
 
   const loadSettings = useCallback(async () => {
-    if (!currentOrganization) return
+    if (!targetSlug) return
     try {
-      const res = await fetch(`/api/organizations/${currentOrganization.slug}`)
+      const res = await fetch(
+        isSuperadminMode
+          ? `/api/admins/organizations/${targetSlug}`
+          : `/api/organizations/${targetSlug}`
+      )
       if (res.ok) {
         const data = await res.json()
+        const source = isSuperadminMode ? data.organization || {} : data
         const receiptNumberFormat =
-          data.settings?.receiptNumberFormat ||
+          source.settings?.receiptNumberFormat ||
           'RCP-{eventCode}-{initials}{seq}'
         setSettings({
-          name: data.name || '',
-          description: data.description || '',
-          logoUrl: data.logoUrl || '',
-          primaryColor: data.settings?.primaryColor || '#3b82f6',
-          secondaryColor: data.settings?.secondaryColor || '#1e40af',
+          name: source.name || '',
+          description: source.description || '',
+          logoUrl: source.logoUrl || '',
+          primaryColor: source.settings?.primaryColor || '#3b82f6',
+          secondaryColor: source.settings?.secondaryColor || '#1e40af',
           receiptNumberFormat,
         })
         setFormatTokens(parseFormatTokens(receiptNumberFormat))
@@ -211,7 +226,7 @@ export function OrganizationSettingsCredenza({
     } catch {
       toast.error('Failed to load settings')
     }
-  }, [currentOrganization])
+  }, [isSuperadminMode, targetSlug])
 
   useEffect(() => {
     if (open) {
@@ -274,33 +289,58 @@ export function OrganizationSettingsCredenza({
   }
 
   const saveSettings = async () => {
-    if (!isAdmin) {
+    if (!canEdit) {
       toast.error('Only admins can update organization settings')
+      return
+    }
+
+    if (!targetSlug) {
+      toast.error('No organization selected')
       return
     }
 
     setLoading(true)
     try {
-      const res = await fetch(
-        `/api/organizations/${currentOrganization.slug}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const url = isSuperadminMode
+        ? `/api/admins/organizations/${targetSlug}`
+        : `/api/organizations/${targetSlug}`
+
+      const body = isSuperadminMode
+        ? {
+            action: 'config',
             name: settings.name,
             description: settings.description,
-            logoUrl: settings.logoUrl,
+            logoUrl: settings.logoUrl.trim() || undefined,
             settings: {
               primaryColor: settings.primaryColor,
               secondaryColor: settings.secondaryColor,
               receiptNumberFormat: settings.receiptNumberFormat,
             },
-          }),
-        }
-      )
+          }
+        : {
+            name: settings.name,
+            description: settings.description,
+            logoUrl: settings.logoUrl.trim() || undefined,
+            settings: {
+              primaryColor: settings.primaryColor,
+              secondaryColor: settings.secondaryColor,
+              receiptNumberFormat: settings.receiptNumberFormat,
+            },
+          }
+
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
 
       if (res.ok) {
-        toast.success('Settings updated')
+        toast.success(
+          isSuperadminMode
+            ? 'Configuration updated by superadmin'
+            : 'Settings updated'
+        )
+        onUpdated?.()
         onOpenChange(false)
       } else {
         const data = await res.json()
@@ -313,15 +353,19 @@ export function OrganizationSettingsCredenza({
     }
   }
 
-  if (!currentOrganization) return null
+  if (!targetSlug) return null
 
   return (
     <Credenza open={open} onOpenChange={onOpenChange}>
       <CredenzaContent className='sm:max-w-lg'>
         <CredenzaHeader>
-          <CredenzaTitle className=''>Organization Settings</CredenzaTitle>
+          <CredenzaTitle className=''>
+            {isSuperadminMode ? 'Organization Config' : 'Organization Settings'}
+          </CredenzaTitle>
           <CredenzaDescription>
-            Manage your organization's appearance and settings.
+            {isSuperadminMode
+              ? 'Superadmin override mode. Updates here bypass organization admin controls.'
+              : "Manage your organization's appearance and settings."}
           </CredenzaDescription>
         </CredenzaHeader>
 
@@ -336,7 +380,7 @@ export function OrganizationSettingsCredenza({
                   setSettings({ ...settings, name: e.target.value })
                 }
                 placeholder='ACES'
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
                 className='peer ps-7'
               />
               <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
@@ -355,7 +399,7 @@ export function OrganizationSettingsCredenza({
                   setSettings({ ...settings, description: e.target.value })
                 }
                 placeholder='Association of Computer Engineering Students'
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
                 rows={2}
                 className='peer ps-7 resize-none'
               />
@@ -375,7 +419,7 @@ export function OrganizationSettingsCredenza({
                   setSettings({ ...settings, logoUrl: e.target.value })
                 }
                 placeholder='https://example.com/logo.png'
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
                 className='peer ps-7'
               />
               <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
@@ -395,7 +439,7 @@ export function OrganizationSettingsCredenza({
                   <Button
                     variant='outline'
                     className='w-full justify-start gap-2 h-8'
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                   >
                     <div
                       className='w-4 h-4 rounded border'
@@ -437,7 +481,7 @@ export function OrganizationSettingsCredenza({
                   <Button
                     variant='outline'
                     className='w-full justify-start gap-2 h-8'
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                   >
                     <div
                       className='w-4 h-4 rounded border'
@@ -481,7 +525,7 @@ export function OrganizationSettingsCredenza({
                 value={settings.receiptNumberFormat}
                 onChange={(e) => handleReceiptFormatChange(e.target.value)}
                 placeholder='RCP-{eventCode}-{initials}{seq}'
-                readOnly={!isAdmin}
+                readOnly={!canEdit}
                 className='peer ps-7'
               />
               <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
@@ -489,7 +533,7 @@ export function OrganizationSettingsCredenza({
               </div>
             </div>
 
-            {isAdmin && (
+            {canEdit && (
               <div className='mt-3 space-y-2'>
                 <div className='text-xs font-medium text-muted-foreground'>
                   Drag to reorder, or add placeholders:
@@ -600,10 +644,10 @@ export function OrganizationSettingsCredenza({
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          {isAdmin && (
+          {canEdit && (
             <Button onClick={() => void saveSettings()} disabled={loading}>
               {loading && <Loader2Icon className='h-4 w-4 animate-spin mr-2' />}
-              Save Changes
+              {isSuperadminMode ? 'Save as Superadmin' : 'Save Changes'}
             </Button>
           )}
         </CredenzaFooter>

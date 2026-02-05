@@ -35,6 +35,8 @@ interface DataTableProps<TData, TValue> {
   isAdmin: boolean
   currentUserId?: string
   onUpdate?: () => void
+  mode?: 'tenant' | 'superadmin'
+  organizationSlug?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -43,6 +45,8 @@ export function DataTable<TData, TValue>({
   isAdmin,
   currentUserId,
   onUpdate,
+  mode = 'tenant',
+  organizationSlug,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -151,6 +155,8 @@ export function DataTable<TData, TValue>({
           currentUserId={currentUserId}
           onClearSelection={() => setRowSelection({})}
           onUpdate={onUpdate || (() => {})}
+          mode={mode}
+          organizationSlug={organizationSlug}
         />
       )}
     </>

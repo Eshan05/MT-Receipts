@@ -29,6 +29,8 @@ interface DataTableBulkActionsProps {
   currentUserId?: string
   onClearSelection: () => void
   onUpdate: () => void
+  mode?: 'tenant' | 'superadmin'
+  organizationSlug?: string
 }
 
 export function DataTableBulkActions({
@@ -36,11 +38,15 @@ export function DataTableBulkActions({
   currentUserId,
   onClearSelection,
   onUpdate,
+  mode = 'tenant',
+  organizationSlug,
 }: DataTableBulkActionsProps) {
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { currentOrganization } = useAuth()
-  const orgSlug = currentOrganization?.slug
+  const targetSlug = organizationSlug ?? currentOrganization?.slug
+  const apiBase =
+    mode === 'superadmin' ? '/api/admins/organizations' : '/api/organizations'
 
   const selectedCount = selectedMembers.length
   const userIds = selectedMembers.map((m) => m.userId)
@@ -53,11 +59,11 @@ export function DataTableBulkActions({
   const hasAdmins = selectedMembers.some((m) => m.role === 'admin')
 
   const handleBulkRoleChange = async (newRole: 'admin' | 'member') => {
-    if (!orgSlug) return
+    if (!targetSlug) return
 
     setIsProcessing(`change to ${newRole}`)
     try {
-      const res = await fetch(`/api/organizations/${orgSlug}/members`, {
+      const res = await fetch(`${apiBase}/${targetSlug}/members`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds, role: newRole }),
@@ -79,14 +85,14 @@ export function DataTableBulkActions({
   }
 
   const handleBulkRemove = async () => {
-    if (!orgSlug) return
+    if (!targetSlug) return
 
     const membersToRemove = nonCurrentUserMembers.map((m) => m.userId)
     if (membersToRemove.length === 0) return
 
     setIsProcessing('remove')
     try {
-      const res = await fetch(`/api/organizations/${orgSlug}/members`, {
+      const res = await fetch(`${apiBase}/${targetSlug}/members`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds: membersToRemove }),
