@@ -49,10 +49,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import type { IconType } from 'react-icons'
 import { cn } from '@/lib/utils'
-import { EntryForm } from './_components/entry-form'
-import { EventForm } from '../_components/event-form'
+import { EntryForm } from '../../../../../components/forms/entry-form'
+import { EventForm } from '../../../../../components/forms/event-form'
 import { toast } from 'sonner'
-import { CSVImportModal } from '@/components/csv-import-modal'
+import { CSVImportModal } from '@/components/organization/csv-import-modal'
 import { iconMap, defaultIcons } from '@/utils/mappings'
 
 function exportToCSV(entries: EventEntry[], eventCode: string) {

@@ -1,4 +1,4 @@
-import TenantErrorPage from '@/components/tenant/tenant-error-page'
+import TenantErrorPage from '@/components/shared/tenant-error-page'
 
 export default function OrgNotFound() {
   return <TenantErrorPage type='not-found' />

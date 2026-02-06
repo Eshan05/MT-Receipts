@@ -34,7 +34,7 @@ import {
   ColorPickerAlpha,
   ColorPickerFormat,
   type RgbaValue,
-} from '@/components/kibo-ui/color-picker'
+} from '@/components/derived/color-picker'
 import {
   receiptSchema,
   type ReceiptFormValues,

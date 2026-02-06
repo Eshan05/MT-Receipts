@@ -1,4 +1,4 @@
-import { ModeToggle } from '@/components/extra/mode-toggle'
+import { ModeToggle } from '@/components/shared/mode-toggle'
 import AdminSidebar from '@/components/navigation/app-sidebar'
 import {
   SidebarInset,

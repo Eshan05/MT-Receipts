@@ -76,11 +76,11 @@ import { useParams } from 'next/navigation'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import type { IconType } from 'react-icons'
 import { toast } from 'sonner'
-import { EventForm } from './_components/event-form'
+import { EventForm } from '../../../../components/forms/event-form'
 import {
   EventFilters as EventFiltersComponent,
   type EventFilters,
-} from './_components/event-filters'
+} from '../../../../components/forms/event-filters'
 import { useInfiniteEvents } from '@/hooks/use-infinite-events'
 
 type SortOption =

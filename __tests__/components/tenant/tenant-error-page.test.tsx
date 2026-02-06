@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => {
 import TenantErrorPage, {
   ERROR_CONFIGS,
   TenantErrorType,
-} from '@/components/tenant/tenant-error-page'
+} from '@/components/shared/tenant-error-page'
 
 describe('TenantErrorPage Component', () => {
   const errorTypes: TenantErrorType[] = [

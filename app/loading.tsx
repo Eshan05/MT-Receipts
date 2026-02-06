@@ -1,4 +1,4 @@
-import { CircularBarsSpinnerLoader } from '@/components/extra/staggered-loader'
+import { CircularBarsSpinnerLoader } from '@/components/shared/staggered-loader'
 
 export default function RootLoading() {
   return (

@@ -6,7 +6,7 @@ import type { TemplateInfo } from '@/lib/templates/types'
 import { CalendarDays, FileText, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ReceiptForm } from './_components/receipt-form'
+import { ReceiptForm } from '../../../../components/forms/receipt-form'
 import { useParams } from 'next/navigation'
 
 export default function ReceiptsPage() {

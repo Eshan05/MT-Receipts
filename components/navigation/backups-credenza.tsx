@@ -123,7 +123,7 @@ export function BackupsCredenza({ open, onOpenChange }: BackupsCredenzaProps) {
         </CredenzaHeader>
 
         <CredenzaBody className='space-y-3'>
-          <div className='rounded-md border p-3 space-y-1'>
+          <div className='rounded-md p-2 space-y-1'>
             <div className='flex items-center justify-between gap-2'>
               <p className='text-sm font-medium flex items-center gap-2'>
                 <ShieldCheck className='w-4 h-4 text-muted-foreground' />

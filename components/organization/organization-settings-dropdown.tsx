@@ -14,7 +14,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { ColorPickerOutput, RgbaValue } from '@/components/kibo-ui/color-picker'
+import { ColorPickerOutput, RgbaValue } from '@/components/derived/color-picker'
 import { Button } from '@/components/ui/button'
 import {
   Credenza,
@@ -39,7 +39,7 @@ import {
   ColorPickerHue,
   ColorPickerAlpha,
   ColorPickerFormat,
-} from '@/components/kibo-ui/color-picker'
+} from '@/components/derived/color-picker'
 import { motion, Reorder } from 'framer-motion'
 
 interface OrganizationSettings {

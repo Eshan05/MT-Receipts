@@ -1,4 +1,4 @@
-import NFB from '@/components/extra/404'
+import NFB from '@/components/shared/404'
 
 export default function NotFound() {
   return (
