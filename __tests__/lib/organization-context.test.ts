@@ -12,7 +12,7 @@ import {
   isOrganizationDeleted,
   getOrganizationErrorPath,
   createOrganizationHeaders,
-} from '@/lib/organization-context'
+} from '@/lib/tenants/organization-context'
 import { getCachedOrganization, setCachedOrganization } from '@/lib/redis'
 import Organization from '@/models/organization.model'
 import mongoose from 'mongoose'

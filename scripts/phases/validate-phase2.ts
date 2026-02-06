@@ -16,7 +16,7 @@ import {
 import {
   resolveOrganization,
   getOrganizationErrorPath,
-} from '../../lib/organization-context'
+} from '../../lib/tenants/organization-context'
 import Organization from '../../models/organization.model'
 import User from '../../models/user.model'
 import { getMasterConnection } from '../../lib/db/conn'

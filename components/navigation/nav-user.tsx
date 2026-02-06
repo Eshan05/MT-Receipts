@@ -2,6 +2,7 @@
 
 import {
   ChevronsUpDown,
+  DatabaseBackup,
   FileTextIcon,
   Heart,
   KeyRound,
@@ -30,6 +31,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
 import { OrganizationSettingsCredenza } from '@/components/organization/organization-settings-dropdown'
+import { BackupsCredenza } from '@/components/navigation/backups-credenza'
 
 interface NavUserProps {
   user: ContextUser | undefined | null
@@ -46,6 +48,7 @@ export function NavUser({
   const { logout, currentOrganization } = useAuth()
   const [vaultOpen, setVaultOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [backupsOpen, setBackupsOpen] = useState(false)
   const isAdmin = currentOrganization?.role === 'admin'
   const isSuperAdminMode = mode === 'superadmin'
 
@@ -128,12 +131,21 @@ export function NavUser({
                 </>
               )}
               {isSuperAdminMode && (
-                <DropdownMenuItem asChild>
-                  <Link href='/s/dashboard' className='cursor-pointer'>
-                    <SettingsIcon className='h-4 w-4' />
-                    Superadmin Dashboard
-                  </Link>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href='/s/dashboard' className='cursor-pointer'>
+                      <SettingsIcon className='h-4 w-4' />
+                      Superadmin Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className='cursor-pointer'
+                    onClick={() => setBackupsOpen(true)}
+                  >
+                    <DatabaseBackup className='h-4 w-4' />
+                    Backups
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -167,6 +179,9 @@ export function NavUser({
           />
           <EmailVaultCredenza open={vaultOpen} onOpenChange={setVaultOpen} />
         </>
+      )}
+      {isSuperAdminMode && (
+        <BackupsCredenza open={backupsOpen} onOpenChange={setBackupsOpen} />
       )}
     </SidebarMenu>
   )

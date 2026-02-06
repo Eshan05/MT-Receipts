@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrganizationContext } from '@/lib/organization-context'
+import { getOrganizationContext } from '@/lib/tenants/organization-context'
 import SMTPVault from '@/models/smtp-vault.model'
-import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
+import { encryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 
 interface RouteParams {
   params: Promise<{ id: string }>

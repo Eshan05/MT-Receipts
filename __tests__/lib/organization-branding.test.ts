@@ -15,7 +15,7 @@ vi.mock('@/models/organization.model', () => ({
 
 import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
-import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
+import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
 
 describe('getOrganizationBrandingBySlug', () => {
   beforeEach(() => {

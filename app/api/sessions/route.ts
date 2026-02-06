@@ -11,7 +11,7 @@ import {
   getTokenServer,
   getCurrentOrgSlug,
   setCurrentOrgCookie,
-} from '@/lib/auth'
+} from '@/lib/auth/auth'
 import { setCachedOrganization } from '@/lib/redis'
 import { z } from 'zod'
 

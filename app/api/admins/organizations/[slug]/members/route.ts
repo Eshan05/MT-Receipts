@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import MembershipRequest from '@/models/membership-request.model'

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import type mongoose from 'mongoose'
-import type { TenantContext } from '@/lib/tenant-route'
+import type { TenantContext } from '@/lib/auth/tenant-route'
 import {
   getOrganizationLimits,
   getRolling30DaysStart,
   getUserSlotUsage,
   isUnlimited,
-} from '@/lib/limits'
+} from '@/lib/tenants/limits'
 
 function quotaExceeded(payload: {
   resource: 'events' | 'receipts' | 'users'

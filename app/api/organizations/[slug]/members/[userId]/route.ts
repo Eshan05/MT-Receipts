@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'

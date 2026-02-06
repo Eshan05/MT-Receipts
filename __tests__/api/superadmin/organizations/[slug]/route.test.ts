@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
-vi.mock('@/lib/superadmin-route', () => ({
+vi.mock('@/lib/auth/superadmin-route', () => ({
   getSuperAdminContext: vi.fn(),
 }))
 
@@ -31,7 +31,7 @@ vi.mock('@/models/organization.model', () => ({
   },
 }))
 
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 import {
   invalidateCachedOrganization,
   setCachedOrganization,

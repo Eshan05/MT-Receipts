@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 import {
   getOrganizationLimits,
   getRolling30DaysStart,
   getUsageSnapshot,
-} from '@/lib/limits'
+} from '@/lib/tenants/limits'
 import { getTenantModels } from '@/lib/db/tenant-models'
 
 interface RouteParams {

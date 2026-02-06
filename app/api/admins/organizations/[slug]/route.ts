@@ -7,7 +7,7 @@ import {
   invalidateCachedOrganization,
   setCachedOrganization,
 } from '@/lib/redis'
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 
 const updateOrganizationSchema = z.object({
   action: z.enum([

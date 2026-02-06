@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
 import {
@@ -9,7 +9,7 @@ import {
   getUsageSnapshot,
   getUserSlotUsage,
   isUnlimited,
-} from '@/lib/limits'
+} from '@/lib/tenants/limits'
 import { getTenantModels } from '@/lib/db/tenant-models'
 
 type OrgDistributionRow = {

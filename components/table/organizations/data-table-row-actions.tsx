@@ -59,16 +59,16 @@ export function DataTableRowActions<TData>({
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-44'>
           <DropdownMenuItem onClick={() => setMembersOpen(true)}>
-            <Users className='mr-1 size-3.5' />
+            <Users className='size-3.5' />
             View Members
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setLimitsOpen(true)}>
-            <Gauge className='mr-1 size-3.5' />
+            <Gauge className='size-3.5' />
             View Limits
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setConfigOpen(true)}>
-            <Settings className='mr-1 size-3.5' />
-            View Config
+            <Settings className='size-3.5' />
+            Configuration
           </DropdownMenuItem>
           <DropdownMenuSeparator />
 
@@ -83,7 +83,7 @@ export function DataTableRowActions<TData>({
                 })
               }
             >
-              <ShieldCheck className='mr-1 size-3.5' />
+              <ShieldCheck className='size-3.5' />
               Approve
             </DropdownMenuItem>
           )}
@@ -100,7 +100,7 @@ export function DataTableRowActions<TData>({
                   })
                 }
               >
-                <Ban className='mr-1 size-3.5' />
+                <Ban className='size-3.5' />
                 Suspend
               </DropdownMenuItem>
               <DropdownMenuItem

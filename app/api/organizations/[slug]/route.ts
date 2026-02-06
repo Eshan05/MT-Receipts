@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
-import { verifyAuthToken, getTokenServer } from '@/lib/auth'
+import { verifyAuthToken, getTokenServer } from '@/lib/auth/auth'
 import {
   setCachedOrganization,
   invalidateCachedOrganization,

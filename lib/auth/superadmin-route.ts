@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 
 export interface SuperAdminContext {
   user: {

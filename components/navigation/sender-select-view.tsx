@@ -1,7 +1,7 @@
 'use client'
 
 import { Mail, ShieldCheck, User } from 'lucide-react'
-import type { SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import type { SmtpVaultMeta } from '@/lib/tenants/smtp-vault-client'
 
 interface SenderSelectViewProps {
   vault: SmtpVaultMeta

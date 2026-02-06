@@ -15,9 +15,9 @@ import mongoose from 'mongoose'
 import type { IUser } from '@/models/user.model'
 import type { IOrganization } from '@/models/organization.model'
 
-vi.mock('@/lib/auth', async () => {
+vi.mock('@/lib/auth/auth', async () => {
   const actual =
-    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+    await vi.importActual<typeof import('@/lib/auth/auth')>('@/lib/auth/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock('@/lib/redis', () => ({
   getCachedOrganization: vi.fn(),
 }))
 
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'

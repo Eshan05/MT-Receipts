@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import MembershipRequest from '@/models/membership-request.model'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'
-import { enforceMaxUsersForJoin } from '@/lib/quota-enforcement'
+import { enforceMaxUsersForJoin } from '@/lib/tenants/quota-enforcement'
 
 const createMembershipSchema = z.object({
   inviteCode: z.string().min(1),

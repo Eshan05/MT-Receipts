@@ -19,7 +19,7 @@ import Organization from '@/models/organization.model'
 import {
   createOrganizationHeaders,
   resolveOrganizationFromCache,
-} from '@/lib/organization-context'
+} from '@/lib/tenants/organization-context'
 
 interface ReceiptData {
   valid: boolean

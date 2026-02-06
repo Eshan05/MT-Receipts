@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import MembershipRequest from '@/models/membership-request.model'
 import Organization from '@/models/organization.model'
 import mongoose from 'mongoose'

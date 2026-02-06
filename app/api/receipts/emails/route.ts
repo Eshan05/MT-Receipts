@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant-route'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
-import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
+import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
 
 type PopulatedEvent = {
   name: string

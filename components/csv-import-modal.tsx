@@ -38,14 +38,14 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { downloadCSVTemplate, csvTemplateFields } from '@/lib/csv-template'
+import { downloadCSVTemplate, csvTemplateFields } from '@/utils/csv-template'
 import {
   parseCSV,
   checkDuplicates,
   type ParsedCSVRow,
   type CSVValidationResult,
   type DuplicateInfo,
-} from '@/lib/csv-parser'
+} from '@/utils/csv-parser'
 import { IEvent } from '@/models/event.model'
 import {
   Select,
@@ -54,7 +54,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import {
+  fetchSmtpVaults,
+  type SmtpVaultMeta,
+} from '@/lib/tenants/smtp-vault-client'
 import { useEffect } from 'react'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
 

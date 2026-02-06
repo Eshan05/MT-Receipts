@@ -9,9 +9,9 @@ import type {
   TemplateConfig,
   TemplateItem,
 } from '@/lib/templates/types'
-import { getOrganizationContext } from '@/lib/organization-context'
+import { getOrganizationContext } from '@/lib/tenants/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
-import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
+import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
 
 export interface RenderReceiptOptions {
   receiptNumber: string

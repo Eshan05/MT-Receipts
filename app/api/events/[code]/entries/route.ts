@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant-route'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 
 interface RouteParams {
   params: Promise<{ code: string }>

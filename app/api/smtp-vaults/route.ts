@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant-route'
-import { encryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
+import { getTenantContext } from '@/lib/auth/tenant-route'
+import { encryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 import SMTPVault from '@/models/smtp-vault.model'
 
 function sanitizeVault(vault: {

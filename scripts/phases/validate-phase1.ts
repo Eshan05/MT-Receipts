@@ -11,9 +11,6 @@ import {
   clearAllTenantConnections,
 } from '../../lib/db/tenant'
 import { getTenantModels, clearModelCache } from '../../lib/db/tenant-models'
-import Migration, {
-  createMigrationModel,
-} from '../../models/tenant/migration.model'
 import {
   encrypt,
   decrypt,
@@ -505,50 +502,6 @@ async function validateTenantIsolation() {
   return allPassed
 }
 
-async function validateMigrationModel() {
-  logSection('Migration Model')
-  let allPassed = true
-
-  try {
-    const migration = await Migration.create({
-      name: `test-migration-${Date.now()}`,
-      checksum: 'abc123',
-      duration: 100,
-    })
-    logTest('Create migration record', true, `ID: ${migration._id}`)
-
-    const isApplied = await Migration.isApplied(migration.name)
-    logTest('isApplied returns true', isApplied)
-
-    const applied = await Migration.findApplied()
-    logTest('findApplied returns array', Array.isArray(applied))
-
-    await Migration.findByIdAndDelete(migration._id)
-    logTest('Migration cleanup', true)
-
-    clearAllTenantConnections()
-    clearModelCache()
-    const tenantConn = await getTenantConnection('migration-test')
-    const TenantMigration = createMigrationModel(tenantConn)
-
-    const tenantMigration = await TenantMigration.create({
-      name: `tenant-migration-${Date.now()}`,
-      checksum: 'def456',
-    })
-    logTest('Create migration in tenant DB', true)
-
-    await TenantMigration.deleteMany({})
-    clearAllTenantConnections()
-    clearModelCache()
-  } catch (e) {
-    logTest('Migration model operations', false)
-    logError(e)
-    allPassed = false
-  }
-
-  return allPassed
-}
-
 async function cleanup() {
   logSection('Final Cleanup')
   try {
@@ -568,7 +521,6 @@ async function dropTestDatabases() {
   const testDbPatterns = [
     'org_validation-test',
     'org_model-test',
-    'org_migration-test',
     'org_tenant-a',
     'org_tenant-b',
     'org_other-test',
@@ -648,10 +600,6 @@ async function main() {
   results.push({
     section: 'Tenant Isolation',
     passed: await validateTenantIsolation(),
-  })
-  results.push({
-    section: 'Migration Model',
-    passed: await validateMigrationModel(),
   })
 
   await cleanup()

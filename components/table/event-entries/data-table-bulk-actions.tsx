@@ -53,7 +53,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FieldLabel } from '@/components/ui/field'
-import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import {
+  fetchSmtpVaults,
+  type SmtpVaultMeta,
+} from '@/lib/tenants/smtp-vault-client'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface DataTableBulkActionsProps {

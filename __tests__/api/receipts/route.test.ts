@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-vi.mock('@/lib/tenant-route', () => ({
+vi.mock('@/lib/auth/tenant-route', () => ({
   getTenantContext: vi.fn(),
 }))
 
-vi.mock('@/lib/limits', () => ({
+vi.mock('@/lib/tenants/limits', () => ({
   getOrganizationLimits: vi.fn(),
   getUserSlotUsage: vi.fn(),
   isUnlimited: (limit: unknown) => typeof limit !== 'number' || limit < 0,
@@ -20,8 +20,8 @@ vi.mock('@/lib/limits', () => ({
 }))
 
 import { POST } from '@/app/api/receipts/route'
-import { getTenantContext } from '@/lib/tenant-route'
-import { getOrganizationLimits } from '@/lib/limits'
+import { getTenantContext } from '@/lib/auth/tenant-route'
+import { getOrganizationLimits } from '@/lib/tenants/limits'
 
 describe('POST /api/receipts (limits)', () => {
   beforeEach(() => {

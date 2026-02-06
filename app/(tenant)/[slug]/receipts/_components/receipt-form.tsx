@@ -74,7 +74,10 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import {
+  fetchSmtpVaults,
+  type SmtpVaultMeta,
+} from '@/lib/tenants/smtp-vault-client'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
 
 interface ReceiptFormProps {

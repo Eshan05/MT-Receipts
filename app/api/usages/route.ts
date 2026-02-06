@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getTenantContext, requireAdmin } from '@/lib/tenant-route'
+import { getTenantContext, requireAdmin } from '@/lib/auth/tenant-route'
 import {
   getOrganizationLimits,
   getRolling30DaysStart,
   getUsageSnapshot,
-} from '@/lib/limits'
+} from '@/lib/tenants/limits'
 
 export async function GET() {
   try {

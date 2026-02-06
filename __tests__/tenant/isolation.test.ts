@@ -19,16 +19,17 @@ import {
   setCachedOrganization,
   invalidateCachedOrganization,
 } from '@/lib/redis'
-import { getTenantContext } from '@/lib/tenant-route'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 import type { IUser } from '@/models/user.model'
 import type { IOrganization } from '@/models/organization.model'
 
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 
 const SKIP_MONGODB_SETUP = process.env.SKIP_MONGODB_SETUP === 'true'
 
-vi.mock('@/lib/auth', async () => {
-  const actual = await vi.importActual('@/lib/auth')
+vi.mock('@/lib/auth/auth', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/auth/auth')>('@/lib/auth/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),

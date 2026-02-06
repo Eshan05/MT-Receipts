@@ -39,7 +39,10 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { fetchSmtpVaults, type SmtpVaultMeta } from '@/lib/smtp-vault-client'
+import {
+  fetchSmtpVaults,
+  type SmtpVaultMeta,
+} from '@/lib/tenants/smtp-vault-client'
 
 interface EmailVaultCredenzaProps {
   open: boolean

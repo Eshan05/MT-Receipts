@@ -9,7 +9,7 @@ import {
 import { generateReceiptQRCode } from '@/lib/qr-code'
 import dbConnect from '@/lib/db-conn'
 import SMTPVault from '@/models/smtp-vault.model'
-import { decryptSmtpAppPassword } from '@/lib/smtp-vault-crypto'
+import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 
 interface SenderCredentials {
   vaultId?: string

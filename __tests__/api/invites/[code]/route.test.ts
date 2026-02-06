@@ -20,9 +20,9 @@ import type { IUser } from '@/models/user.model'
 import type { IOrganization } from '@/models/organization.model'
 import type { IMembershipRequest } from '@/models/membership-request.model'
 
-vi.mock('@/lib/auth', async () => {
+vi.mock('@/lib/auth/auth', async () => {
   const actual =
-    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+    await vi.importActual<typeof import('@/lib/auth/auth')>('@/lib/auth/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('@/lib/auth', async () => {
   }
 })
 
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 
 describe('GET /api/invites/[code]', () => {
   let adminUser!: IUser

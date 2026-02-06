@@ -14,7 +14,7 @@ describe('Auth Cookie Functions', () => {
       const response = NextResponse.json({ ok: true })
       const mockSet = vi.spyOn(response.cookies, 'set')
 
-      const { setCurrentOrgCookie } = await import('@/lib/auth')
+      const { setCurrentOrgCookie } = await import('@/lib/auth/auth')
       await setCurrentOrgCookie('my-org', response)
 
       expect(mockSet).toHaveBeenCalledWith({
@@ -32,7 +32,7 @@ describe('Auth Cookie Functions', () => {
       const response = NextResponse.json({ ok: true })
       const mockSet = vi.spyOn(response.cookies, 'set')
 
-      const { clearCurrentOrgCookie } = await import('@/lib/auth')
+      const { clearCurrentOrgCookie } = await import('@/lib/auth/auth')
       await clearCurrentOrgCookie(response)
 
       expect(mockSet).toHaveBeenCalledWith({

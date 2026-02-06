@@ -174,4 +174,4 @@ const Organization = getOrganizationModel()
 
 export default Organization
 
-export { RESERVED_SLUGS, isSlugReserved } from '@/lib/reserved-slugs'
+export { RESERVED_SLUGS, isSlugReserved } from '@/utils/reserved-slugs'

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant-route'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 import { generateCustomerInitials } from '@/lib/utils'
 import { sendReceiptEmail } from '@/lib/email'
-import { getOrganizationBrandingBySlug } from '@/lib/organization-branding'
-import { formatReceiptNumber } from '@/lib/receipt-number'
-import { enforceMaxReceipts } from '@/lib/quota-enforcement'
+import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
+import { formatReceiptNumber } from '@/lib/tenants/receipt-number'
+import { enforceMaxReceipts } from '@/lib/tenants/quota-enforcement'
 
 export async function GET(request: NextRequest) {
   try {

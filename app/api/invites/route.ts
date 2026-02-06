@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import MembershipRequest from '@/models/membership-request.model'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { sendEmail } from '@/lib/email'
 import { render } from '@react-email/components'
 import OrganizationInviteEmail from '@/lib/emails/organization-invite-email'
-import { enforceMaxUsersForInvite } from '@/lib/quota-enforcement'
+import { enforceMaxUsersForInvite } from '@/lib/tenants/quota-enforcement'
 
 const createInviteSchema = z.object({
   type: z.enum(['email', 'code']),

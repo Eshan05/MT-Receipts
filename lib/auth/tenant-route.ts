@@ -3,9 +3,9 @@ import dbConnect from '@/lib/db-conn'
 import {
   getOrganizationContext,
   type OrganizationContext,
-} from '@/lib/organization-context'
+} from '@/lib/tenants/organization-context'
 import { getTenantModels, type TenantModels } from '@/lib/db/tenant-models'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import User from '@/models/user.model'
 
 export interface TenantContext {

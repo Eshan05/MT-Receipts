@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect } from 'vitest'
-import { formatReceiptNumber } from '@/lib/receipt-number'
+import { formatReceiptNumber } from '@/lib/tenants/receipt-number'
 
 describe('formatReceiptNumber', () => {
   it('uses default format when custom format is missing', () => {

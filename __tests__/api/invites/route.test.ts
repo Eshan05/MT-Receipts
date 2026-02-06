@@ -19,9 +19,9 @@ import MembershipRequest from '@/models/membership-request.model'
 import type { IUser } from '@/models/user.model'
 import type { IOrganization } from '@/models/organization.model'
 
-vi.mock('@/lib/auth', async () => {
+vi.mock('@/lib/auth/auth', async () => {
   const actual =
-    await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+    await vi.importActual<typeof import('@/lib/auth/auth')>('@/lib/auth/auth')
   return {
     ...actual,
     getTokenServer: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('@/lib/auth', async () => {
   }
 })
 
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 
 vi.mock('@/lib/email', () => ({
   sendEmail: vi.fn().mockResolvedValue({ success: true, messageId: 'test-id' }),

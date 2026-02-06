@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTenantContext } from '@/lib/tenant-route'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
 
 export async function POST(request: NextRequest) {

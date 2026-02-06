@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getTenantContext } from '@/lib/tenant-route'
-import { enforceMaxEvents } from '@/lib/quota-enforcement'
+import { getTenantContext } from '@/lib/auth/tenant-route'
+import { enforceMaxEvents } from '@/lib/tenants/quota-enforcement'
 
 const PAGE_SIZE = 12
 

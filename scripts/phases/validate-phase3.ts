@@ -4,9 +4,9 @@ import {
   getCurrentOrgSlug,
   setCurrentOrgCookie,
   clearCurrentOrgCookie,
-} from '../../lib/auth'
+} from '../../lib/auth/auth'
 import { NextResponse } from 'next/server'
-import { isSlugReserved } from '../../lib/reserved-slugs'
+import { isSlugReserved } from '../../utils/reserved-slugs'
 import Organization from '../../models/organization.model'
 import User from '@/models/user.model'
 import dbConnect from '@/lib/db-conn'

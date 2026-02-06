@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
-import { setAuthCookie } from '@/lib/auth'
+import { setAuthCookie } from '@/lib/auth/auth'
 import { z } from 'zod'
 
 const createUserSchema = z.object({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrganizationContext } from '@/lib/organization-context'
+import { getOrganizationContext } from '@/lib/tenants/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
-import { getTokenServer, verifyAuthToken } from '@/lib/auth'
+import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
 
 interface RouteParams {

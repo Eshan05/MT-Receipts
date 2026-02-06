@@ -7,7 +7,7 @@ import { GET, POST } from '@/app/api/organizations/route'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
-import { setAuthCookie } from '@/lib/auth'
+import { setAuthCookie } from '@/lib/auth/auth'
 import { cookies } from 'next/headers'
 import type { IUser } from '@/models/user.model'
 

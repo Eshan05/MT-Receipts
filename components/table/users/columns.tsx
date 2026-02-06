@@ -205,7 +205,7 @@ export function createColumns(): ColumnDef<UserRow>[] {
 
         const formatted = formatTime(value, false)
         return (
-          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+          <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
             <Clock className='size-3 shrink-0' />
             <div className='flex flex-col text-muted-foreground!'>
               <span className='font-mono'>{formatted.date},</span>
@@ -223,7 +223,7 @@ export function createColumns(): ColumnDef<UserRow>[] {
       cell: ({ row }) => {
         const formatted = formatTime(row.original.createdAt, false)
         return (
-          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+          <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
             <Calendar className='size-3 shrink-0' />
             <div className='flex flex-col text-muted-foreground!'>
               <span className='font-mono'>{formatted.date},</span>

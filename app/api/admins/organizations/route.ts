@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
-import { getSuperAdminContext } from '@/lib/superadmin-route'
+import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 
 export async function GET(request: NextRequest) {
   const superAdmin = await getSuperAdminContext()

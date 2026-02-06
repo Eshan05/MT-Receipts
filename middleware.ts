@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyAuthToken, getTokenServer } from '@/lib/auth'
+import { verifyAuthToken, getTokenServer } from '@/lib/auth/auth'
 import {
   isStaticPath,
   isPublicPath,
@@ -14,7 +14,7 @@ import {
 import {
   resolveOrganizationFromCache as resolveOrganization,
   getOrganizationErrorPath,
-} from '@/lib/organization-context'
+} from '@/lib/tenants/organization-context'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
