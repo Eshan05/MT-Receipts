@@ -407,7 +407,20 @@ export default function ProfessionalDarkTemplate({
         <View style={styles.totalsWithQrContainer}>
           {qrCodeData && (
             <View style={styles.qrCodeSection}>
-              <Image style={styles.qrCode} src={qrCodeData} />
+              <Image
+                style={styles.qrCode}
+                src={(() => {
+                  if (!qrCodeData.startsWith('data:image/')) return qrCodeData
+                  const [header, base64] = qrCodeData.split(',')
+                  const mime = header.slice(5, header.indexOf(';'))
+                  const ext = mime.split('/')[1]
+                  const format = ext === 'jpeg' ? 'jpg' : ext
+                  return {
+                    data: Buffer.from(base64, 'base64'),
+                    format: format as 'png' | 'jpg',
+                  }
+                })()}
+              />
             </View>
           )}
           <View style={styles.totalsSection}>

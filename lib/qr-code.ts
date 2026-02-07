@@ -3,6 +3,12 @@ export interface QRCodeOptions {
   width?: number
   height?: number
   margin?: number
+  /**
+   * Output image format.
+   * React-PDF's PNG decoder is picky; JPEG is often more robust in PDFs.
+   */
+  format?: 'png' | 'jpeg'
+  jpegQuality?: number
   dotsColor?: string
   backgroundColor?: string
   dotsType?: 'square' | 'rounded' | 'dots' | 'classy-rounded' | 'extra-rounded'
@@ -144,6 +150,8 @@ export async function generateQRCodeBase64(
     width = 150,
     height = 150,
     margin = 0,
+    format = 'png',
+    jpegQuality = 90,
     dotsColor = '#000000',
     backgroundColor = '#ffffff',
     dotsType = 'rounded',
@@ -168,7 +176,7 @@ export async function generateQRCodeBase64(
     logoSize,
   }
 
-  if (engine !== 'wasm') {
+  if (engine !== 'wasm' && format === 'png') {
     const dataUrl = await tryGenerateWithLoskir(resolved)
     if (dataUrl) return dataUrl
     if (engine === 'native') {
@@ -259,10 +267,21 @@ export async function generateQRCodeBase64(
       },
     })
 
-    const pngData = resvg.render()
-    const pngBytes = pngData.asPng()
-    const pngBuffer = Buffer.from(pngBytes)
+    const rendered = resvg.render()
 
+    if (format === 'jpeg') {
+      const asJpegFn = (rendered as any).asJpeg ?? (rendered as any).asJpg
+      if (typeof asJpegFn !== 'function') {
+        throw new Error('resvg renderer does not support JPEG output')
+      }
+
+      const jpegBytes: Uint8Array = asJpegFn.call(rendered, jpegQuality)
+      const jpegBuffer = Buffer.from(jpegBytes)
+      return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`
+    }
+
+    const pngBytes: Uint8Array = (rendered as any).asPng()
+    const pngBuffer = Buffer.from(pngBytes)
     return `data:image/png;base64,${pngBuffer.toString('base64')}`
   } finally {
     globalAny.window = previousGlobals.window
