@@ -295,7 +295,11 @@ export async function generateQRCodeBase64(
 
 export async function generateReceiptQRCode(
   receiptNumber: string,
-  organizationSlug?: string
+  organizationSlug?: string,
+  opts?: {
+    format?: QRCodeOptions['format']
+    engine?: QRCodeOptions['engine']
+  }
 ): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
   const verifyUrl = organizationSlug
@@ -311,5 +315,7 @@ export async function generateReceiptQRCode(
     backgroundColor: '#ffffff',
     dotsColor: '#444',
     cornersColor: '#444',
+    format: opts?.format,
+    engine: opts?.engine,
   })
 }

@@ -9,8 +9,8 @@ import {
 import type { TemplateConfig } from '@/lib/templates/types'
 import dbConnect from '@/lib/db-conn'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
-import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
 import { getTenantModels } from '@/lib/db/tenant-models'
+import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
 
 interface SenderCredentials {
   vaultId?: string
@@ -225,15 +225,35 @@ export async function sendReceiptEmail({
       })
     )
 
-    let finalQrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
-    if (!finalQrCodeData) {
-      const { generateReceiptQRCode } = await import('@/lib/qr-code')
-      finalQrCodeData = await generateReceiptQRCode(
-        receiptNumber,
-        organizationSlug
-      )
+    let finalQrCodeData: string | undefined
 
-      finalQrCodeData = await ensureQrPngIsRgbDataUrl(finalQrCodeData)
+    try {
+      finalQrCodeData =
+        typeof qrCodeData === 'string' &&
+        qrCodeData.startsWith('data:image/jpeg')
+          ? qrCodeData
+          : undefined
+
+      if (!finalQrCodeData) {
+        const { generateReceiptQRCode } = await import('@/lib/qr-code')
+        finalQrCodeData = await generateReceiptQRCode(
+          receiptNumber,
+          organizationSlug,
+          {
+            format: 'jpeg',
+          }
+        )
+      }
+    } catch {
+      finalQrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
+      if (!finalQrCodeData) {
+        const { generateReceiptQRCode } = await import('@/lib/qr-code')
+        finalQrCodeData = await generateReceiptQRCode(
+          receiptNumber,
+          organizationSlug
+        )
+        finalQrCodeData = await ensureQrPngIsRgbDataUrl(finalQrCodeData)
+      }
     }
 
     const renderOptions: RenderReceiptOptions = {

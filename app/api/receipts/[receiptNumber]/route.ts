@@ -214,17 +214,35 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         )
       }
 
-      let qrCodeData: string | undefined = await ensureQrPngIsRgbDataUrl(
-        receipt.qrCodeData
-      )
-      if (!qrCodeData) {
-        const { generateReceiptQRCode } = await import('@/lib/qr-code')
-        qrCodeData = await generateReceiptQRCode(
-          receiptNumber,
-          organization.slug
-        )
+      let qrCodeData: string | undefined
 
-        qrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
+      try {
+        qrCodeData =
+          typeof receipt.qrCodeData === 'string' &&
+          receipt.qrCodeData.startsWith('data:image/jpeg')
+            ? receipt.qrCodeData
+            : undefined
+
+        if (!qrCodeData) {
+          const { generateReceiptQRCode } = await import('@/lib/qr-code')
+          qrCodeData = await generateReceiptQRCode(
+            receiptNumber,
+            organization.slug,
+            {
+              format: 'jpeg',
+            }
+          )
+        }
+      } catch {
+        qrCodeData = await ensureQrPngIsRgbDataUrl(receipt.qrCodeData)
+        if (!qrCodeData) {
+          const { generateReceiptQRCode } = await import('@/lib/qr-code')
+          qrCodeData = await generateReceiptQRCode(
+            receiptNumber,
+            organization.slug
+          )
+          qrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
+        }
       }
 
       const result = await renderReceiptPDF({
@@ -266,6 +284,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `inline; filename="receipt-${receiptNumber}.pdf"`,
+          'Cache-Control': 'no-store, max-age=0',
         },
       })
     }
