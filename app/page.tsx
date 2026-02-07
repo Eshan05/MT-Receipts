@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ReceiptIcon, UsersIcon } from 'lucide-react'
+import { LandingOrganizationsCredenza } from '@/components/landing/landing-organizations-credenza'
 
 export default function LandingPage() {
   return (
@@ -35,6 +36,7 @@ export default function LandingPage() {
               Create Organization
             </Button>
           </Link>
+          <LandingOrganizationsCredenza />
         </div>
       </div>
     </main>

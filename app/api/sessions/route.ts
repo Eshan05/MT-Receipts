@@ -35,6 +35,11 @@ type SessionMembership = {
   organizationSlug: string
   organizationName: string
   role: 'admin' | 'member'
+  organizationLogoUrl?: string
+  organizationDescription?: string
+  organizationStatus?: string
+  organizationCreatedAt?: string
+  organizationExpectedMembers?: number
 }
 
 async function markMembershipLastSignedIn(
@@ -325,7 +330,8 @@ async function handleOrgSwitch(organizationSlug: string, request?: Request) {
 }
 
 async function buildMemberships(
-  user: Pick<IUser, 'memberships'>
+  user: Pick<IUser, 'memberships'>,
+  detailed: boolean = false
 ): Promise<SessionMembership[]> {
   if (!user.memberships || user.memberships.length === 0) {
     return []
@@ -347,17 +353,29 @@ async function buildMemberships(
     const org = orgs.find(
       (o) => o._id.toString() === m.organizationId.toString()
     )
-    return {
+    const membership: SessionMembership = {
       organizationId: m.organizationId.toString(),
       organizationSlug: m.organizationSlug,
       organizationName: org?.name || 'Unknown',
       role: m.role,
     }
+
+    if (detailed && org) {
+      membership.organizationLogoUrl = org.logoUrl
+      membership.organizationDescription = org.description
+      membership.organizationStatus = org.status
+      membership.organizationCreatedAt = org.createdAt.toISOString()
+      membership.organizationExpectedMembers = org.expectedMembers
+    }
+
+    return membership
   })
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const detailed = searchParams.get('detailed') === 'true'
     const token = await getTokenServer()
 
     if (!token || token.trim() === '') {
@@ -376,7 +394,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 })
     }
 
-    const memberships = await buildMemberships(user)
+    const memberships = await buildMemberships(user, detailed)
 
     let currentOrganization = null
     if (user.currentOrganizationSlug && memberships.length > 0) {

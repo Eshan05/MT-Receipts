@@ -698,6 +698,7 @@ export default function EventsPage() {
               <EventCard
                 key={event._id?.toString()}
                 event={event}
+                orgSlug={slug}
                 itemCounts={itemCounts[event._id?.toString() || ''] || {}}
                 entryCount={entryCounts[event._id?.toString() || ''] || 0}
                 onEdit={openEditDialog}
@@ -988,6 +989,7 @@ export default function EventsPage() {
 
 function EventCard({
   event,
+  orgSlug,
   itemCounts,
   entryCount,
   onEdit,
@@ -998,6 +1000,7 @@ function EventCard({
   onToggleSelect,
 }: {
   event: IEvent
+  orgSlug: string
   itemCounts: Record<string, number>
   entryCount: number
   onEdit: (e: React.MouseEvent, event: IEvent) => void
@@ -1035,7 +1038,10 @@ function EventCard({
           className='bg-background'
         />
       </div>
-      <Link href={`/events/${event.eventCode}`} className='group block'>
+      <Link
+        href={`${orgSlug}/events/${event.eventCode}`}
+        className='group block'
+      >
         <div
           className={cn(
             'px-3 py-1.5 flex items-center justify-between pl-10',
@@ -1048,7 +1054,7 @@ function EventCard({
               {event.type}
             </span>
             {isDeleted && (
-              <span className='text-[10px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive'>
+              <span className='text-tiny px-1.5 py-0.5 rounded bg-destructive/20 text-destructive'>
                 Deleted
               </span>
             )}

@@ -22,6 +22,11 @@ export interface Membership {
   organizationSlug: string
   organizationName: string
   role: 'admin' | 'member'
+  organizationLogoUrl?: string
+  organizationDescription?: string
+  organizationStatus?: string
+  organizationCreatedAt?: string
+  organizationExpectedMembers?: number
 }
 
 export interface CurrentOrganization {
@@ -55,9 +60,13 @@ export function useAuth() {
 
 interface AuthProviderProps {
   children: ReactNode
+  autoRefresh?: boolean
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({
+  children,
+  autoRefresh = true,
+}: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [user, setUser] = useState<ContextUser | null>(null)
   const [memberships, setMemberships] = useState<Membership[]>([])
@@ -94,8 +103,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [router])
 
   useEffect(() => {
-    refreshSession()
-  }, [refreshSession])
+    if (autoRefresh) {
+      refreshSession()
+      return
+    }
+
+    setLoading(false)
+  }, [autoRefresh, refreshSession])
 
   const login = async (email: string, pass: string) => {
     const res = await fetch('/api/sessions', {

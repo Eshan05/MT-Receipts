@@ -33,6 +33,10 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+vi.mock('@/components/landing/landing-organizations-credenza', () => ({
+  LandingOrganizationsCredenza: () => <button>My Organizations</button>,
+}))
+
 describe('LandingPage', () => {
   it('renders the logo', () => {
     render(<LandingPage />)
