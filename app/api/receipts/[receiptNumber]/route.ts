@@ -3,6 +3,7 @@ import { getOrganizationContext } from '@/lib/tenants/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
 import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
+import { normalizeQrCodeDataUrl } from '@/lib/qr-code-data'
 
 interface RouteParams {
   params: Promise<{ receiptNumber: string }>
@@ -187,7 +188,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         )
       }
 
-      let qrCodeData: string | undefined = receipt.qrCodeData
+      let qrCodeData: string | undefined = normalizeQrCodeDataUrl(
+        receipt.qrCodeData
+      )
       if (!qrCodeData) {
         const { generateReceiptQRCode } = await import('@/lib/qr-code')
         qrCodeData = await generateReceiptQRCode(

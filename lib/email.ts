@@ -9,6 +9,7 @@ import {
 import dbConnect from '@/lib/db-conn'
 import SMTPVault from '@/models/smtp-vault.model'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
+import { normalizeQrCodeDataUrl } from '@/lib/qr-code-data'
 
 interface SenderCredentials {
   vaultId?: string
@@ -17,28 +18,55 @@ interface SenderCredentials {
   pass: string
 }
 
-async function resolveSenderCredentials(
+async function resolveSenderCredentials(opts?: {
   smtpVaultId?: string
-): Promise<SenderCredentials> {
+  organizationId?: string
+}): Promise<SenderCredentials> {
   await dbConnect()
+
+  const smtpVaultId = opts?.smtpVaultId
+  const organizationId = opts?.organizationId
 
   let selectedVault = null
 
   if (smtpVaultId) {
-    selectedVault = await SMTPVault.findById(smtpVaultId)
-  } else {
-    selectedVault = await SMTPVault.findOne({ isDefault: true })
+    selectedVault = await SMTPVault.findOne({
+      _id: smtpVaultId,
+      ...(organizationId ? { organizationId } : {}),
+    })
     if (!selectedVault) {
-      selectedVault = await SMTPVault.findOne().sort({ createdAt: 1 })
+      throw new Error('SMTP vault not found for this organization.')
+    }
+  } else {
+    selectedVault = await SMTPVault.findOne({
+      ...(organizationId ? { organizationId } : {}),
+      isDefault: true,
+    })
+    if (!selectedVault) {
+      selectedVault = await SMTPVault.findOne({
+        ...(organizationId ? { organizationId } : {}),
+      }).sort({ createdAt: 1 })
     }
   }
 
   if (selectedVault) {
-    const decryptedPassword = decryptSmtpAppPassword(
-      selectedVault.encryptedAppPassword,
-      selectedVault.iv,
-      selectedVault.authTag
-    )
+    let decryptedPassword: string
+    try {
+      decryptedPassword = decryptSmtpAppPassword(
+        selectedVault.encryptedAppPassword,
+        selectedVault.iv,
+        selectedVault.authTag
+      )
+    } catch (error) {
+      const maybeMessage =
+        error instanceof Error ? error.message : String(error)
+      if (maybeMessage.includes('unable to authenticate data')) {
+        throw new Error(
+          'Unable to decrypt SMTP vault password. Ensure SMTP_VAULT_SECRET (or JWT_SECRET fallback) matches the value used when this vault entry was created. If the secret changed, you must recreate the SMTP vault entry.'
+        )
+      }
+      throw error
+    }
 
     await SMTPVault.findByIdAndUpdate(selectedVault._id, {
       lastUsedAt: new Date(),
@@ -65,7 +93,7 @@ async function resolveSenderCredentials(
 }
 
 async function createTransporter(smtpVaultId?: string) {
-  const credentials = await resolveSenderCredentials(smtpVaultId)
+  const credentials = await resolveSenderCredentials({ smtpVaultId })
 
   return nodemailer.createTransport({
     service: 'gmail',
@@ -88,6 +116,7 @@ export interface SendReceiptOptions {
   to: string
   receiptNumber: string
   organizationSlug?: string
+  organizationId?: string
   customerName: string
   customerPhone?: string
   customerAddress?: string
@@ -117,6 +146,7 @@ export async function sendReceiptEmail({
   to,
   receiptNumber,
   organizationSlug,
+  organizationId,
   customerName,
   customerPhone,
   customerAddress,
@@ -169,7 +199,7 @@ export async function sendReceiptEmail({
       })
     )
 
-    let finalQrCodeData = qrCodeData
+    let finalQrCodeData = normalizeQrCodeDataUrl(qrCodeData)
     if (!finalQrCodeData) {
       const { generateReceiptQRCode } = await import('@/lib/qr-code')
       finalQrCodeData = await generateReceiptQRCode(
@@ -207,7 +237,10 @@ export async function sendReceiptEmail({
     const { stream } = await renderReceiptPDF(renderOptions)
     const pdfBuffer = await streamToBuffer(stream)
 
-    const senderCredentials = await resolveSenderCredentials(smtpVaultId)
+    const senderCredentials = await resolveSenderCredentials({
+      smtpVaultId,
+      organizationId,
+    })
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -259,6 +292,7 @@ export async function sendEmail({
   html,
   attachments,
   smtpVaultId,
+  organizationId,
 }: {
   to: string
   subject: string
@@ -269,9 +303,13 @@ export async function sendEmail({
     contentType?: string
   }>
   smtpVaultId?: string
+  organizationId?: string
 }) {
   try {
-    const senderCredentials = await resolveSenderCredentials(smtpVaultId)
+    const senderCredentials = await resolveSenderCredentials({
+      smtpVaultId,
+      organizationId,
+    })
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

@@ -221,6 +221,7 @@ export async function POST(request: NextRequest) {
           to: receipt.customer.email,
           receiptNumber: receipt.receiptNumber,
           organizationSlug: ctx.organization.slug,
+          organizationId: ctx.organization.id,
           customerName: receipt.customer.name,
           customerPhone: receipt.customer.phone,
           customerAddress: receipt.customer.address,
