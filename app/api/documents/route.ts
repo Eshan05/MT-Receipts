@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
+import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,6 +36,9 @@ export async function POST(request: NextRequest) {
         receiptNumber,
         ctx.organization.slug
       )
+
+      const rgbQr = await ensureQrPngIsRgbDataUrl(qrCodeData)
+      if (rgbQr) qrCodeData = rgbQr
     }
 
     const result = await renderReceiptPDF({

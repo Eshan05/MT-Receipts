@@ -8,7 +8,7 @@ import {
 } from '@/lib/pdf/template-renderer'
 import dbConnect from '@/lib/db-conn'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
-import { normalizeQrCodeDataUrl } from '@/lib/qr-code-data'
+import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
 import { getTenantModels } from '@/lib/db/tenant-models'
 
 interface SenderCredentials {
@@ -218,13 +218,15 @@ export async function sendReceiptEmail({
       })
     )
 
-    let finalQrCodeData = normalizeQrCodeDataUrl(qrCodeData)
+    let finalQrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
     if (!finalQrCodeData) {
       const { generateReceiptQRCode } = await import('@/lib/qr-code')
       finalQrCodeData = await generateReceiptQRCode(
         receiptNumber,
         organizationSlug
       )
+
+      finalQrCodeData = await ensureQrPngIsRgbDataUrl(finalQrCodeData)
     }
 
     const renderOptions: RenderReceiptOptions = {

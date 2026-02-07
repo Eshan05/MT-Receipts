@@ -3,7 +3,7 @@ import { getOrganizationContext } from '@/lib/tenants/organization-context'
 import { getTenantModels } from '@/lib/db/tenant-models'
 import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'
 import { renderReceiptPDF, streamToBuffer } from '@/lib/pdf/template-renderer'
-import { normalizeQrCodeDataUrl } from '@/lib/qr-code-data'
+import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
 
 interface RouteParams {
   params: Promise<{ receiptNumber: string }>
@@ -188,7 +188,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         )
       }
 
-      let qrCodeData: string | undefined = normalizeQrCodeDataUrl(
+      let qrCodeData: string | undefined = await ensureQrPngIsRgbDataUrl(
         receipt.qrCodeData
       )
       if (!qrCodeData) {
@@ -197,6 +197,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           receiptNumber,
           organization.slug
         )
+
+        qrCodeData = await ensureQrPngIsRgbDataUrl(qrCodeData)
       }
 
       const result = await renderReceiptPDF({

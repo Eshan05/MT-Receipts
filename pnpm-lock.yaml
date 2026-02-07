@@ -95,6 +95,9 @@ importers:
       nodemailer:
         specifier: ^8.0.1
         version: 8.0.1
+      pngjs:
+        specifier: ^7.0.0
+        version: 7.0.0
       qr-code-styling:
         specifier: ^1.9.2
         version: 1.9.2
@@ -171,6 +174,9 @@ importers:
       '@types/nodemailer':
         specifier: ^7.0.9
         version: 7.0.9
+      '@types/pngjs':
+        specifier: ^6.0.5
+        version: 6.0.5
       '@types/react':
         specifier: 19.2.14
         version: 19.2.14
@@ -4404,6 +4410,12 @@ packages:
         integrity: sha512-vI8oF1M+8JvQhsId0Pc38BdUP2evenIIys7c7p+9OZXSPOH5c1dyINP1jT8xQ2xPuBUXmIC87s+91IZMDjH8Ow==,
       }
 
+  '@types/pngjs@6.0.5':
+    resolution:
+      {
+        integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==,
+      }
+
   '@types/react-dom@19.2.3':
     resolution:
       {
@@ -8042,6 +8054,13 @@ packages:
       {
         integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==,
       }
+
+  pngjs@7.0.0:
+    resolution:
+      {
+        integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==,
+      }
+    engines: { node: '>=14.19.0' }
 
   possible-typed-array-names@1.1.0:
     resolution:
@@ -12480,6 +12499,10 @@ snapshots:
     dependencies:
       '@types/node': 25.2.3
 
+  '@types/pngjs@6.0.5':
+    dependencies:
+      '@types/node': 25.2.3
+
   '@types/react-dom@19.2.3(@types/react@19.2.14)':
     dependencies:
       '@types/react': 19.2.14
@@ -14885,6 +14908,8 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  pngjs@7.0.0: {}
 
   possible-typed-array-names@1.1.0: {}
 
