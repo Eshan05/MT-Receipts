@@ -3,6 +3,11 @@ import { beforeAll, afterAll } from 'vitest'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
 
+// Make tests hermetic: avoid accidentally hitting real Upstash Redis
+// when developers have env vars set locally.
+process.env.UPSTASH_REDIS_REST_URL = ''
+process.env.UPSTASH_REDIS_REST_TOKEN = ''
+
 let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {

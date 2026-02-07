@@ -31,6 +31,8 @@ vi.mock('@/lib/db-conn', () => ({
 
 vi.mock('@/lib/redis', () => ({
   invalidateCachedOrganization: vi.fn(),
+  getRedis: vi.fn(() => null),
+  redis: null,
 }))
 
 vi.mock('@/lib/db/tenant', () => ({

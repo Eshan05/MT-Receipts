@@ -33,6 +33,8 @@ vi.mock('@/lib/auth/auth', async () => {
 vi.mock('@/lib/redis', () => ({
   setCachedOrganization: vi.fn(),
   getCachedOrganization: vi.fn(),
+  getRedis: vi.fn(() => null),
+  redis: null,
 }))
 
 import { getTokenServer, verifyAuthToken } from '@/lib/auth/auth'

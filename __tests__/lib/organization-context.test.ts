@@ -29,6 +29,8 @@ vi.mock('next/headers', () => ({
 vi.mock('@/lib/redis', () => ({
   getCachedOrganization: vi.fn(),
   setCachedOrganization: vi.fn(),
+  getRedis: vi.fn(() => null),
+  redis: null,
 }))
 
 vi.mock('@/models/organization.model', () => ({

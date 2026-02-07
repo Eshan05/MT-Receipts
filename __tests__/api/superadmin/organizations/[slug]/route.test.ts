@@ -15,6 +15,8 @@ vi.mock('@/lib/db-conn', () => ({
 vi.mock('@/lib/redis', () => ({
   invalidateCachedOrganization: vi.fn(),
   setCachedOrganization: vi.fn(),
+  getRedis: vi.fn(() => null),
+  redis: null,
 }))
 
 vi.mock('@/models/user.model', () => ({
