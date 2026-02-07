@@ -6,7 +6,6 @@ import {
   streamToBuffer,
   type RenderReceiptOptions,
 } from '@/lib/pdf/template-renderer'
-import { generateReceiptQRCode } from '@/lib/qr-code'
 import dbConnect from '@/lib/db-conn'
 import SMTPVault from '@/models/smtp-vault.model'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
@@ -172,6 +171,7 @@ export async function sendReceiptEmail({
 
     let finalQrCodeData = qrCodeData
     if (!finalQrCodeData) {
+      const { generateReceiptQRCode } = await import('@/lib/qr-code')
       finalQrCodeData = await generateReceiptQRCode(
         receiptNumber,
         organizationSlug

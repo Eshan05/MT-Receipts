@@ -10,12 +10,8 @@ import {
   createErrorResponse,
   injectOrganizationHeaders,
   isPublicReceiptView,
-  isApiRoute,
 } from '@/lib/middleware-helpers'
-import {
-  resolveOrganizationFromCache as resolveOrganization,
-  getOrganizationErrorPath,
-} from '@/lib/tenants/organization-context'
+import { getCachedOrganization, type CachedOrganization } from '@/lib/redis'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -114,8 +110,7 @@ async function handleTenantRoutes(
     return auth.response
   }
 
-  const org = await resolveOrganization(slug)
-
+  const org = await resolveOrganizationForMiddleware(request, slug)
   const errorPath = getOrganizationErrorPath(org)
 
   if (errorPath) {
@@ -133,6 +128,69 @@ async function handleTenantRoutes(
     slug: org!.slug,
     name: org!.name,
   })
+}
+
+async function resolveOrganizationForMiddleware(
+  request: NextRequest,
+  slug: string
+): Promise<CachedOrganization | null> {
+  const cachedOrg = await getCachedOrganization(slug)
+  if (cachedOrg) return cachedOrg
+
+  // Edge Runtime can't connect to MongoDB. On cache miss, fetch from an existing
+  // Node.js API route which will also populate the cache.
+  try {
+    const url = new URL(
+      `/api/organizations/${encodeURIComponent(slug)}`,
+      request.url
+    )
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    })
+
+    if (!res.ok) return null
+    const data = (await res.json()) as {
+      id?: unknown
+      slug?: unknown
+      name?: unknown
+      status?: unknown
+    }
+
+    const id =
+      typeof data.id === 'string'
+        ? data.id
+        : ((data.id as any)?.toString?.() ?? '')
+    const resolvedSlug = typeof data.slug === 'string' ? data.slug : slug
+    const name = typeof data.name === 'string' ? data.name : ''
+    const status = typeof data.status === 'string' ? data.status : ''
+
+    if (!id || !resolvedSlug || !name || !status) return null
+
+    return { id, slug: resolvedSlug, name, status }
+  } catch {
+    return null
+  }
+}
+
+function getOrganizationErrorPath(
+  org: { status: string } | null
+): string | null {
+  if (!org) {
+    return '/o/404'
+  }
+
+  switch (org.status) {
+    case 'pending':
+      return '/o/202'
+    case 'suspended':
+      return '/o/403'
+    case 'deleted':
+      return '/o/410'
+    default:
+      return null
+  }
 }
 
 function queueTenantPageViewLog(params: {
@@ -212,7 +270,7 @@ async function handleApiRoutes(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next()
   }
 
-  const org = await resolveOrganization(orgSlugCookie)
+  const org = await resolveOrganizationForMiddleware(request, orgSlugCookie)
 
   if (!org || org.status !== 'active') {
     return NextResponse.next()
