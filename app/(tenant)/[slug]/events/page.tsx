@@ -1038,10 +1038,7 @@ function EventCard({
           className='bg-background'
         />
       </div>
-      <Link
-        href={`${orgSlug}/events/${event.eventCode}`}
-        className='group block'
-      >
+      <Link href={`events/${event.eventCode}`} className='group block'>
         <div
           className={cn(
             'px-3 py-1.5 flex items-center justify-between pl-10',

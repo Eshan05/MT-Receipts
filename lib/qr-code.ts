@@ -139,14 +139,12 @@ export async function generateQRCodeBase64(
     }
   }
 
-  const [{ default: QRCodeStyling }, { JSDOM }] = await Promise.all([
+  const [{ default: QRCodeStyling }, { Window }] = await Promise.all([
     import('qr-code-styling'),
-    import('jsdom'),
+    import('happy-dom'),
   ])
 
-  const dom = new JSDOM(
-    '<!DOCTYPE html><html><body><div id="container"></div></body></html>'
-  )
+  const window = new Window()
 
   const globalAny = global as any
   const previousGlobals = {
@@ -154,13 +152,21 @@ export async function generateQRCodeBase64(
     document: globalAny.document,
     HTMLElement: globalAny.HTMLElement,
     Node: globalAny.Node,
+    XMLSerializer: globalAny.XMLSerializer,
+    btoa: globalAny.btoa,
   }
 
   try {
-    globalAny.window = dom.window
-    globalAny.document = dom.window.document
-    globalAny.HTMLElement = dom.window.HTMLElement
-    globalAny.Node = dom.window.Node
+    globalAny.window = window
+    globalAny.document = window.document
+    globalAny.HTMLElement = window.HTMLElement
+    globalAny.Node = window.Node
+    globalAny.XMLSerializer = window.XMLSerializer
+    // qr-code-styling uses global `btoa()` when creating a data: URL.
+    globalAny.btoa =
+      typeof globalAny.btoa === 'function'
+        ? globalAny.btoa
+        : (data: string) => Buffer.from(data, 'binary').toString('base64')
 
     const qrCode = new QRCodeStyling({
       type: 'svg',
@@ -224,6 +230,8 @@ export async function generateQRCodeBase64(
     globalAny.document = previousGlobals.document
     globalAny.HTMLElement = previousGlobals.HTMLElement
     globalAny.Node = previousGlobals.Node
+    globalAny.XMLSerializer = previousGlobals.XMLSerializer
+    globalAny.btoa = previousGlobals.btoa
   }
 }
 

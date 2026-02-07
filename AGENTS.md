@@ -1,0 +1,1 @@
+1. The QR code MUST BE HIGHLY CUSTOMIZABLE, allowing users to modify its design, colors, and patterns to suit their preferences and branding needs. Do NOT ever use `qrcode` or `react-qr-code` or `qrcode-generatoe` or any such basic and uncustomizable packages UNDER ANY CIRCUMSTANCES
