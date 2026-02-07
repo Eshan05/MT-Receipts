@@ -11,10 +11,10 @@ export interface SuperAdminContext {
   }
 }
 
-export async function getSuperAdminContext(): Promise<
-  SuperAdminContext | NextResponse
-> {
-  const token = await getTokenServer()
+export async function getSuperAdminContext(
+  request?: Request
+): Promise<SuperAdminContext | NextResponse> {
+  const token = await getTokenServer(request)
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

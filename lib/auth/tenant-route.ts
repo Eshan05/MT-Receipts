@@ -29,10 +29,10 @@ export interface TenantRouteResult<T = unknown> {
   status: number
 }
 
-export async function getTenantContext(): Promise<
-  TenantContext | NextResponse
-> {
-  const token = await getTokenServer()
+export async function getTenantContext(
+  request?: Request
+): Promise<TenantContext | NextResponse> {
+  const token = await getTokenServer(request)
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
