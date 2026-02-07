@@ -35,24 +35,54 @@ type ResolvedQrOptions = {
 
 let resvgWasmInit: Promise<void> | null = null
 
+async function loadResvgWasmBytes(): Promise<Uint8Array> {
+  const { readFile } = await import('node:fs/promises')
+
+  const metaResolve = (import.meta as any).resolve
+  if (typeof metaResolve === 'function') {
+    const resolved = metaResolve('@resvg/resvg-wasm/index_bg.wasm')
+    const wasmUrl = new URL(resolved)
+    return await readFile(wasmUrl)
+  }
+
+  const moduleNs = await import('node:module')
+  const createRequireFn =
+    (moduleNs as any).createRequire ?? (moduleNs as any).default?.createRequire
+
+  if (typeof createRequireFn === 'function') {
+    const requireFn = createRequireFn(`${process.cwd()}/`)
+    const wasmPath = requireFn.resolve('@resvg/resvg-wasm/index_bg.wasm')
+    return await readFile(wasmPath)
+  }
+
+  const globalRequire = (globalThis as any).require
+  if (typeof globalRequire?.resolve === 'function') {
+    const wasmPath = globalRequire.resolve('@resvg/resvg-wasm/index_bg.wasm')
+    return await readFile(wasmPath)
+  }
+
+  throw new Error('Unable to resolve @resvg/resvg-wasm WASM file path')
+}
+
 async function getResvgWasm() {
   const mod = await import('@resvg/resvg-wasm')
 
+  const initWasmFn = (mod as any).initWasm ?? (mod as any).default?.initWasm
+  const ResvgClass = (mod as any).Resvg ?? (mod as any).default?.Resvg
+
+  if (typeof initWasmFn !== 'function' || typeof ResvgClass !== 'function') {
+    throw new Error('Failed to load @resvg/resvg-wasm exports')
+  }
+
   if (!resvgWasmInit) {
     resvgWasmInit = (async () => {
-      const { readFile } = await import('node:fs/promises')
-      const { createRequire } = await import('node:module')
-
-      const require = createRequire(import.meta.url)
-      const wasmPath = require.resolve('@resvg/resvg-wasm/index_bg.wasm')
-      const wasmBytes = await readFile(wasmPath)
-
-      await mod.initWasm(wasmBytes)
+      const wasmBytes = await loadResvgWasmBytes()
+      await initWasmFn(wasmBytes)
     })()
   }
 
   await resvgWasmInit
-  return { Resvg: mod.Resvg }
+  return { Resvg: ResvgClass as typeof mod.Resvg }
 }
 
 async function tryGenerateWithLoskir(options: ResolvedQrOptions) {
