@@ -36,13 +36,12 @@ type ResolvedQrOptions = {
 let resvgWasmInit: Promise<void> | null = null
 
 async function loadResvgWasmBytes(): Promise<Uint8Array> {
-  const { readFile } = await import('node:fs/promises')
+  const fsPromisesNs = await import('node:fs/promises')
+  const readFileFn =
+    (fsPromisesNs as any).readFile ?? (fsPromisesNs as any).default?.readFile
 
-  const metaResolve = (import.meta as any).resolve
-  if (typeof metaResolve === 'function') {
-    const resolved = metaResolve('@resvg/resvg-wasm/index_bg.wasm')
-    const wasmUrl = new URL(resolved)
-    return await readFile(wasmUrl)
+  if (typeof readFileFn !== 'function') {
+    throw new Error('Failed to load node:fs/promises readFile()')
   }
 
   const moduleNs = await import('node:module')
@@ -51,14 +50,24 @@ async function loadResvgWasmBytes(): Promise<Uint8Array> {
 
   if (typeof createRequireFn === 'function') {
     const requireFn = createRequireFn(`${process.cwd()}/`)
-    const wasmPath = requireFn.resolve('@resvg/resvg-wasm/index_bg.wasm')
-    return await readFile(wasmPath)
+    const resolveFn = (requireFn as any).resolve
+    if (typeof resolveFn !== 'function') {
+      throw new Error(
+        'node:module createRequire() did not return a require with resolve()'
+      )
+    }
+
+    const wasmPath = resolveFn.call(
+      requireFn,
+      '@resvg/resvg-wasm/index_bg.wasm'
+    )
+    return await readFileFn(wasmPath)
   }
 
   const globalRequire = (globalThis as any).require
   if (typeof globalRequire?.resolve === 'function') {
     const wasmPath = globalRequire.resolve('@resvg/resvg-wasm/index_bg.wasm')
-    return await readFile(wasmPath)
+    return await readFileFn(wasmPath)
   }
 
   throw new Error('Unable to resolve @resvg/resvg-wasm WASM file path')
