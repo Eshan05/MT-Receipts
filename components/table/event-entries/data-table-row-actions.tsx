@@ -10,6 +10,7 @@ import {
   Pencil,
   Trash2,
   FileInputIcon,
+  Palette,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,6 +53,20 @@ import { getTemplateComponent, getAllTemplateInfo } from '@/lib/templates'
 import { useMemo } from 'react'
 import { IEvent } from '@/models/event.model'
 import { EntryForm } from '@/components/forms/entry-form'
+import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  ColorPicker,
+  ColorPickerAlpha,
+  ColorPickerFormat,
+  ColorPickerHue,
+  ColorPickerSelection,
+  type RgbaValue,
+} from '@/components/derived/color-picker'
 import {
   Select,
   SelectContent,
@@ -81,12 +96,23 @@ export function DataTableRowActions<TData>({
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isSendOpen, setIsSendOpen] = useState(false)
+  const [isTemplateConfigOpen, setIsTemplateConfigOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
   const [selectedTemplateSlug, setSelectedTemplateSlug] =
     useState<string>('professional')
   const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
+
+  const [templateConfig, setTemplateConfig] = useState<{
+    primaryColor: string
+    secondaryColor?: string
+    footerText?: string
+  }>({
+    primaryColor: '#25345b',
+    secondaryColor: undefined,
+    footerText: undefined,
+  })
   const entry = row.original as EventEntry
   const templateInfo = getAllTemplateInfo()
 
@@ -115,6 +141,11 @@ export function DataTableRowActions<TData>({
           templateSlug: selectedTemplateSlug,
           smtpVaultId:
             selectedVaultId === 'default' ? undefined : selectedVaultId,
+          config: {
+            primaryColor: templateConfig.primaryColor,
+            secondaryColor: templateConfig.secondaryColor,
+            footerText: templateConfig.footerText,
+          },
         }),
       }).then(async (response) => {
         if (!response.ok) throw new Error('Failed to send email')
@@ -132,8 +163,24 @@ export function DataTableRowActions<TData>({
 
   const handleDownloadPdf = async () => {
     if (!entry.receiptNumber) return
+
+    const url = new URL(
+      `/api/receipts/${entry.receiptNumber}`,
+      window.location.origin
+    )
+    url.searchParams.set('format', 'pdf')
+    if (templateConfig.primaryColor) {
+      url.searchParams.set('primaryColor', templateConfig.primaryColor)
+    }
+    if (templateConfig.secondaryColor) {
+      url.searchParams.set('secondaryColor', templateConfig.secondaryColor)
+    }
+    if (templateConfig.footerText) {
+      url.searchParams.set('footerText', templateConfig.footerText)
+    }
+
     toast.promise(
-      fetch(`/api/receipts/${entry.receiptNumber}`, {
+      fetch(url.toString(), {
         headers: { Accept: 'application/pdf' },
       }).then(async (response) => {
         if (!response.ok) throw new Error('Failed to download PDF')
@@ -210,12 +257,14 @@ export function DataTableRowActions<TData>({
           : entry.createdAt?.toISOString(),
       notes: entry.notes,
       config: {
-        primaryColor: '#25345b',
+        primaryColor: templateConfig.primaryColor,
+        secondaryColor: templateConfig.secondaryColor,
         showQrCode: true,
         organizationName: 'ACES',
+        footerText: templateConfig.footerText,
       },
     }
-  }, [entry])
+  }, [entry, templateConfig])
 
   return (
     <>
@@ -241,6 +290,10 @@ export function DataTableRowActions<TData>({
           <DropdownMenuItem onClick={handleDownloadPdf}>
             <Download className='mr-1' />
             Download PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setIsTemplateConfigOpen(true)}>
+            <Palette className='mr-1' />
+            Template
           </DropdownMenuItem>
           {!entry.refunded && (
             <>
@@ -301,6 +354,139 @@ export function DataTableRowActions<TData>({
               <TemplateComponent {...templateProps} />
             </PDFViewer>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isTemplateConfigOpen}
+        onOpenChange={setIsTemplateConfigOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Template Settings</DialogTitle>
+            <DialogDescription>
+              Set primary/secondary colors and footer text for this receipt.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-3'>
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='space-y-1'>
+                <FieldLabel>Primary Color</FieldLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className='w-full justify-start gap-2 h-9'
+                    >
+                      <div
+                        className='w-4 h-4 rounded border'
+                        style={{ backgroundColor: templateConfig.primaryColor }}
+                      />
+                      {templateConfig.primaryColor}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-64 p-3' align='start'>
+                    <ColorPicker
+                      value={templateConfig.primaryColor || '#25345b'}
+                      onChange={(rgba: RgbaValue) => {
+                        const r = Math.round(rgba[0])
+                        const g = Math.round(rgba[1])
+                        const b = Math.round(rgba[2])
+                        const hex = `#${r.toString(16).padStart(2, '0')}${g
+                          .toString(16)
+                          .padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+                        setTemplateConfig((prev) => ({
+                          ...prev,
+                          primaryColor: hex,
+                        }))
+                      }}
+                      className='flex flex-col gap-2'
+                    >
+                      <ColorPickerSelection className='h-40 rounded-md' />
+                      <ColorPickerHue />
+                      <ColorPickerAlpha />
+                      <ColorPickerFormat />
+                    </ColorPicker>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className='space-y-1'>
+                <FieldLabel>Secondary Color</FieldLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className='w-full justify-start gap-2 h-9'
+                    >
+                      <div
+                        className='w-4 h-4 rounded border'
+                        style={{
+                          backgroundColor:
+                            templateConfig.secondaryColor || '#000000',
+                        }}
+                      />
+                      {templateConfig.secondaryColor || 'Not set'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-64 p-3' align='start'>
+                    <ColorPicker
+                      value={templateConfig.secondaryColor || '#000000'}
+                      onChange={(rgba: RgbaValue) => {
+                        const r = Math.round(rgba[0])
+                        const g = Math.round(rgba[1])
+                        const b = Math.round(rgba[2])
+                        const hex = `#${r.toString(16).padStart(2, '0')}${g
+                          .toString(16)
+                          .padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+                        setTemplateConfig((prev) => ({
+                          ...prev,
+                          secondaryColor: hex,
+                        }))
+                      }}
+                      className='flex flex-col gap-2'
+                    >
+                      <ColorPickerSelection className='h-40 rounded-md' />
+                      <ColorPickerHue />
+                      <ColorPickerAlpha />
+                      <ColorPickerFormat />
+                    </ColorPicker>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className='space-y-1'>
+              <FieldLabel>Footer Text</FieldLabel>
+              <Input
+                value={templateConfig.footerText || ''}
+                onChange={(e) =>
+                  setTemplateConfig((prev) => ({
+                    ...prev,
+                    footerText: e.target.value || undefined,
+                  }))
+                }
+                placeholder='Custom footer text'
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() =>
+                setTemplateConfig({
+                  primaryColor: '#25345b',
+                  secondaryColor: undefined,
+                  footerText: undefined,
+                })
+              }
+            >
+              Reset
+            </Button>
+            <Button onClick={() => setIsTemplateConfigOpen(false)}>Done</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

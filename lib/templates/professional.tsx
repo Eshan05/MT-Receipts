@@ -393,20 +393,7 @@ export default function ProfessionalTemplate({
         <View style={styles.totalsWithQrContainer}>
           {qrCodeData && (
             <View style={styles.qrCodeSection}>
-              <Image
-                style={styles.qrCode}
-                src={(() => {
-                  if (!qrCodeData.startsWith('data:image/')) return qrCodeData
-                  const [header, base64] = qrCodeData.split(',')
-                  const mime = header.slice(5, header.indexOf(';'))
-                  const ext = mime.split('/')[1]
-                  const format = ext === 'jpeg' ? 'jpg' : ext
-                  return {
-                    data: Buffer.from(base64, 'base64'),
-                    format: format as 'png' | 'jpg',
-                  }
-                })()}
-              />
+              <Image style={styles.qrCode} src={qrCodeData} />
             </View>
           )}
           <View style={styles.totalsSection}>
@@ -447,10 +434,13 @@ export default function ProfessionalTemplate({
                 <Text style={styles.notesText}>{notes}</Text>
               </View>
             )} */}
-            <Text style={styles.termsTitle}>Terms & Conditions</Text>
+            <Text style={styles.termsTitle}>
+              {config.footerText ? 'Footer' : 'Terms & Conditions'}
+            </Text>
             <Text style={styles.termsText}>
-              Payment is due within 15 days{'\n'}
-              Please make checks payable to: {orgName}
+              {config.footerText
+                ? config.footerText
+                : `Payment is due within 15 days\nPlease make checks payable to: ${orgName}`}
             </Text>
           </View>
         </View>

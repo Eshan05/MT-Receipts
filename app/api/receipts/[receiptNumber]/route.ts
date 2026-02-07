@@ -171,6 +171,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const wantsPdf =
       request.nextUrl.searchParams.get('format')?.toLowerCase() === 'pdf'
 
+    const qpPrimaryColor = request.nextUrl.searchParams.get('primaryColor')
+    const qpSecondaryColor = request.nextUrl.searchParams.get('secondaryColor')
+    const qpFooterText = request.nextUrl.searchParams.get('footerText')
+
+    const normalizeHex = (value: string | null): string | undefined => {
+      if (!value) return undefined
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+      if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash
+      if (/^#[0-9a-fA-F]{3}$/.test(withHash)) return withHash
+      return undefined
+    }
+
+    const customConfig = (() => {
+      const primaryColor = normalizeHex(qpPrimaryColor)
+      const secondaryColor = normalizeHex(qpSecondaryColor)
+      const footerText = qpFooterText?.trim() || undefined
+      if (!primaryColor && !secondaryColor && !footerText) return undefined
+      return {
+        ...(primaryColor ? { primaryColor } : {}),
+        ...(secondaryColor ? { secondaryColor } : {}),
+        ...(footerText ? { footerText } : {}),
+      }
+    })()
+
     if (acceptHeader.includes('application/pdf') || wantsPdf) {
       const receipt = await Receipt.findOne({ receiptNumber }).lean()
       if (!receipt) {
@@ -231,6 +257,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         date: receipt.createdAt?.toISOString(),
         notes: receipt.notes,
         qrCodeData,
+        customConfig,
       })
 
       const buffer = await streamToBuffer(result.stream)

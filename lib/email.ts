@@ -6,6 +6,7 @@ import {
   streamToBuffer,
   type RenderReceiptOptions,
 } from '@/lib/pdf/template-renderer'
+import type { TemplateConfig } from '@/lib/templates/types'
 import dbConnect from '@/lib/db-conn'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 import { ensureQrPngIsRgbDataUrl } from '@/lib/qr-code-data'
@@ -153,6 +154,7 @@ export interface SendReceiptOptions {
   organizationLogo?: string
   primaryColor?: string
   secondaryColor?: string
+  templateConfig?: Partial<TemplateConfig>
   emailFromName?: string
   emailFromAddress?: string
   notes?: string
@@ -183,6 +185,7 @@ export async function sendReceiptEmail({
   organizationLogo,
   primaryColor,
   secondaryColor,
+  templateConfig,
   emailFromName,
   emailFromAddress,
   notes,
@@ -199,6 +202,10 @@ export async function sendReceiptEmail({
   })
 
   try {
+    const effectivePrimaryColor = templateConfig?.primaryColor || primaryColor
+    const effectiveSecondaryColor =
+      templateConfig?.secondaryColor || secondaryColor
+
     const emailHtml = await render(
       ReceiptEmail({
         receiptNumber,
@@ -212,8 +219,8 @@ export async function sendReceiptEmail({
         date,
         organizationName,
         organizationLogo,
-        primaryColor,
-        secondaryColor,
+        primaryColor: effectivePrimaryColor,
+        secondaryColor: effectiveSecondaryColor,
         emailFromAddress,
       })
     )
@@ -253,6 +260,7 @@ export async function sendReceiptEmail({
       date,
       notes,
       qrCodeData: finalQrCodeData,
+      customConfig: templateConfig,
     }
 
     const { stream } = await renderReceiptPDF(renderOptions)

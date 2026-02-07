@@ -37,7 +37,7 @@ export interface RenderReceiptOptions {
   date?: string
   notes?: string
   qrCodeData?: string
-  customConfig?: TemplateConfig
+  customConfig?: Partial<TemplateConfig>
 }
 
 export interface RenderResult {
@@ -178,7 +178,7 @@ export async function renderReceiptPDF(
     orgBranding?.defaultTemplate
   )
   const dbConfig = buildConfig(template, organization?.name, orgBranding)
-  const config = customConfig || dbConfig
+  const config = customConfig ? { ...dbConfig, ...customConfig } : dbConfig
   const TemplateComponent = getTemplateComponent(slug)
 
   const props: TemplateProps = {

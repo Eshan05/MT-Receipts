@@ -35,10 +35,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { Receipt } = ctx.models
     const body = await request.json().catch(() => ({}))
-    const { templateSlug, smtpVaultId } = body
+    const { templateSlug, smtpVaultId, config } = body
     const organizationBranding = await getOrganizationBrandingBySlug(
       ctx.organization.slug
     )
+
+    const normalizeHex = (value: unknown): string | undefined => {
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`
+      if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash
+      if (/^#[0-9a-fA-F]{3}$/.test(withHash)) return withHash
+      return undefined
+    }
+
+    const templateConfig = (() => {
+      const primaryColor = normalizeHex((config as any)?.primaryColor)
+      const secondaryColor = normalizeHex((config as any)?.secondaryColor)
+      const footerText =
+        typeof (config as any)?.footerText === 'string'
+          ? ((config as any)?.footerText as string).trim() || undefined
+          : undefined
+
+      if (!primaryColor && !secondaryColor && !footerText) return undefined
+      return {
+        ...(primaryColor ? { primaryColor } : {}),
+        ...(secondaryColor ? { secondaryColor } : {}),
+        ...(footerText ? { footerText } : {}),
+      }
+    })()
 
     const receipt = await Receipt.findOne({ receiptNumber }).populate('event')
 
@@ -90,14 +116,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       organizationName:
         organizationBranding?.organizationName || ctx.organization.name,
       organizationLogo: organizationBranding?.logoUrl,
-      primaryColor: organizationBranding?.primaryColor,
-      secondaryColor: organizationBranding?.secondaryColor,
+      primaryColor:
+        templateConfig?.primaryColor || organizationBranding?.primaryColor,
+      secondaryColor:
+        templateConfig?.secondaryColor || organizationBranding?.secondaryColor,
       emailFromName: organizationBranding?.emailFromName,
       emailFromAddress: organizationBranding?.emailFromAddress,
       notes: receipt.notes,
       qrCodeData: receipt.qrCodeData,
       templateSlug,
       smtpVaultId,
+      templateConfig,
     })
 
     if (result.success) {
