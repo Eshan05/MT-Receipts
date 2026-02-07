@@ -38,6 +38,20 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ['skia-canvas', '@loskir/styled-qr-code-node'],
+  outputFileTracingIncludes: {
+    '/api/receipts/[receiptNumber]': [
+      'node_modules/@resvg/resvg-wasm/index_bg.wasm',
+      'node_modules/.pnpm/@resvg+resvg-wasm@*/node_modules/@resvg/resvg-wasm/index_bg.wasm',
+    ],
+    '/api/receipts/[receiptNumber]/emails': [
+      'node_modules/@resvg/resvg-wasm/index_bg.wasm',
+      'node_modules/.pnpm/@resvg+resvg-wasm@*/node_modules/@resvg/resvg-wasm/index_bg.wasm',
+    ],
+    '/api/receipts/emails': [
+      'node_modules/@resvg/resvg-wasm/index_bg.wasm',
+      'node_modules/.pnpm/@resvg+resvg-wasm@*/node_modules/@resvg/resvg-wasm/index_bg.wasm',
+    ],
+  },
 }
 
 export default nextConfig
