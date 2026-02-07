@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
+import { getRequestMeta } from '@/lib/request-meta'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'
@@ -15,6 +17,8 @@ const updateRoleSchema = z.object({
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const meta = getRequestMeta(request)
+
     const superAdmin = await getSuperAdminContext()
     if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -53,8 +57,28 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       )
     }
 
+    const beforeRole = targetMembership.role
     targetMembership.role = validation.data.role
     await targetUser.save()
+
+    void writeAuditLog({
+      userId: superAdmin.user.id,
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'UPDATE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        operation: 'update_member_role',
+        targetUserId: targetUser._id.toString(),
+        targetEmail: targetUser.email,
+        beforeRole,
+        afterRole: validation.data.role,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
 
     return NextResponse.json({ message: 'Role updated' })
   } catch (error) {
@@ -66,8 +90,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const meta = getRequestMeta(request)
+
     const superAdmin = await getSuperAdminContext()
     if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -94,6 +120,23 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     )
 
     await targetUser.save()
+
+    void writeAuditLog({
+      userId: superAdmin.user.id,
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'DELETE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        operation: 'remove_member',
+        targetUserId: targetUser._id.toString(),
+        targetEmail: targetUser.email,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
 
     return NextResponse.json({ message: 'Member removed' })
   } catch (error) {

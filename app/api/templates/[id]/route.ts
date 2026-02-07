@@ -1,14 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
+  const meta = getRequestMeta(req)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Template } = ctx.models
     const { id } = await params
@@ -23,7 +51,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ template }, { status: 200 })
   } catch (error) {
-    console.error('Failed to fetch template:', error)
+    baseLog.error('template_fetch_error', { error })
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }
@@ -32,9 +60,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 export async function PUT(req: NextRequest, { params }: RouteParams) {
+  const meta = getRequestMeta(req)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Template } = ctx.models
     const { id } = await params
@@ -79,9 +130,26 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     await template.save()
 
+    void writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: 'UPDATE',
+      resourceType: 'TEMPLATE',
+      resourceId: template._id.toString(),
+      details: {
+        templateName: template.name,
+        templateSlug: template.slug,
+        category: template.category,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
+
     return NextResponse.json({ template }, { status: 200 })
   } catch (error) {
-    console.error('Failed to update template:', error)
+    baseLog.error('template_update_error', { error })
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }
@@ -90,9 +158,32 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  const meta = getRequestMeta(req)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Template } = ctx.models
     const { id } = await params
@@ -105,9 +196,26 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       )
     }
 
+    void writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: 'DELETE',
+      resourceType: 'TEMPLATE',
+      resourceId: template._id.toString(),
+      details: {
+        templateName: template.name,
+        templateSlug: template.slug,
+        category: template.category,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
+
     return NextResponse.json({ message: 'Template deleted' }, { status: 200 })
   } catch (error) {
-    console.error('Failed to delete template:', error)
+    baseLog.error('template_delete_error', { error })
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }

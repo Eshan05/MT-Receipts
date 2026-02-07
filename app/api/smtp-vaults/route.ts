@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
 import { encryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 import SMTPVault from '@/models/smtp-vault.model'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 function sanitizeVault(vault: {
   _id: string
@@ -23,10 +28,33 @@ function sanitizeVault(vault: {
   }
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const vaults = await SMTPVault.find({
       organizationId: ctx.organization.id,
@@ -46,7 +74,7 @@ export async function GET() {
       ),
     })
   } catch (error) {
-    console.error('Error fetching SMTP vaults:', error)
+    baseLog.error('smtp_vaults_fetch_error', { error })
     return NextResponse.json(
       { message: 'Failed to fetch SMTP vaults' },
       { status: 500 }
@@ -55,9 +83,41 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
+
+    const vaultWriteRl = await checkRateLimit({
+      policy: RATE_LIMITS.smtpVaultWrite,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!vaultWriteRl.success) {
+      log.warn('rate_limited', { limiter: vaultWriteRl.policy.name })
+      return rateLimitedResponse(vaultWriteRl)
+    }
 
     const body = await request.json()
 
@@ -119,6 +179,31 @@ export async function POST(request: NextRequest) {
       createdBy: ctx.user.id,
     })
 
+    log.info('smtp_vault_created', {
+      vaultId: String(vault._id),
+      email,
+      isDefault,
+    })
+
+    await writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: 'CREATE',
+      resourceType: 'ORGANIZATION',
+      resourceId: ctx.organization.id,
+      details: {
+        kind: 'smtp_vault',
+        vaultId: String(vault._id),
+        email,
+        isDefault,
+        requestId: meta.requestId,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json(
       {
         message: 'SMTP vault created successfully',
@@ -135,7 +220,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating SMTP vault:', error)
+    baseLog.error('smtp_vault_create_error', { error })
     return NextResponse.json(
       { message: 'Failed to create SMTP vault' },
       { status: 500 }

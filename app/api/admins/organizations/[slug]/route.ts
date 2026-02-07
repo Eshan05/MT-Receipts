@@ -8,6 +8,8 @@ import {
   setCachedOrganization,
 } from '@/lib/redis'
 import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
+import { getRequestMeta } from '@/lib/request-meta'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 const updateOrganizationSchema = z.object({
   action: z.enum([
@@ -111,6 +113,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const meta = getRequestMeta(request)
+
   const superAdmin = await getSuperAdminContext()
   if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -136,6 +140,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const { action, limits, name, description, logoUrl, settings } = parsed.data
+
+  const before = {
+    status: organization.status,
+    limits: organization.limits,
+    name: organization.name,
+    description: organization.description,
+    logoUrl: organization.logoUrl,
+    settings: organization.settings,
+  }
 
   switch (action) {
     case 'approve':
@@ -211,6 +224,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     status: organization.status,
   })
 
+  void writeAuditLog({
+    userId: superAdmin.user.id,
+    organizationId: organization._id.toString(),
+    organizationSlug: organization.slug,
+    action: 'UPDATE',
+    resourceType: 'ORGANIZATION',
+    resourceId: organization._id.toString(),
+    details: {
+      operation: action,
+      before,
+      after: {
+        status: organization.status,
+        limits: organization.limits,
+        name: organization.name,
+        description: organization.description,
+        logoUrl: organization.logoUrl,
+        settings: organization.settings,
+        approvedAt: organization.approvedAt,
+        deletedAt: organization.deletedAt,
+        restoresBefore: organization.restoresBefore,
+      },
+    },
+    status: 'SUCCESS',
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent,
+  }).catch(() => {})
+
   return NextResponse.json({
     message: `Organization ${action} action completed`,
     organization: {
@@ -226,6 +266,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const meta = getRequestMeta(request)
+
   const superAdmin = await getSuperAdminContext()
   if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -257,6 +299,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
   await Organization.deleteOne({ _id: organization._id })
   await invalidateCachedOrganization(organization.slug)
+
+  void writeAuditLog({
+    userId: superAdmin.user.id,
+    organizationId: organization._id.toString(),
+    organizationSlug: organization.slug,
+    action: 'DELETE',
+    resourceType: 'ORGANIZATION',
+    resourceId: organization._id.toString(),
+    details: {
+      operation: 'hard_delete',
+      slug: organization.slug,
+    },
+    status: 'SUCCESS',
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent,
+  }).catch(() => {})
 
   return NextResponse.json({
     message: 'Organization permanently deleted',

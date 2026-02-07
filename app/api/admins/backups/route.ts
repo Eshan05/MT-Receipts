@@ -13,6 +13,11 @@ import User from '@/models/user.model'
 import { getTenantModels } from '@/lib/db/tenant-models'
 import { gzipSync } from 'node:zlib'
 import crypto from 'node:crypto'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 export const runtime = 'nodejs'
 
@@ -42,9 +47,17 @@ function isMissingEnvError(err: unknown): boolean {
   return message.includes('Missing required environment variable')
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
+  const meta = getRequestMeta(request)
+  const log = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const superAdmin = await getSuperAdminContext()
+    const superAdmin = await getSuperAdminContext(request)
     if (superAdmin instanceof NextResponse) return superAdmin
 
     let clientInfo: ReturnType<typeof getB2S3Client>
@@ -91,7 +104,7 @@ export async function GET() {
     }
     return NextResponse.json(payload)
   } catch (error) {
-    console.error('Backups health check error:', error)
+    log.error('backups_health_error', { error })
     const message = error instanceof Error ? error.message : 'Unknown error'
 
     const payload: BackupsHealthResponse = {
@@ -108,10 +121,27 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request?: Request) {
+  const meta = getRequestMeta(request)
+  const log = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const superAdmin = await getSuperAdminContext()
+    const superAdmin = await getSuperAdminContext(request)
     if (superAdmin instanceof NextResponse) return superAdmin
+
+    const rl = await checkRateLimit({
+      policy: RATE_LIMITS.superadminBackupsRun,
+      scope: `superadmin:${superAdmin.user.id}`,
+    })
+    if (!rl.success) {
+      log.warn('rate_limited', { limiter: rl.policy.name })
+      return rateLimitedResponse(rl)
+    }
 
     const { client, bucket } = getB2S3Client({ requireBucket: true })
 
@@ -201,9 +231,36 @@ export async function POST() {
       tenantErrors,
     }
 
+    log.info('backups_run_complete', {
+      userId: superAdmin.user.id,
+      key,
+      bytes: gz.byteLength,
+      orgCount: organizations.length,
+      tenantCount: Object.keys(tenants).length,
+      tenantErrorsCount: tenantErrors.length,
+    })
+
+    await writeAuditLog({
+      userId: superAdmin.user.id,
+      action: 'BACKUP',
+      resourceType: 'ORGANIZATION',
+      details: {
+        key,
+        bytes: gz.byteLength,
+        createdAt,
+        orgCount: organizations.length,
+        tenantCount: Object.keys(tenants).length,
+        tenantErrorsCount: tenantErrors.length,
+        requestId: meta.requestId,
+      },
+      status: tenantErrors.length > 0 ? 'FAILURE' : 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json(payload)
   } catch (error) {
-    console.error('Backups run error:', error)
+    log.error('backups_run_error', { error })
     const message = error instanceof Error ? error.message : 'Unknown error'
     const payload: BackupsRunResponse = { ok: false, error: message }
     return NextResponse.json(payload, { status: 500 })

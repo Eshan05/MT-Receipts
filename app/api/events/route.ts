@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getTenantContext } from '@/lib/auth/tenant-route'
 import { enforceMaxEvents } from '@/lib/tenants/quota-enforcement'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 const PAGE_SIZE = 12
 
@@ -47,9 +52,32 @@ const eventSchema = z.object({
 })
 
 export async function GET(req: NextRequest) {
+  const meta = getRequestMeta(req)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Event } = ctx.models
     const { searchParams } = new URL(req.url)
@@ -86,7 +114,7 @@ export async function GET(req: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('Failed to fetch events:', error)
+    baseLog.error('events_fetch_error', { error })
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }
@@ -95,9 +123,32 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const meta = getRequestMeta(req)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Event } = ctx.models
     const body = await req.json()
@@ -130,12 +181,34 @@ export async function POST(req: NextRequest) {
       createdBy: ctx.user.id,
     })
 
+    log.info('event_created', {
+      eventId: newEvent._id.toString(),
+      eventCode: newEvent.eventCode,
+    })
+
+    await writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: 'CREATE',
+      resourceType: 'EVENT',
+      resourceId: newEvent._id.toString(),
+      details: {
+        eventCode: newEvent.eventCode,
+        name: newEvent.name,
+        requestId: meta.requestId,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json(
       { message: 'Event created successfully', event: newEvent },
       { status: 201 }
     )
   } catch (error) {
-    console.error('Failed to create event:', error)
+    baseLog.error('event_create_error', { error })
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }

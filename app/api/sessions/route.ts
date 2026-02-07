@@ -14,6 +14,11 @@ import {
 } from '@/lib/auth/auth'
 import { setCachedOrganization } from '@/lib/redis'
 import { z } from 'zod'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -52,13 +57,21 @@ async function markMembershipLastSignedIn(
 }
 
 export async function POST(request: Request) {
+  const meta = getRequestMeta(request)
+  const log = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
     await dbConnect()
     const body = await request.json()
 
     const switchValidation = switchOrgSchema.safeParse(body)
     if (switchValidation.success) {
-      return handleOrgSwitch(switchValidation.data.organizationSlug)
+      return handleOrgSwitch(switchValidation.data.organizationSlug, request)
     }
 
     const validationResult = loginSchema.safeParse(body)
@@ -71,8 +84,36 @@ export async function POST(request: Request) {
     }
     const { email, password } = validationResult.data
 
+    // Rate limit login attempts by IP and IP+email.
+    const ipScope = `ip:${meta.ip || 'unknown'}`
+    const emailScope = `ip:${meta.ip || 'unknown'}:email:${email.toLowerCase()}`
+
+    const rlIp = await checkRateLimit({
+      policy: RATE_LIMITS.loginAttemptsPerIp,
+      scope: ipScope,
+    })
+    if (!rlIp.success) {
+      log.warn('rate_limited', { limiter: rlIp.policy.name, scope: ipScope })
+      return rateLimitedResponse(rlIp)
+    }
+
+    const rlIpEmail = await checkRateLimit({
+      policy: RATE_LIMITS.loginAttemptsPerIpEmail,
+      scope: emailScope,
+    })
+    if (!rlIpEmail.success) {
+      log.warn('rate_limited', {
+        limiter: rlIpEmail.policy.name,
+        scope: emailScope,
+      })
+      return rateLimitedResponse(rlIpEmail)
+    }
+
     const user = await User.findOne({ email })
     if (!user) {
+      log.warn('login_failed_no_such_user', {
+        email: email.toLowerCase(),
+      })
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -81,6 +122,19 @@ export async function POST(request: Request) {
 
     const passwordMatch = await User.comparePassword(password, user.passhash)
     if (!passwordMatch) {
+      await writeAuditLog({
+        userId: user._id.toString(),
+        action: 'LOGIN',
+        resourceType: 'USER',
+        resourceId: user._id.toString(),
+        details: {
+          outcome: 'bad_password',
+          requestId: meta.requestId,
+        },
+        status: 'FAILURE',
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      }).catch(() => undefined)
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -146,9 +200,31 @@ export async function POST(request: Request) {
       )
     }
 
+    log.info('session_created', {
+      userId: user._id.toString(),
+      isSuperAdmin: !!user.isSuperAdmin,
+      currentOrgSlug: currentOrganization?.slug || null,
+    })
+
+    await writeAuditLog({
+      userId: user._id.toString(),
+      organizationId: currentOrganization?.id,
+      organizationSlug: currentOrganization?.slug,
+      action: 'LOGIN',
+      resourceType: 'USER',
+      resourceId: user._id.toString(),
+      details: {
+        requestId: meta.requestId,
+        currentOrgSlug: currentOrganization?.slug || null,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return response
   } catch (error) {
-    console.error('Login error:', error)
+    log.error('login_error', { error })
     return NextResponse.json(
       {
         message: 'Internal Server Error',
@@ -159,8 +235,16 @@ export async function POST(request: Request) {
   }
 }
 
-async function handleOrgSwitch(organizationSlug: string) {
-  const token = await getTokenServer()
+async function handleOrgSwitch(organizationSlug: string, request?: Request) {
+  const meta = getRequestMeta(request)
+  const log = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
+  const token = await getTokenServer(request)
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -180,6 +264,10 @@ async function handleOrgSwitch(organizationSlug: string) {
   )
 
   if (!membership) {
+    log.warn('switch_org_denied', {
+      userId: user._id.toString(),
+      targetOrgSlug: organizationSlug,
+    })
     return NextResponse.json(
       { error: 'You are not a member of this organization' },
       { status: 403 }
@@ -188,6 +276,10 @@ async function handleOrgSwitch(organizationSlug: string) {
 
   const org = await Organization.findBySlug(organizationSlug)
   if (!org || org.status !== 'active') {
+    log.warn('switch_org_unavailable', {
+      userId: user._id.toString(),
+      targetOrgSlug: organizationSlug,
+    })
     return NextResponse.json(
       { error: 'Organization not available' },
       { status: 404 }
@@ -209,6 +301,26 @@ async function handleOrgSwitch(organizationSlug: string) {
   })
 
   await setCurrentOrgCookie(organizationSlug, response)
+
+  log.info('switch_org_success', {
+    userId: user._id.toString(),
+    organizationId: org._id.toString(),
+    organizationSlug: org.slug,
+  })
+
+  await writeAuditLog({
+    userId: user._id.toString(),
+    organizationId: org._id.toString(),
+    organizationSlug: org.slug,
+    action: 'SWITCH_ORG',
+    resourceType: 'ORGANIZATION',
+    resourceId: org._id.toString(),
+    details: { requestId: meta.requestId },
+    status: 'SUCCESS',
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent,
+  }).catch(() => undefined)
+
   return response
 }
 

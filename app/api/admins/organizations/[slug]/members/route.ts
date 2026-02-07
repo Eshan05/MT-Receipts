@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/db-conn'
 import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
+import { getRequestMeta } from '@/lib/request-meta'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import MembershipRequest from '@/models/membership-request.model'
@@ -139,6 +141,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const meta = getRequestMeta(request)
+
     const superAdmin = await getSuperAdminContext()
     if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -175,6 +179,24 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       )
     }
 
+    void writeAuditLog({
+      userId: superAdmin.user.id,
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'UPDATE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        operation: 'bulk_update_member_role',
+        role,
+        userIds,
+        count: userIds.length,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
+
     return NextResponse.json({ message: `Updated ${userIds.length} members` })
   } catch (error) {
     console.error('Bulk update superadmin members error:', error)
@@ -187,6 +209,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const meta = getRequestMeta(request)
+
     const superAdmin = await getSuperAdminContext()
     if (superAdmin instanceof NextResponse) return superAdmin
 
@@ -221,6 +245,23 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         }
       )
     }
+
+    void writeAuditLog({
+      userId: superAdmin.user.id,
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'DELETE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        operation: 'bulk_remove_members',
+        userIds,
+        count: userIds.length,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => {})
 
     return NextResponse.json({ message: `Removed ${userIds.length} members` })
   } catch (error) {

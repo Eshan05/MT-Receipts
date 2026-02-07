@@ -4,6 +4,11 @@ import { sendReceiptEmail } from '@/lib/email'
 import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 type PopulatedEvent = {
   name: string
@@ -25,9 +30,32 @@ function isPopulatedEvent(value: unknown): value is PopulatedEvent {
 }
 
 export async function GET(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Receipt } = ctx.models
     const { searchParams } = new URL(request.url)
@@ -105,7 +133,7 @@ export async function GET(request: NextRequest) {
       }),
     })
   } catch (error) {
-    console.error('Error fetching receipt email activity:', error)
+    baseLog.error('receipt_email_activity_fetch_error', { error })
     return NextResponse.json(
       { message: 'Failed to fetch receipt email activity' },
       { status: 500 }
@@ -114,9 +142,32 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Receipt } = ctx.models
     const body = await request.json()
@@ -149,6 +200,18 @@ export async function POST(request: NextRequest) {
 
     for (const receipt of receipts) {
       try {
+        const emailRl = await checkRateLimit({
+          policy: RATE_LIMITS.receiptEmailSend,
+          scope: `tenant:${ctx.organization.id}`,
+        })
+        if (!emailRl.success) {
+          failedCount++
+          errors.push(
+            `${receipt.receiptNumber}: rate limited (${emailRl.policy.name})`
+          )
+          continue
+        }
+
         const event: unknown = receipt.event
         if (!isPopulatedEvent(event)) {
           throw new Error('Receipt is missing populated event data')
@@ -226,6 +289,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    log.info('receipt_bulk_email_complete', {
+      attempted: receipts.length,
+      sentCount,
+      failedCount,
+    })
+
+    await writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: failedCount > 0 ? 'EMAIL_FAILED' : 'EMAIL_SENT',
+      resourceType: 'RECEIPT',
+      details: {
+        kind: 'bulk_email',
+        attempted: receipts.length,
+        sentCount,
+        failedCount,
+        errors: errors.slice(0, 25),
+        requestId: meta.requestId,
+      },
+      status: failedCount > 0 ? 'FAILURE' : 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json({
       message: `Sent ${sentCount} emails${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
       sentCount,
@@ -233,7 +321,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error) {
-    console.error('Error sending bulk emails:', error)
+    baseLog.error('receipt_bulk_email_error', { error })
     return NextResponse.json(
       { message: 'Failed to send emails' },
       { status: 500 }

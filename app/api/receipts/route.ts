@@ -5,11 +5,39 @@ import { sendReceiptEmail } from '@/lib/email'
 import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
 import { formatReceiptNumber } from '@/lib/tenants/receipt-number'
 import { enforceMaxReceipts } from '@/lib/tenants/quota-enforcement'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 export async function GET(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Receipt, Event } = ctx.models
     const { searchParams } = new URL(request.url)
@@ -50,7 +78,7 @@ export async function GET(request: NextRequest) {
       hasMore,
     })
   } catch (error) {
-    console.error('Error fetching receipts:', error)
+    baseLog.error('receipts_fetch_error', { error })
     return NextResponse.json(
       { message: 'Failed to fetch receipts' },
       { status: 500 }
@@ -59,9 +87,41 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
+
+    const createRl = await checkRateLimit({
+      policy: RATE_LIMITS.receiptCreate,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!createRl.success) {
+      log.warn('rate_limited', { limiter: createRl.policy.name })
+      return rateLimitedResponse(createRl)
+    }
 
     const { Receipt, Event, Sequence } = ctx.models
     const body = await request.json()
@@ -152,72 +212,164 @@ export async function POST(request: NextRequest) {
     })
 
     if (shouldSendEmail) {
-      try {
-        const result = await sendReceiptEmail({
-          to: receipt.customer.email,
-          receiptNumber: receipt.receiptNumber,
-          organizationSlug: ctx.organization.slug,
-          customerName: receipt.customer.name,
-          customerPhone: receipt.customer.phone,
-          customerAddress: receipt.customer.address,
-          eventName: event.name,
-          eventCode: event.eventCode,
-          eventType: event.type,
-          eventLocation: event.location,
-          eventStartDate: event.startDate?.toISOString(),
-          eventEndDate: event.endDate?.toISOString(),
-          items: receipt.items.map((item) => ({
-            name: item.name,
-            description: item.description,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.total,
-          })),
-          totalAmount: receipt.totalAmount,
-          paymentMethod: receipt.paymentMethod,
-          organizationName:
-            organizationBranding?.organizationName || ctx.organization.name,
-          organizationLogo: organizationBranding?.logoUrl,
-          primaryColor: organizationBranding?.primaryColor,
-          secondaryColor: organizationBranding?.secondaryColor,
-          emailFromName: organizationBranding?.emailFromName,
-          emailFromAddress: organizationBranding?.emailFromAddress,
-          notes: receipt.notes,
-          qrCodeData: receipt.qrCodeData,
+      const emailRl = await checkRateLimit({
+        policy: RATE_LIMITS.receiptEmailSend,
+        scope: `tenant:${ctx.organization.id}`,
+      })
+      if (!emailRl.success) {
+        log.warn('rate_limited', { limiter: emailRl.policy.name })
+        receipt.emailLog.push({
+          sentTo: receipt.customer.email,
+          status: 'failed',
+          sentAt: new Date(),
+          error: 'rate_limited',
+          sentByUserId: ctx.user.id,
+          sentByUsername: ctx.user.username,
           smtpVaultId,
         })
 
-        if (result.success) {
-          receipt.emailSent = true
-          receipt.emailSentAt = new Date()
-          receipt.emailLog.push({
-            sentTo: receipt.customer.email,
-            status: 'sent',
-            sentAt: new Date(),
-            sentByUserId: ctx.user.id,
-            sentByUsername: ctx.user.username,
-            smtpSender: result.senderEmail,
-            smtpVaultId: result.smtpVaultId,
-            messageId: result.messageId,
-          })
-        } else {
-          receipt.emailLog.push({
-            sentTo: receipt.customer.email,
-            status: 'failed',
-            sentAt: new Date(),
-            error: result.error,
-            sentByUserId: ctx.user.id,
-            sentByUsername: ctx.user.username,
-            smtpSender: result.senderEmail,
-            smtpVaultId: result.smtpVaultId,
-          })
-        }
-
         await receipt.save()
-      } catch (emailError) {
-        console.error('Failed to send email:', emailError)
+
+        await writeAuditLog({
+          userId: ctx.user.id,
+          organizationId: ctx.organization.id,
+          organizationSlug: ctx.organization.slug,
+          action: 'EMAIL_FAILED',
+          resourceType: 'RECEIPT',
+          resourceId: receipt._id.toString(),
+          details: {
+            receiptNumber: receipt.receiptNumber,
+            to: receipt.customer.email,
+            smtpVaultId: smtpVaultId || null,
+            error: 'rate_limited',
+            requestId: meta.requestId,
+          },
+          status: 'FAILURE',
+          ipAddress: meta.ip,
+          userAgent: meta.userAgent,
+        }).catch(() => undefined)
+
+        // Continue returning 201 for the receipt creation.
+      } else {
+        try {
+          const result = await sendReceiptEmail({
+            to: receipt.customer.email,
+            receiptNumber: receipt.receiptNumber,
+            organizationSlug: ctx.organization.slug,
+            customerName: receipt.customer.name,
+            customerPhone: receipt.customer.phone,
+            customerAddress: receipt.customer.address,
+            eventName: event.name,
+            eventCode: event.eventCode,
+            eventType: event.type,
+            eventLocation: event.location,
+            eventStartDate: event.startDate?.toISOString(),
+            eventEndDate: event.endDate?.toISOString(),
+            items: receipt.items.map((item) => ({
+              name: item.name,
+              description: item.description,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total,
+            })),
+            totalAmount: receipt.totalAmount,
+            paymentMethod: receipt.paymentMethod,
+            organizationName:
+              organizationBranding?.organizationName || ctx.organization.name,
+            organizationLogo: organizationBranding?.logoUrl,
+            primaryColor: organizationBranding?.primaryColor,
+            secondaryColor: organizationBranding?.secondaryColor,
+            emailFromName: organizationBranding?.emailFromName,
+            emailFromAddress: organizationBranding?.emailFromAddress,
+            notes: receipt.notes,
+            qrCodeData: receipt.qrCodeData,
+            smtpVaultId,
+          })
+
+          if (result.success) {
+            receipt.emailSent = true
+            receipt.emailSentAt = new Date()
+            receipt.emailLog.push({
+              sentTo: receipt.customer.email,
+              status: 'sent',
+              sentAt: new Date(),
+              sentByUserId: ctx.user.id,
+              sentByUsername: ctx.user.username,
+              smtpSender: result.senderEmail,
+              smtpVaultId: result.smtpVaultId,
+              messageId: result.messageId,
+            })
+          } else {
+            receipt.emailLog.push({
+              sentTo: receipt.customer.email,
+              status: 'failed',
+              sentAt: new Date(),
+              error: result.error,
+              sentByUserId: ctx.user.id,
+              sentByUsername: ctx.user.username,
+              smtpSender: result.senderEmail,
+              smtpVaultId: result.smtpVaultId,
+            })
+          }
+
+          await receipt.save()
+
+          log.info('receipt_email_attempted', {
+            receiptNumber: receipt.receiptNumber,
+            success: result.success,
+            smtpVaultId: result.smtpVaultId || null,
+            senderEmail: result.senderEmail || null,
+          })
+
+          await writeAuditLog({
+            userId: ctx.user.id,
+            organizationId: ctx.organization.id,
+            organizationSlug: ctx.organization.slug,
+            action: result.success ? 'EMAIL_SENT' : 'EMAIL_FAILED',
+            resourceType: 'RECEIPT',
+            resourceId: receipt._id.toString(),
+            details: {
+              receiptNumber: receipt.receiptNumber,
+              to: receipt.customer.email,
+              smtpVaultId: result.smtpVaultId || null,
+              senderEmail: result.senderEmail || null,
+              messageId: result.messageId || null,
+              requestId: meta.requestId,
+            },
+            status: result.success ? 'SUCCESS' : 'FAILURE',
+            ipAddress: meta.ip,
+            userAgent: meta.userAgent,
+          }).catch(() => undefined)
+        } catch (emailError) {
+          log.error('receipt_email_error', { error: emailError })
+        }
       }
     }
+
+    log.info('receipt_created', {
+      receiptId: receipt._id.toString(),
+      receiptNumber: receipt.receiptNumber,
+      eventId,
+      sendEmail: !!shouldSendEmail,
+    })
+
+    await writeAuditLog({
+      userId: ctx.user.id,
+      organizationId: ctx.organization.id,
+      organizationSlug: ctx.organization.slug,
+      action: 'CREATE',
+      resourceType: 'RECEIPT',
+      resourceId: receipt._id.toString(),
+      details: {
+        receiptNumber: receipt.receiptNumber,
+        eventId,
+        totalAmount,
+        requestId: meta.requestId,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
 
     return NextResponse.json(
       {
@@ -232,7 +384,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error creating receipt:', error)
+    baseLog.error('receipt_create_error', { error })
     return NextResponse.json(
       { message: 'Failed to create receipt' },
       { status: 500 }
@@ -241,9 +393,32 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Receipt } = ctx.models
     const body = await request.json()
@@ -314,7 +489,7 @@ export async function PATCH(request: NextRequest) {
       modifiedCount: result.modifiedCount,
     })
   } catch (error) {
-    console.error('Error updating receipts:', error)
+    baseLog.error('receipts_patch_error', { error })
     return NextResponse.json(
       { message: 'Failed to update receipts' },
       { status: 500 }
@@ -323,9 +498,32 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(request)
     if (ctx instanceof NextResponse) return ctx
+
+    const log = baseLog.child({
+      tenantId: ctx.organization.id,
+      tenantSlug: ctx.organization.slug,
+      userId: ctx.user.id,
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${ctx.organization.id}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
 
     const { Receipt } = ctx.models
     const body = await request.json()
@@ -347,7 +545,7 @@ export async function DELETE(request: NextRequest) {
       deletedCount: result.deletedCount,
     })
   } catch (error) {
-    console.error('Error deleting receipts:', error)
+    baseLog.error('receipts_delete_error', { error })
     return NextResponse.json(
       { message: 'Failed to delete receipts' },
       { status: 500 }

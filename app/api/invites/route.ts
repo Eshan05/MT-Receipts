@@ -10,6 +10,11 @@ import { sendEmail } from '@/lib/email'
 import { render } from '@react-email/components'
 import OrganizationInviteEmail from '@/lib/emails/organization-invite-email'
 import { enforceMaxUsersForInvite } from '@/lib/tenants/quota-enforcement'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 const createInviteSchema = z.object({
   type: z.enum(['email', 'code']),
@@ -21,8 +26,16 @@ const createInviteSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const meta = getRequestMeta(request)
+  const baseLog = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
-    const token = await getTokenServer()
+    const token = await getTokenServer(request)
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -65,6 +78,30 @@ export async function POST(request: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       )
+    }
+
+    const log = baseLog.child({
+      tenantId: organization._id.toString(),
+      tenantSlug: organization.slug,
+      userId: user._id.toString(),
+    })
+
+    const tenantApiRl = await checkRateLimit({
+      policy: RATE_LIMITS.tenantApiRequests,
+      scope: `tenant:${organization._id.toString()}`,
+    })
+    if (!tenantApiRl.success) {
+      log.warn('rate_limited', { limiter: tenantApiRl.policy.name })
+      return rateLimitedResponse(tenantApiRl)
+    }
+
+    const inviteRl = await checkRateLimit({
+      policy: RATE_LIMITS.inviteCreate,
+      scope: `tenant:${organization._id.toString()}`,
+    })
+    if (!inviteRl.success) {
+      log.warn('rate_limited', { limiter: inviteRl.policy.name })
+      return rateLimitedResponse(inviteRl)
     }
 
     const membership = user.memberships.find(
@@ -152,6 +189,31 @@ export async function POST(request: Request) {
         html: emailHtml,
       })
 
+      log.info('invite_created_email', {
+        inviteId: invite._id.toString(),
+        invitedEmail: email.toLowerCase(),
+        role,
+      })
+
+      await writeAuditLog({
+        userId: user._id.toString(),
+        organizationId: organization._id.toString(),
+        organizationSlug: organization.slug,
+        action: 'CREATE',
+        resourceType: 'ORGANIZATION',
+        resourceId: organization._id.toString(),
+        details: {
+          kind: 'invite_email',
+          inviteId: invite._id.toString(),
+          invitedEmail: email.toLowerCase(),
+          role,
+          requestId: meta.requestId,
+        },
+        status: 'SUCCESS',
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      }).catch(() => undefined)
+
       return NextResponse.json(
         {
           id: invite._id,
@@ -186,6 +248,34 @@ export async function POST(request: Request) {
       usedCount: 0,
     })
 
+    baseLog.info('invite_created_code', {
+      tenantId: organization._id.toString(),
+      tenantSlug: organization.slug,
+      userId: user._id.toString(),
+      inviteId: invite._id.toString(),
+      maxUses: invite.maxUses,
+      role,
+    })
+
+    await writeAuditLog({
+      userId: user._id.toString(),
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'CREATE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        kind: 'invite_code',
+        inviteId: invite._id.toString(),
+        maxUses: invite.maxUses,
+        role,
+        requestId: meta.requestId,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json(
       {
         id: invite._id,
@@ -199,7 +289,7 @@ export async function POST(request: Request) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Create invite error:', error)
+    baseLog.error('invite_create_error', { error })
     return NextResponse.json(
       { error: 'Failed to create invite' },
       { status: 500 }

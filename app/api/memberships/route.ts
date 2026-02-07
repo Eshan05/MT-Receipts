@@ -6,13 +6,35 @@ import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { z } from 'zod'
 import { enforceMaxUsersForJoin } from '@/lib/tenants/quota-enforcement'
+import { getRequestMeta } from '@/lib/request-meta'
+import { createLogger } from '@/lib/logger'
+import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
+import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
 
 const createMembershipSchema = z.object({
   inviteCode: z.string().min(1),
 })
 
 export async function POST(request: Request) {
+  const meta = getRequestMeta(request)
+  const log = createLogger({
+    requestId: meta.requestId,
+    method: meta.method,
+    path: meta.path,
+    ip: meta.ip,
+  })
+
   try {
+    const rl = await checkRateLimit({
+      policy: RATE_LIMITS.joinInviteCodeAttemptsPerIp,
+      scope: `ip:${meta.ip || 'unknown'}`,
+    })
+    if (!rl.success) {
+      log.warn('rate_limited', { limiter: rl.policy.name })
+      return rateLimitedResponse(rl)
+    }
+
     const token = await getTokenServer(request)
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -92,6 +114,30 @@ export async function POST(request: Request) {
     invite.acceptedAt = new Date()
     await invite.save()
 
+    log.info('membership_joined', {
+      userId: user._id.toString(),
+      tenantId: organization._id.toString(),
+      tenantSlug: organization.slug,
+    })
+
+    await writeAuditLog({
+      userId: user._id.toString(),
+      organizationId: organization._id.toString(),
+      organizationSlug: organization.slug,
+      action: 'CREATE',
+      resourceType: 'ORGANIZATION',
+      resourceId: organization._id.toString(),
+      details: {
+        kind: 'membership_join',
+        inviteType: invite.type,
+        role: invite.role,
+        requestId: meta.requestId,
+      },
+      status: 'SUCCESS',
+      ipAddress: meta.ip,
+      userAgent: meta.userAgent,
+    }).catch(() => undefined)
+
     return NextResponse.json({
       message: `Successfully joined ${organization.name}`,
       organization: {
@@ -101,7 +147,7 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Create membership error:', error)
+    log.error('membership_join_error', { error })
     return NextResponse.json(
       { error: 'Failed to join organization' },
       { status: 500 }
