@@ -1,17 +1,22 @@
 import 'dotenv/config'
-import { redis } from '@/lib/redis'
+import { getRedis } from '@/lib/redis'
 import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
 
 async function main() {
   console.log('=== Checking Redis Cache ===')
 
-  const keys = await redis.keys('org:*')
-  console.log('Keys found:', keys)
+  const redis = getRedis()
+  if (!redis) {
+    console.log('Upstash Redis not configured; skipping cache checks.')
+  } else {
+    const keys = await redis.keys('org:*')
+    console.log('Keys found:', keys)
 
-  for (const key of keys) {
-    const value = await redis.get(key)
-    console.log(`${key}:`, value)
+    for (const key of keys) {
+      const value = await redis.get(key)
+      console.log(`${key}:`, value)
+    }
   }
 
   console.log('\n=== Checking Database ===')

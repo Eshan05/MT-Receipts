@@ -52,6 +52,11 @@ async function validateRedisConnection() {
   logSection('Redis Connection')
   let allPassed = true
 
+  if (!redis) {
+    logTest('Redis client configured', false, 'Redis client is not configured')
+    return false
+  }
+
   try {
     const result = await redis.ping()
     logTest('Redis PING command', result === 'PONG', `Response: ${result}`)
