@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrganizationContext } from '@/lib/tenants/organization-context'
-import SMTPVault from '@/models/smtp-vault.model'
+import { getTenantContext } from '@/lib/auth/tenant-route'
 import { encryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 
 interface RouteParams {
@@ -29,20 +28,15 @@ function sanitizeVault(vault: {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const organization = await getOrganizationContext()
-    if (!organization) {
-      return NextResponse.json(
-        { message: 'Organization context not found' },
-        { status: 400 }
-      )
-    }
+    const ctx = await getTenantContext(request)
+    if (ctx instanceof NextResponse) return ctx
 
     const { id } = await params
     const body = await request.json()
 
-    const vault = await SMTPVault.findOne({
+    const vault = await ctx.models.SMTPVault.findOne({
       _id: id,
-      organizationId: organization.id,
+      organizationId: ctx.organization.id,
     })
 
     if (!vault) {
@@ -71,8 +65,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         )
       }
 
-      const duplicate = await SMTPVault.findOne({
-        organizationId: organization.id,
+      const duplicate = await ctx.models.SMTPVault.findOne({
+        organizationId: ctx.organization.id,
         email,
         _id: { $ne: id },
       }).lean()
@@ -102,8 +96,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     if (body.isDefault === true) {
-      await SMTPVault.updateMany(
-        { organizationId: organization.id, isDefault: true },
+      await ctx.models.SMTPVault.updateMany(
+        { organizationId: ctx.organization.id, isDefault: true },
         { isDefault: false }
       )
       updates.isDefault = true
@@ -116,8 +110,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const updated = await SMTPVault.findOneAndUpdate(
-      { _id: id, organizationId: organization.id },
+    const updated = await ctx.models.SMTPVault.findOneAndUpdate(
+      { _id: id, organizationId: ctx.organization.id },
       updates,
       { new: true }
     )
@@ -152,19 +146,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const organization = await getOrganizationContext()
-    if (!organization) {
-      return NextResponse.json(
-        { message: 'Organization context not found' },
-        { status: 400 }
-      )
-    }
+    const ctx = await getTenantContext(_request)
+    if (ctx instanceof NextResponse) return ctx
 
     const { id } = await params
 
-    const vault = await SMTPVault.findOne({
+    const vault = await ctx.models.SMTPVault.findOne({
       _id: id,
-      organizationId: organization.id,
+      organizationId: ctx.organization.id,
     })
 
     if (!vault) {
@@ -176,11 +165,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     const wasDefault = vault.isDefault
 
-    await SMTPVault.findByIdAndDelete(id)
+    await ctx.models.SMTPVault.findByIdAndDelete(id)
 
     if (wasDefault) {
-      const fallback = await SMTPVault.findOne({
-        organizationId: organization.id,
+      const fallback = await ctx.models.SMTPVault.findOne({
+        organizationId: ctx.organization.id,
       }).sort({ createdAt: 1 })
       if (fallback) {
         fallback.isDefault = true

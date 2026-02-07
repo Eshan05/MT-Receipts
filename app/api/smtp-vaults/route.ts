@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
 import { encryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
-import SMTPVault from '@/models/smtp-vault.model'
 import { getRequestMeta } from '@/lib/request-meta'
 import { createLogger } from '@/lib/logger'
 import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
@@ -56,7 +55,7 @@ export async function GET(request?: Request) {
       return rateLimitedResponse(tenantApiRl)
     }
 
-    const vaults = await SMTPVault.find({
+    const vaults = await ctx.models.SMTPVault.find({
       organizationId: ctx.organization.id,
     }).sort({ isDefault: -1, createdAt: -1 })
 
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existing = await SMTPVault.findOne({
+    const existing = await ctx.models.SMTPVault.findOne({
       organizationId: ctx.organization.id,
       email,
     }).lean()
@@ -154,13 +153,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const vaultCount = await SMTPVault.countDocuments({
+    const vaultCount = await ctx.models.SMTPVault.countDocuments({
       organizationId: ctx.organization.id,
     })
     const isDefault = requestedDefault || vaultCount === 0
 
     if (isDefault) {
-      await SMTPVault.updateMany(
+      await ctx.models.SMTPVault.updateMany(
         { organizationId: ctx.organization.id, isDefault: true },
         { isDefault: false }
       )
@@ -168,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     const { encryptedData, iv, authTag } = encryptSmtpAppPassword(appPassword)
 
-    const vault = await SMTPVault.create({
+    const vault = await ctx.models.SMTPVault.create({
       organizationId: ctx.organization.id,
       label: name || undefined,
       email,

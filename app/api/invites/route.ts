@@ -188,6 +188,7 @@ export async function POST(request: Request) {
         subject: `You've been invited to join ${organization.name}`,
         html: emailHtml,
         organizationId: organization._id.toString(),
+        organizationSlug: organization.slug,
       })
 
       log.info('invite_created_email', {

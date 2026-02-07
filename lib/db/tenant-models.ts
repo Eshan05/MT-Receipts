@@ -112,6 +112,21 @@ export interface ITenantSequence {
   value: number
 }
 
+export interface ITenantSMTPVault {
+  _id: mongoose.Types.ObjectId
+  organizationId: mongoose.Types.ObjectId
+  label?: string
+  email: string
+  encryptedAppPassword: string
+  iv: string
+  authTag: string
+  isDefault: boolean
+  lastUsedAt?: Date
+  createdBy: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
+}
+
 const EVENT_TYPES = [
   'seminar',
   'workshop',
@@ -258,6 +273,55 @@ const sequenceSchema = new Schema<ITenantSequence>({
   value: { type: Number, default: 1 },
 })
 
+const smtpVaultSchema = new Schema<ITenantSMTPVault>(
+  {
+    organizationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+    },
+    label: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    encryptedAppPassword: {
+      type: String,
+      required: true,
+    },
+    iv: {
+      type: String,
+      required: true,
+    },
+    authTag: {
+      type: String,
+      required: true,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+    lastUsedAt: {
+      type: Date,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  { timestamps: true }
+)
+
+smtpVaultSchema.index({ organizationId: 1, email: 1 }, { unique: true })
+smtpVaultSchema.index({ organizationId: 1, isDefault: 1 })
+
 sequenceSchema.statics.getNext = async function (
   name: string
 ): Promise<number> {
@@ -281,6 +345,7 @@ export interface TenantModels {
   Sequence: Model<ITenantSequence> & {
     getNext(name: string): Promise<number>
   }
+  SMTPVault: Model<ITenantSMTPVault>
 }
 
 const modelCache = new Map<string, TenantModels>()
@@ -298,8 +363,11 @@ function createModelsForConnection(conn: Connection): TenantModels {
   const Sequence =
     (conn.models.Sequence as TenantModels['Sequence']) ||
     (conn.model('Sequence', sequenceSchema) as TenantModels['Sequence'])
+  const SMTPVault =
+    (conn.models.SMTPVault as TenantModels['SMTPVault']) ||
+    (conn.model('SMTPVault', smtpVaultSchema) as TenantModels['SMTPVault'])
 
-  return { Event, Receipt, Template, Sequence }
+  return { Event, Receipt, Template, Sequence, SMTPVault }
 }
 
 export async function getTenantModels(slug: string): Promise<TenantModels> {

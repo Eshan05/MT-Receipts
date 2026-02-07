@@ -7,9 +7,9 @@ import {
   type RenderReceiptOptions,
 } from '@/lib/pdf/template-renderer'
 import dbConnect from '@/lib/db-conn'
-import SMTPVault from '@/models/smtp-vault.model'
 import { decryptSmtpAppPassword } from '@/lib/tenants/smtp-vault-crypto'
 import { normalizeQrCodeDataUrl } from '@/lib/qr-code-data'
+import { getTenantModels } from '@/lib/db/tenant-models'
 
 interface SenderCredentials {
   vaultId?: string
@@ -21,11 +21,30 @@ interface SenderCredentials {
 async function resolveSenderCredentials(opts?: {
   smtpVaultId?: string
   organizationId?: string
+  organizationSlug?: string
 }): Promise<SenderCredentials> {
   await dbConnect()
 
   const smtpVaultId = opts?.smtpVaultId
   const organizationId = opts?.organizationId
+  const organizationSlug = opts?.organizationSlug
+
+  if (!organizationSlug) {
+    // Without a tenant slug, we can't safely look up tenant DB vaults.
+    // Fall back to env-based sender only.
+    if (process.env.GMAIL_EMAIL && process.env.GMAIL_APP_PASSWORD) {
+      return {
+        user: process.env.GMAIL_EMAIL,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      }
+    }
+
+    throw new Error(
+      'No sender configured. Provide organizationSlug to use tenant SMTP vaults, or set GMAIL_EMAIL/GMAIL_APP_PASSWORD.'
+    )
+  }
+
+  const { SMTPVault } = await getTenantModels(organizationSlug)
 
   let selectedVault = null
 
@@ -240,6 +259,7 @@ export async function sendReceiptEmail({
     const senderCredentials = await resolveSenderCredentials({
       smtpVaultId,
       organizationId,
+      organizationSlug,
     })
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -293,6 +313,7 @@ export async function sendEmail({
   attachments,
   smtpVaultId,
   organizationId,
+  organizationSlug,
 }: {
   to: string
   subject: string
@@ -304,11 +325,13 @@ export async function sendEmail({
   }>
   smtpVaultId?: string
   organizationId?: string
+  organizationSlug?: string
 }) {
   try {
     const senderCredentials = await resolveSenderCredentials({
       smtpVaultId,
       organizationId,
+      organizationSlug,
     })
     const transporter = nodemailer.createTransport({
       service: 'gmail',
