@@ -87,7 +87,7 @@ export function createColumns({
         const member = row.original
         const avatarUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(member.username)}`
         return (
-          <div className='flex items-center gap-2 min-w-0 max-w-50'>
+          <div className='flex items-center gap-2 min-w-0 max-w-50 ml-1'>
             <Avatar className='size-7 shrink-0'>
               <AvatarImage src={avatarUrl} />
               <AvatarFallback>
