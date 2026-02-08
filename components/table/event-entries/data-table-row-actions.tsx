@@ -102,6 +102,9 @@ export function DataTableRowActions<TData>({
     useState<string>('professional')
   const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
 
+  const [emailSubject, setEmailSubject] = useState<string>('')
+  const [subjectCustomized, setSubjectCustomized] = useState(false)
+
   const [templateConfig, setTemplateConfig] = useState<{
     primaryColor: string
     secondaryColor?: string
@@ -115,17 +118,23 @@ export function DataTableRowActions<TData>({
   const templateInfo = getAllTemplateInfo()
 
   useEffect(() => {
+    if (!isSendOpen) return
+    let cancelled = false
+
     const loadVaults = async () => {
       try {
         const vaults = await fetchSmtpVaults()
-        setSmtpVaults(vaults)
+        if (!cancelled) setSmtpVaults(vaults)
       } catch {
-        setSmtpVaults([])
+        if (!cancelled) setSmtpVaults([])
       }
     }
 
-    loadVaults()
-  }, [])
+    void loadVaults()
+    return () => {
+      cancelled = true
+    }
+  }, [isSendOpen])
 
   const handleSendEmail = async () => {
     if (!entry.receiptNumber) return
@@ -139,6 +148,7 @@ export function DataTableRowActions<TData>({
           templateSlug: selectedTemplateSlug,
           smtpVaultId:
             selectedVaultId === 'default' ? undefined : selectedVaultId,
+          subject: emailSubject || undefined,
           config: {
             primaryColor: templateConfig.primaryColor,
             secondaryColor: templateConfig.secondaryColor,
@@ -230,6 +240,27 @@ export function DataTableRowActions<TData>({
     return smtpVaults.find((vault) => vault.id === selectedVaultId)
   }, [smtpVaults, selectedVaultId])
 
+  const defaultSubject = useMemo(() => {
+    const vaultName = (() => {
+      if (selectedVaultId === 'default') {
+        const defaultVault = smtpVaults.find((vault) => vault.isDefault)
+        return defaultVault?.label || defaultVault?.email || 'Default Sender'
+      }
+
+      return (
+        selectedSenderVault?.label || selectedSenderVault?.email || 'Sender'
+      )
+    })()
+
+    return `${vaultName} - ${entry.receiptNumber}`
+  }, [entry.receiptNumber, selectedSenderVault, selectedVaultId, smtpVaults])
+
+  useEffect(() => {
+    if (!isSendOpen) return
+    if (subjectCustomized) return
+    setEmailSubject(defaultSubject)
+  }, [defaultSubject, isSendOpen, subjectCustomized])
+
   const templateProps = useMemo(() => {
     return {
       receiptNumber: entry.receiptNumber,
@@ -246,6 +277,11 @@ export function DataTableRowActions<TData>({
         quantity: item.quantity,
         price: item.price,
         total: item.total ?? item.quantity * item.price,
+      })),
+      taxes: entry.taxes?.map((tax) => ({
+        name: tax.name,
+        rate: tax.rate,
+        amount: tax.amount ?? 0,
       })),
       totalAmount: entry.totalAmount,
       paymentMethod: entry.paymentMethod,
@@ -351,7 +387,16 @@ export function DataTableRowActions<TData>({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSendOpen} onOpenChange={setIsSendOpen}>
+      <Dialog
+        open={isSendOpen}
+        onOpenChange={(open) => {
+          setIsSendOpen(open)
+          if (open) {
+            setSubjectCustomized(false)
+            setEmailSubject(defaultSubject)
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -381,6 +426,18 @@ export function DataTableRowActions<TData>({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className='space-y-1'>
+              <FieldLabel>Subject</FieldLabel>
+              <Input
+                value={emailSubject}
+                onChange={(e) => {
+                  setSubjectCustomized(true)
+                  setEmailSubject(e.target.value)
+                }}
+                placeholder={defaultSubject}
+              />
             </div>
 
             <div className='space-y-3'>
@@ -490,22 +547,6 @@ export function DataTableRowActions<TData>({
                   placeholder='Custom footer text'
                 />
               </div>
-
-              <div className='mx-auto'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() =>
-                    setTemplateConfig({
-                      primaryColor: '#25345b',
-                      secondaryColor: undefined,
-                      footerText: undefined,
-                    })
-                  }
-                >
-                  Reset template settings
-                </Button>
-              </div>
             </div>
 
             <div className='space-y-1'>
@@ -537,6 +578,19 @@ export function DataTableRowActions<TData>({
           </div>
 
           <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() =>
+                setTemplateConfig({
+                  primaryColor: '#25345b',
+                  secondaryColor: undefined,
+                  footerText: undefined,
+                })
+              }
+            >
+              Reset settings
+            </Button>
             <Button variant='outline' onClick={() => setIsSendOpen(false)}>
               Cancel
             </Button>

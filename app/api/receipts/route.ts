@@ -127,8 +127,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       eventId,
+      templateSlug,
       customer,
       items,
+      taxes,
       totalAmount,
       paymentMethod,
       emailSent,
@@ -175,7 +177,17 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    const processedItems = items.map(
+    type ProcessedItem = {
+      name: string
+      description?: string
+      quantity: number
+      price: number
+      total: number
+    }
+
+    const processedItems: ProcessedItem[] = (
+      Array.isArray(items) ? items : []
+    ).map(
       (item: {
         name: string
         description?: string
@@ -191,11 +203,33 @@ export async function POST(request: NextRequest) {
       })
     )
 
+    const subtotal = processedItems.reduce(
+      (sum: number, item) => sum + item.total,
+      0
+    )
+
+    type ProcessedTax = { name: string; rate: number; amount: number }
+
+    const processedTaxes: ProcessedTax[] | undefined = Array.isArray(taxes)
+      ? taxes
+          .filter((t: any) => t && typeof t.name === 'string')
+          .map((t: any): ProcessedTax => {
+            const rate = Number(t.rate) || 0
+            const amount = Number.isFinite(rate) ? (subtotal * rate) / 100 : 0
+            return { name: String(t.name), rate, amount }
+          })
+      : undefined
+
+    const computedTotalAmount =
+      subtotal +
+      (processedTaxes?.reduce((sum: number, tax) => sum + tax.amount, 0) || 0)
+
     const shouldSendEmail = sendEmail && !emailSent
 
     const receipt = await Receipt.create({
       receiptNumber,
       event: eventId,
+      templateSlug: typeof templateSlug === 'string' ? templateSlug : undefined,
       customer: {
         name: customer.name,
         email: customer.email,
@@ -203,7 +237,10 @@ export async function POST(request: NextRequest) {
         address: customer.address,
       },
       items: processedItems,
-      totalAmount,
+      taxes: processedTaxes,
+      totalAmount: Number.isFinite(computedTotalAmount)
+        ? computedTotalAmount
+        : totalAmount,
       paymentMethod,
       emailSent: emailSent || false,
       emailSentAt: emailSent ? new Date() : undefined,
@@ -273,6 +310,7 @@ export async function POST(request: NextRequest) {
               price: item.price,
               total: item.total,
             })),
+            taxes: receipt.taxes,
             totalAmount: receipt.totalAmount,
             paymentMethod: receipt.paymentMethod,
             organizationName:

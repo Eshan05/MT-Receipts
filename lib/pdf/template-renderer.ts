@@ -32,6 +32,7 @@ export interface RenderReceiptOptions {
     endDate?: string
   }
   items: TemplateItem[]
+  taxes?: Array<{ name: string; rate: number; amount: number }>
   totalAmount: number
   paymentMethod?: string
   date?: string
@@ -154,6 +155,7 @@ export async function renderReceiptPDF(
     customer,
     event,
     items,
+    taxes,
     totalAmount,
     paymentMethod,
     notes,
@@ -198,6 +200,7 @@ export async function renderReceiptPDF(
       endDate: event.endDate,
     },
     items,
+    taxes,
     totalAmount,
     paymentMethod,
     date,

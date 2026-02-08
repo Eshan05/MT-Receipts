@@ -135,6 +135,7 @@ export interface ReceiptItem {
 export interface SendReceiptOptions {
   to: string
   receiptNumber: string
+  subject?: string
   organizationSlug?: string
   organizationId?: string
   customerName: string
@@ -148,6 +149,7 @@ export interface SendReceiptOptions {
   eventStartDate?: string
   eventEndDate?: string
   items: ReceiptItem[]
+  taxes?: Array<{ name: string; rate: number; amount: number }>
   totalAmount: number
   paymentMethod?: string
   organizationName?: string
@@ -166,6 +168,7 @@ export interface SendReceiptOptions {
 export async function sendReceiptEmail({
   to,
   receiptNumber,
+  subject,
   organizationSlug,
   organizationId,
   customerName,
@@ -179,6 +182,7 @@ export async function sendReceiptEmail({
   eventStartDate,
   eventEndDate,
   items,
+  taxes,
   totalAmount,
   paymentMethod,
   organizationName = 'ACES',
@@ -275,6 +279,7 @@ export async function sendReceiptEmail({
         endDate: eventEndDate,
       },
       items,
+      taxes,
       totalAmount,
       paymentMethod,
       date,
@@ -302,11 +307,15 @@ export async function sendReceiptEmail({
     const fromName =
       emailFromName || senderCredentials.label || `${organizationName} Receipts`
     const fromAddress = emailFromAddress || senderCredentials.user
+    const finalSubject =
+      typeof subject === 'string' && subject.trim()
+        ? subject.trim()
+        : `${fromName} - ${receiptNumber}`
 
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromAddress}>`,
       to,
-      subject: `Receipt #${receiptNumber} - ${eventName}`,
+      subject: finalSubject,
       html: emailHtml,
       attachments: [
         {

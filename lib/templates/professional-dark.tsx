@@ -273,6 +273,7 @@ export default function ProfessionalDarkTemplate({
   customer,
   event,
   items,
+  taxes,
   totalAmount,
   paymentMethod,
   date,
@@ -283,8 +284,7 @@ export default function ProfessionalDarkTemplate({
   const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName || 'ACES'
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
-  const taxRate = 0.0625
-  const taxAmount = subtotal * taxRate
+  const taxLines = Array.isArray(taxes) ? taxes : []
 
   return (
     <Document>
@@ -415,14 +415,23 @@ export default function ProfessionalDarkTemplate({
               <Text style={styles.totalLabel}>Subtotal</Text>
               <Text style={styles.totalValue}>{subtotal.toFixed(2)}</Text>
             </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Sales Tax 6.25%</Text>
-              <Text style={styles.totalValue}>{taxAmount.toFixed(2)}</Text>
-            </View>
+            {taxLines.map((tax, index) => (
+              <View key={`${tax.name}-${index}`} style={styles.totalRow}>
+                <Text style={styles.totalLabel}>
+                  {tax.name}
+                  {Number.isFinite(tax.rate) ? ` ${tax.rate}%` : ''}
+                </Text>
+                <Text style={styles.totalValue}>
+                  {Number.isFinite(tax.amount) ? tax.amount.toFixed(2) : '0.00'}
+                </Text>
+              </View>
+            ))}
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>TOTAL</Text>
+              <Text style={styles.grandTotalLabel}>
+                {taxLines.length > 0 ? 'TOTAL (incl. taxes)' : 'TOTAL'}
+              </Text>
               <Text style={styles.grandTotalValue}>
-                $
+                ₹
                 {totalAmount.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}
@@ -448,14 +457,17 @@ export default function ProfessionalDarkTemplate({
                 <Text style={styles.notesText}>{notes}</Text>
               </View>
             )}
-            <Text style={styles.termsTitle}>
-              {config.footerText ? 'Footer' : 'Terms & Conditions'}
-            </Text>
+            <Text style={styles.termsTitle}>Terms & Conditions</Text>
             <Text style={styles.termsText}>
-              {config.footerText
-                ? config.footerText
-                : `Payment is due within 15 days\nPlease make checks payable to: ${orgName}`}
+              {`Payment is due within 15 days\nPlease make checks payable to: ${orgName}`}
             </Text>
+
+            {config.footerText ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.termsTitle}>Footer</Text>
+                <Text style={styles.termsText}>{config.footerText}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
       </Page>

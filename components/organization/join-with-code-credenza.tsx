@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { KeyRound, Loader2, Users } from 'lucide-react'
 
@@ -26,6 +27,7 @@ export function JoinWithCodeCredenza({
   open,
   onOpenChange,
 }: JoinWithCodeCredenzaProps) {
+  const router = useRouter()
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -51,7 +53,21 @@ export function JoinWithCodeCredenza({
         throw new Error(data.error || 'Failed to join organization')
       }
 
-      toast.success(data.message || 'Successfully joined organization!')
+      const organizationSlug: string | undefined = data?.organization?.slug
+      const successMessage =
+        (typeof data?.message === 'string' && data.message) ||
+        'Successfully joined organization!'
+
+      toast.success(successMessage, {
+        action: organizationSlug
+          ? {
+            label: 'Go to dashboard',
+            onClick: () => {
+              router.push(`/${organizationSlug}/dashboard`)
+            },
+          }
+          : undefined,
+      })
       setCode('')
       onOpenChange(false)
     } catch (error) {

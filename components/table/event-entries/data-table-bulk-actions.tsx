@@ -82,17 +82,25 @@ export function DataTableBulkActions({
   const templateInfo = getAllTemplateInfo()
 
   useEffect(() => {
+    if (!sendDialogOpen) return
+
+    let cancelled = false
+
     const loadVaults = async () => {
       try {
         const vaults = await fetchSmtpVaults()
-        setSmtpVaults(vaults)
+        if (!cancelled) setSmtpVaults(vaults)
       } catch {
-        setSmtpVaults([])
+        if (!cancelled) setSmtpVaults([])
       }
     }
 
-    loadVaults()
-  }, [])
+    void loadVaults()
+
+    return () => {
+      cancelled = true
+    }
+  }, [sendDialogOpen])
 
   const selectedCount = selectedEntries.length
   const receiptNumbers = selectedEntries.map((e) => e.receiptNumber)

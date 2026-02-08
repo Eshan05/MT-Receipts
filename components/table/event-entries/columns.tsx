@@ -313,10 +313,81 @@ export function createColumns({
       ),
       cell: ({ row }) => {
         const amount = row.original.totalAmount
+        const items = row.original.items || []
+        const subtotal = items.reduce(
+          (sum, item) => sum + (Number(item.total) || 0),
+          0
+        )
+
+        const taxes = Array.isArray(row.original.taxes)
+          ? row.original.taxes
+          : []
+        const normalizedTaxes = taxes
+          .filter((t) => t && typeof t.name === 'string' && t.name.trim())
+          .map((t) => {
+            const rate = Number(t.rate) || 0
+            const computedAmount =
+              Number.isFinite(rate) && rate > 0 ? (subtotal * rate) / 100 : 0
+            const resolvedAmount =
+              typeof t.amount === 'number' && Number.isFinite(t.amount)
+                ? t.amount
+                : computedAmount
+            return {
+              name: t.name.trim(),
+              rate,
+              amount: resolvedAmount,
+            }
+          })
+
+        const hasTaxes = normalizedTaxes.length > 0
+        if (!hasTaxes) {
+          return (
+            <span className='font-medium tabular-nums'>
+              {formatCurrency(amount)}
+            </span>
+          )
+        }
+
         return (
-          <span className='font-medium tabular-nums'>
-            {formatCurrency(amount)}
-          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type='button'
+                className='font-medium tabular-nums underline underline-offset-2 decoration-dotted text-left'
+              >
+                {formatCurrency(amount)}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className='w-64 p-3' align='end'>
+              <div className='space-y-1 text-xs'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-muted-foreground'>Subtotal</span>
+                  <span className='tabular-nums'>
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
+                {normalizedTaxes.map((tax, index) => (
+                  <div
+                    key={`${tax.name}-${index}`}
+                    className='flex items-center justify-between'
+                  >
+                    <span className='text-muted-foreground truncate'>
+                      {tax.name}
+                      {Number.isFinite(tax.rate) ? ` ${tax.rate}%` : ''}
+                    </span>
+                    <span className='tabular-nums'>
+                      {formatCurrency(tax.amount)}
+                    </span>
+                  </div>
+                ))}
+                <div className='h-px bg-border my-2' />
+                <div className='flex items-center justify-between font-medium'>
+                  <span>Total (incl. taxes)</span>
+                  <span className='tabular-nums'>{formatCurrency(amount)}</span>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         )
       },
       enableSorting: true,

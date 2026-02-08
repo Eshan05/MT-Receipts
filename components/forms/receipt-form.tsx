@@ -35,6 +35,7 @@ import {
   ColorPickerFormat,
   type RgbaValue,
 } from '@/components/derived/color-picker'
+
 import {
   receiptSchema,
   type ReceiptFormValues,
@@ -47,6 +48,7 @@ import type {
 } from '@/lib/templates/types'
 import { getTemplateComponent } from '@/lib/templates'
 import { IEvent } from '@/models/event.model'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PDFViewer } from '@react-pdf/renderer'
 import {
@@ -158,6 +160,7 @@ export function ReceiptForm({
           total: 0,
         },
       ],
+      taxes: [],
       totalAmount: 0,
       paymentMethod: 'cash',
       notes: '',
@@ -171,8 +174,18 @@ export function ReceiptForm({
     name: 'items',
   })
 
+  const {
+    fields: taxFields,
+    append: appendTax,
+    remove: removeTax,
+  } = useFieldArray({
+    control: form.control,
+    name: 'taxes',
+  })
+
   const selectedEventId = form.watch('eventId')
   const watchedItems = form.watch('items')
+  const watchedTaxes = form.watch('taxes')
   const selectedTemplate = form.watch('templateSlug')
   const watchedCustomer = form.watch('customer')
   const watchedPaymentMethod = form.watch('paymentMethod')
@@ -223,12 +236,19 @@ export function ReceiptForm({
   }, [smtpVaults, selectedSmtpVaultId])
 
   useEffect(() => {
-    const total = watchedItems.reduce(
+    const subtotal = watchedItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
       0
     )
-    form.setValue('totalAmount', total)
-  }, [watchedItems, form])
+
+    const taxTotal = (watchedTaxes || []).reduce((sum, tax) => {
+      const rate = Number(tax?.rate) || 0
+      if (!Number.isFinite(rate) || rate <= 0) return sum
+      return sum + (subtotal * rate) / 100
+    }, 0)
+
+    form.setValue('totalAmount', subtotal + taxTotal)
+  }, [watchedItems, watchedTaxes, form])
 
   useEffect(() => {
     if (selectedEvent && selectedEvent.items.length > 0) {
@@ -288,7 +308,21 @@ export function ReceiptForm({
       total: (item.quantity || 1) * (item.price || 0),
     }))
 
-    const totalAmount = items.reduce((sum, item) => sum + item.total, 0)
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0)
+    const taxLines = (watchedTaxes || [])
+      .filter((tax) => !!tax?.name)
+      .map((tax) => {
+        const rate = Number(tax.rate) || 0
+        const amount = Number.isFinite(rate) ? (subtotal * rate) / 100 : 0
+        return {
+          name: tax.name,
+          rate,
+          amount,
+        }
+      })
+
+    const taxTotal = taxLines.reduce((sum, tax) => sum + tax.amount, 0)
+    const totalAmount = subtotal + taxTotal
 
     return {
       receiptNumber: generateReceiptNumber(),
@@ -322,6 +356,7 @@ export function ReceiptForm({
         items.length > 0 && items.some((i) => i.name !== 'Item')
           ? items
           : defaultTemplateProps.items,
+      taxes: taxLines,
       totalAmount: totalAmount || defaultTemplateProps.totalAmount,
       paymentMethod: watchedPaymentMethod,
       date,
@@ -330,6 +365,7 @@ export function ReceiptForm({
     }
   }, [
     watchedItems,
+    watchedTaxes,
     watchedCustomer,
     selectedEvent,
     watchedPaymentMethod,
@@ -424,6 +460,7 @@ export function ReceiptForm({
                 total: 0,
               },
             ],
+            taxes: [],
             totalAmount: 0,
             paymentMethod: 'cash',
             notes: '',
@@ -1042,7 +1079,7 @@ export function ReceiptForm({
               ))}
 
               <div className='flex justify-between items-center pt-2 border-t'>
-                <span className='text-sm font-medium'>Total Amount</span>
+                <span className='text-sm font-medium'>Total (incl. taxes)</span>
                 <span className='text-lg font-semibold'>
                   ₹
                   {form
@@ -1050,6 +1087,118 @@ export function ReceiptForm({
                     .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className='pb-3'>
+              <div className='flex items-center justify-between'>
+                <CardTitle className='text-sm font-medium flex items-center gap-2'>
+                  <Sparkles className='w-4 h-4' />
+                  Taxes
+                </CardTitle>
+                <Button
+                  type='button'
+                  onClick={() => appendTax({ name: '', rate: 0 })}
+                  variant='outline'
+                  size='sm'
+                  className='gap-1 h-7 text-xs'
+                >
+                  <Plus className='w-3 h-3' />
+                  Add
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className='space-y-2'>
+              {taxFields.length === 0 ? (
+                <p className='text-xs text-muted-foreground'>No taxes</p>
+              ) : null}
+
+              {taxFields.map((tax, index) => {
+                const subtotal = watchedItems.reduce(
+                  (sum, item) => sum + item.quantity * item.price,
+                  0
+                )
+                const rate = Number(watchedTaxes?.[index]?.rate) || 0
+                const amount =
+                  Number.isFinite(rate) && rate > 0
+                    ? (subtotal * rate) / 100
+                    : 0
+
+                return (
+                  <div
+                    key={tax.id}
+                    className='group flex items-center gap-2 p-2 rounded-md bg-muted/40'
+                  >
+                    <Controller
+                      name={`taxes.${index}.name`}
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field
+                          data-invalid={fieldState.invalid}
+                          className='flex-1'
+                        >
+                          <Input
+                            {...field}
+                            placeholder='CGST / SGST / IGST / GST...'
+                            aria-invalid={fieldState.invalid}
+                          />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
+
+                    <Controller
+                      name={`taxes.${index}.rate`}
+                      control={form.control}
+                      render={({ field, fieldState }) => (
+                        <Field
+                          data-invalid={fieldState.invalid}
+                          className='w-24'
+                        >
+                          <div className='relative'>
+                            <Input
+                              {...field}
+                              type='number'
+                              min={0}
+                              step='0.01'
+                              placeholder='Rate'
+                              className='peer pr-6'
+                              aria-invalid={fieldState.invalid}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value)
+                                field.onChange(isNaN(value) ? 0 : value)
+                              }}
+                            />
+                            <div className='pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-muted-foreground/80'>
+                              <span className='text-xs'>%</span>
+                            </div>
+                          </div>
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </Field>
+                      )}
+                    />
+
+                    <div className='w-24 text-right text-xs text-muted-foreground tabular-nums'>
+                      ₹{amount.toFixed(2)}
+                    </div>
+
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon'
+                      onClick={() => removeTax(index)}
+                      className='w-6 h-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
+                    >
+                      <Trash2 className='w-3 h-3' />
+                    </Button>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
 

@@ -22,11 +22,18 @@ export const emailLogSchema = z.object({
   error: z.string().optional(),
 })
 
+export const receiptTaxLineSchema = z.object({
+  name: z.string(),
+  rate: z.number(),
+  amount: z.number().optional(),
+})
+
 export const eventEntrySchema = z.object({
   _id: z.string(),
   receiptNumber: z.string(),
   customer: receiptCustomerSchema,
   items: z.array(receiptItemSchema),
+  taxes: z.array(receiptTaxLineSchema).optional(),
   totalAmount: z.number(),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'other']).optional(),
   emailSent: z.boolean(),

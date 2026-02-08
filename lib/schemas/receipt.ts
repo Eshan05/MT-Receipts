@@ -25,11 +25,17 @@ export const receiptItemSchema = z.object({
   total: z.number(),
 })
 
+export const receiptTaxSchema = z.object({
+  name: z.string().min(1),
+  rate: z.number().min(0),
+})
+
 export const receiptSchema = z.object({
   eventId: z.string(),
   templateSlug: z.string(),
   customer: receiptCustomerSchema,
   items: z.array(receiptItemSchema),
+  taxes: z.array(receiptTaxSchema).optional(),
   totalAmount: z.number(),
   paymentMethod: z.string().optional(),
   notes: z.string().optional(),

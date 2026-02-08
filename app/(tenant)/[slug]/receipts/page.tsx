@@ -6,8 +6,8 @@ import type { TemplateInfo } from '@/lib/templates/types'
 import { CalendarDays, FileText, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ReceiptForm } from '../../../../components/forms/receipt-form'
 import { useParams } from 'next/navigation'
+import { ReceiptForm } from '@/components/forms/receipt-form'
 
 export default function ReceiptsPage() {
   const params = useParams()

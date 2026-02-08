@@ -20,6 +20,12 @@ export interface IReceiptItem {
   total: number
 }
 
+export interface IReceiptTaxLine {
+  name: string
+  rate: number
+  amount: number
+}
+
 export interface IReceipt extends Document {
   receiptNumber: string
   event: mongoose.Schema.Types.ObjectId
@@ -30,6 +36,7 @@ export interface IReceipt extends Document {
     phone?: string
   }
   items: IReceiptItem[]
+  taxes?: IReceiptTaxLine[]
   totalAmount: number
   paymentMethod?: 'cash' | 'upi' | 'card' | 'other'
   templateSlug?: string
@@ -70,6 +77,13 @@ const receiptSchema = new Schema<IReceipt, IReceiptModel>(
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
         total: { type: Number, required: true },
+      },
+    ],
+    taxes: [
+      {
+        name: { type: String, required: true },
+        rate: { type: Number, required: true },
+        amount: { type: Number, required: true },
       },
     ],
     totalAmount: { type: Number, required: true },

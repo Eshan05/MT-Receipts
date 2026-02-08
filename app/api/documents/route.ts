@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
       customer,
       event,
       items,
+      taxes,
       totalAmount,
       paymentMethod,
       date,
@@ -41,6 +42,50 @@ export async function POST(request: NextRequest) {
       if (rgbQr) qrCodeData = rgbQr
     }
 
+    type ProcessedItem = {
+      name: string
+      description?: string
+      quantity: number
+      price: number
+      total: number
+    }
+
+    const processedItems: ProcessedItem[] = (
+      Array.isArray(items) ? items : []
+    ).map(
+      (item: {
+        name: string
+        description?: string
+        quantity: number
+        price: number
+      }) => ({
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.quantity * item.price,
+      })
+    )
+
+    const subtotal = processedItems.reduce(
+      (sum: number, item) => sum + item.total,
+      0
+    )
+
+    const processedTaxes = Array.isArray(taxes)
+      ? taxes
+          .filter((t: any) => t && typeof t.name === 'string')
+          .map((t: any) => {
+            const rate = Number(t.rate) || 0
+            const amount = Number.isFinite(rate) ? (subtotal * rate) / 100 : 0
+            return { name: String(t.name), rate, amount }
+          })
+      : undefined
+
+    const computedTotalAmount =
+      subtotal +
+      (processedTaxes?.reduce((sum, tax) => sum + tax.amount, 0) || 0)
+
     const result = await renderReceiptPDF({
       receiptNumber,
       customer: {
@@ -59,21 +104,11 @@ export async function POST(request: NextRequest) {
         endDate: event.endDate,
         templateId: templateSlug,
       },
-      items: items.map(
-        (item: {
-          name: string
-          description?: string
-          quantity: number
-          price: number
-        }) => ({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.quantity * item.price,
-        })
-      ),
-      totalAmount,
+      items: processedItems,
+      taxes: processedTaxes,
+      totalAmount: Number.isFinite(computedTotalAmount)
+        ? computedTotalAmount
+        : totalAmount,
       paymentMethod,
       date,
       notes,

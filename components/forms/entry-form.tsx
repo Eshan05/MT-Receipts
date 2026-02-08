@@ -55,6 +55,11 @@ const entryItemSchema = z.object({
   price: z.number().min(0, 'Price must be non-negative'),
 })
 
+const entryTaxSchema = z.object({
+  name: z.string().min(1, 'Tax name is required'),
+  rate: z.number().min(0, 'Tax rate must be non-negative'),
+})
+
 const entryCustomerSchema = z.object({
   name: z.string().min(1, 'Customer name is required'),
   email: z.string().email('Invalid email address'),
@@ -65,6 +70,7 @@ const entryCustomerSchema = z.object({
 const entryFormSchema = z.object({
   customer: entryCustomerSchema,
   items: z.array(entryItemSchema).min(1, 'At least one item is required'),
+  taxes: z.array(entryTaxSchema).optional(),
   totalAmount: z.number().min(0),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'other']),
   emailSent: z.boolean().optional(),
@@ -137,6 +143,10 @@ export function EntryForm({
             quantity: item.quantity,
             price: item.price,
           })),
+          taxes: (editEntry.taxes || []).map((tax) => ({
+            name: tax.name,
+            rate: tax.rate,
+          })),
           totalAmount: editEntry.totalAmount,
           paymentMethod: editEntry.paymentMethod || 'cash',
           emailSent: editEntry.emailSent,
@@ -182,6 +192,7 @@ export function EntryForm({
                     price: 0,
                   },
                 ],
+          taxes: [],
           totalAmount: 0,
           paymentMethod: 'cash',
           emailSent: false,
@@ -200,7 +211,17 @@ export function EntryForm({
     name: 'items',
   })
 
+  const {
+    fields: taxFields,
+    append: appendTax,
+    remove: removeTax,
+  } = useFieldArray({
+    control: form.control,
+    name: 'taxes',
+  })
+
   const watchedItems = form.watch('items')
+  const watchedTaxes = form.watch('taxes')
 
   useEffect(() => {
     const newIcons: Record<string, IconType> = {}
@@ -213,12 +234,19 @@ export function EntryForm({
   }, [watchedItems])
 
   useEffect(() => {
-    const total = watchedItems.reduce(
+    const subtotal = watchedItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
       0
     )
-    form.setValue('totalAmount', total)
-  }, [watchedItems, form])
+
+    const taxTotal = (watchedTaxes || []).reduce((sum, tax) => {
+      const rate = Number(tax?.rate) || 0
+      if (!Number.isFinite(rate) || rate <= 0) return sum
+      return sum + (subtotal * rate) / 100
+    }, 0)
+
+    form.setValue('totalAmount', subtotal + taxTotal)
+  }, [watchedItems, watchedTaxes, form])
 
   const onSubmit = async (data: EntryFormValues) => {
     const receiptData = {
@@ -230,6 +258,10 @@ export function EntryForm({
         quantity: item.quantity,
         price: item.price,
         total: item.quantity * item.price,
+      })),
+      taxes: (data.taxes || []).map((tax) => ({
+        name: tax.name,
+        rate: tax.rate,
       })),
       totalAmount: data.totalAmount,
       paymentMethod: data.paymentMethod,
@@ -528,13 +560,115 @@ export function EntryForm({
         </div>
       </div>
 
+      <div className='space-y-1.5'>
+        <div className='flex items-center justify-between'>
+          <span className='text-sm font-medium'>Taxes</span>
+          <Button
+            type='button'
+            onClick={() => appendTax({ name: '', rate: 0 })}
+            variant='outline'
+            size='sm'
+            className='gap-1 h-7 text-xs'
+          >
+            <Plus className='w-3 h-3' />
+            Add
+          </Button>
+        </div>
+
+        {taxFields.length === 0 ? (
+          <p className='text-xs text-muted-foreground'>No taxes</p>
+        ) : null}
+
+        <div className='space-y-1'>
+          {taxFields.map((tax, index) => {
+            const subtotal = watchedItems.reduce(
+              (sum, item) => sum + item.quantity * item.price,
+              0
+            )
+            const rate = Number(watchedTaxes?.[index]?.rate) || 0
+            const amount =
+              Number.isFinite(rate) && rate > 0 ? (subtotal * rate) / 100 : 0
+
+            return (
+              <div key={tax.id} className='group p-2 rounded-md bg-muted/40'>
+                <div className='flex items-center gap-1.5'>
+                  <Controller
+                    name={`taxes.${index}.name`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        data-invalid={fieldState.invalid}
+                        className='flex-1'
+                      >
+                        <Input
+                          {...field}
+                          placeholder='CGST / SGST / IGST / GST...'
+                          aria-invalid={fieldState.invalid}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name={`taxes.${index}.rate`}
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid} className='w-20'>
+                        <div className='relative'>
+                          <Input
+                            {...field}
+                            type='number'
+                            min={0}
+                            step='0.01'
+                            placeholder='Rate'
+                            className='peer pr-6'
+                            aria-invalid={fieldState.invalid}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value)
+                              field.onChange(isNaN(value) ? 0 : value)
+                            }}
+                          />
+                          <div className='pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-muted-foreground/80'>
+                            <span className='text-xs'>%</span>
+                          </div>
+                        </div>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <div className='w-20 text-right text-xs text-muted-foreground tabular-nums'>
+                    {amount.toFixed(2)}
+                  </div>
+
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => removeTax(index)}
+                    className='w-6 h-6 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive'
+                  >
+                    <Trash2 className='w-3 h-3' />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       <div className='grid grid-cols-2 gap-2'>
         <Controller
           name='totalAmount'
           control={form.control}
           render={({ field }) => (
             <Field>
-              <FieldLabel className='sr-only'>Total Amount</FieldLabel>
+              <FieldLabel className='sr-only'>Total (incl. taxes)</FieldLabel>
               <div className='relative'>
                 <Input
                   {...field}

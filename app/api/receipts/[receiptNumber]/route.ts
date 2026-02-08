@@ -29,9 +29,12 @@ type ReceiptLean = {
   receiptNumber: string
   customer: ReceiptCustomer
   items: ReceiptItem[]
+  taxes?: Array<{ name: string; rate: number; amount: number }>
   totalAmount: number
+  templateSlug?: string
   paymentMethod?: string
   notes?: string
+  qrCodeData?: string
   refunded: boolean
   refundReason?: string
   refundedAt?: Date
@@ -85,6 +88,7 @@ function formatPublicReceipt(
         price: item.price,
         total: item.total,
       })),
+      taxes: receipt.taxes,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
       notes: receipt.notes,
@@ -116,6 +120,7 @@ function formatPrivateReceipt(
       receiptNumber: receipt.receiptNumber,
       customer: receipt.customer,
       items: receipt.items,
+      taxes: receipt.taxes,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
       notes: receipt.notes,
@@ -198,7 +203,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     })()
 
     if (acceptHeader.includes('application/pdf') || wantsPdf) {
-      const receipt = await Receipt.findOne({ receiptNumber }).lean()
+      const receipt = await Receipt.findOne({
+        receiptNumber,
+      }).lean<ReceiptLean>()
       if (!receipt) {
         return NextResponse.json(
           { message: 'Receipt not found' },
@@ -270,6 +277,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           price: item.price,
           total: item.total,
         })),
+        taxes: receipt.taxes,
         totalAmount: receipt.totalAmount,
         paymentMethod: receipt.paymentMethod,
         date: receipt.createdAt?.toISOString(),
@@ -339,6 +347,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const {
       customer,
       items,
+      taxes,
       totalAmount,
       paymentMethod,
       emailSent,
@@ -350,7 +359,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       emailSentAt,
     } = body
 
-    const processedItems = items.map(
+    type ProcessedItem = {
+      name: string
+      description?: string
+      quantity: number
+      price: number
+      total: number
+    }
+
+    const processedItems: ProcessedItem[] = (
+      Array.isArray(items) ? items : []
+    ).map(
       (item: {
         name: string
         description?: string
@@ -366,6 +385,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       })
     )
 
+    const subtotal = processedItems.reduce(
+      (sum: number, item) => sum + item.total,
+      0
+    )
+
+    const processedTaxes = Array.isArray(taxes)
+      ? taxes
+          .filter((t: any) => t && typeof t.name === 'string')
+          .map((t: any) => {
+            const rate = Number(t.rate) || 0
+            const amount = Number.isFinite(rate) ? (subtotal * rate) / 100 : 0
+            return { name: String(t.name), rate, amount }
+          })
+      : undefined
+
+    const computedTotalAmount =
+      subtotal +
+      (processedTaxes?.reduce((sum, tax) => sum + tax.amount, 0) || 0)
+
     const updateData: Record<string, unknown> = {
       customer: {
         name: customer.name,
@@ -374,7 +412,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         address: customer.address,
       },
       items: processedItems,
-      totalAmount,
+      taxes: processedTaxes,
+      totalAmount: Number.isFinite(computedTotalAmount)
+        ? computedTotalAmount
+        : totalAmount,
       paymentMethod,
       emailSent,
       notes,

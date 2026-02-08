@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { Receipt } = ctx.models
     const body = await request.json().catch(() => ({}))
-    const { templateSlug, smtpVaultId, config } = body
+    const { templateSlug, smtpVaultId, subject, config } = body
     const organizationBranding = await getOrganizationBrandingBySlug(
       ctx.organization.slug
     )
@@ -93,6 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const result = await sendReceiptEmail({
       to: receipt.customer.email,
       receiptNumber: receipt.receiptNumber,
+      subject,
       organizationSlug: ctx.organization.slug,
       organizationId: ctx.organization.id,
       customerName: receipt.customer.name,
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         price: item.price,
         total: item.total,
       })),
+      taxes: receipt.taxes,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
       organizationName:

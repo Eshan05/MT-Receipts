@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
 
     const { Receipt } = ctx.models
     const body = await request.json()
-    const { filter, templateSlug, smtpVaultId } = body
+    const { filter, templateSlug, smtpVaultId, subject } = body
 
     if (
       !filter ||
@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
         const result = await sendReceiptEmail({
           to: receipt.customer.email,
           receiptNumber: receipt.receiptNumber,
+          subject,
           organizationSlug: ctx.organization.slug,
           organizationId: ctx.organization.id,
           customerName: receipt.customer.name,
@@ -238,6 +239,7 @@ export async function POST(request: NextRequest) {
             price: item.price,
             total: item.total,
           })),
+          taxes: receipt.taxes,
           totalAmount: receipt.totalAmount,
           paymentMethod: receipt.paymentMethod,
           organizationName:

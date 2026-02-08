@@ -55,6 +55,11 @@ export interface ITenantReceipt {
     price: number
     total: number
   }>
+  taxes?: Array<{
+    name: string
+    rate: number
+    amount: number
+  }>
   totalAmount: number
   paymentMethod?: 'cash' | 'upi' | 'card' | 'other'
   templateSlug?: string
@@ -194,6 +199,13 @@ const receiptSchema = new Schema<ITenantReceipt>(
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
         total: { type: Number, required: true },
+      },
+    ],
+    taxes: [
+      {
+        name: { type: String, required: true },
+        rate: { type: Number, required: true },
+        amount: { type: Number, required: true },
       },
     ],
     totalAmount: { type: Number, required: true },

@@ -7,6 +7,12 @@ export interface TemplateConfig {
   organizationName?: string
 }
 
+export interface TemplateTaxLine {
+  name: string
+  rate: number
+  amount: number
+}
+
 export interface TemplateCustomer {
   name: string
   email: string
@@ -36,6 +42,7 @@ export interface TemplateProps {
   customer: TemplateCustomer
   event: TemplateEvent
   items: TemplateItem[]
+  taxes?: TemplateTaxLine[]
   totalAmount: number
   paymentMethod?: string
   date: string
