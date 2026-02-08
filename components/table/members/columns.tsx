@@ -81,7 +81,7 @@ export function createColumns({
     {
       accessorKey: 'user',
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='User' className='ml-2' />
+        <DataTableColumnHeader column={column} title='User' className='ml-3' />
       ),
       cell: ({ row }) => {
         const member = row.original
@@ -244,7 +244,8 @@ export function createColumns({
         )
 
         return (
-          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+          <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+            <Calendar className='size-3 text-muted-foreground shrink-0' />
             <div className='flex flex-col text-muted-foreground!'>
               <span className='font-mono'>
                 {formatted.date}
@@ -278,7 +279,8 @@ export function createColumns({
         )
 
         return (
-          <div className='flex items-center gap-1 text-xs text-muted-foreground'>
+          <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+            <Clock className='size-3 text-muted-foreground shrink-0' />
             <div className='flex flex-col text-muted-foreground!'>
               <span className='font-mono'>
                 {formatted.date}
