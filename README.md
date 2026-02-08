@@ -138,29 +138,6 @@ B2_SECRET_ACCESS_KEY=
 
 </div>
 
-## Project Structure
-
-```
-├── app/                    # Next.js App Router
-│   ├── (tenant)/          # Organization-scoped routes
-│   │   └── [slug]/        # Dynamic organization pages
-│   ├── (superadmin)/      # Superadmin routes
-│   ├── api/               # API endpoints
-│   └── v/                 # Verification routes
-├── components/            # React components
-│   ├── forms/            # Form components
-│   ├── table/            # Data table components
-│   ├── ui/               # shadcn/ui components
-│   └── ...
-├── lib/                   # Utilities and helpers
-│   ├── emails/           # Email templates
-│   ├── templates/        # PDF receipt templates
-│   ├── tenants/          # Multi-tenant logic
-│   └── ...
-├── models/               # Mongoose models
-└── public/              # Static assets
-```
-
 ## 📄 Additional Notes
 
 - See GPLv3 LICENSE for licensing information
