@@ -491,7 +491,7 @@ export function DataTableRowActions<TData>({
                 />
               </div>
 
-              <div>
+              <div className='mx-auto'>
                 <Button
                   type='button'
                   variant='outline'

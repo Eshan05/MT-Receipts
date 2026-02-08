@@ -224,7 +224,14 @@ function queueTenantPageViewLog(params: {
   const accept = params.request.headers.get('accept')
   const isDocument =
     dest === 'document' || (accept?.includes('text/html') ?? false)
-  if (!isDocument) return
+  // Next.js App Router client navigations fetch React Server Components.
+  // Those requests typically accept `text/x-component` and would be missed
+  // by document-only logging.
+  const isRscNavigation =
+    (accept?.includes('text/x-component') ?? false) ||
+    params.request.headers.has('rsc')
+
+  if (!isDocument && !isRscNavigation) return
 
   const rawRate = process.env.TENANT_PAGE_VIEW_SAMPLE_RATE
   const sampleRate = rawRate ? Number(rawRate) : 0.1

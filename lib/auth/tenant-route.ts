@@ -61,6 +61,24 @@ export async function getTenantContext(
     (m) => m.organizationSlug === organization.slug
   )
   if (!membership) {
+    // Superadmins can view active orgs even without membership.
+    if (user.isSuperAdmin && organization.status === 'active') {
+      const models = await getTenantModels(organization.slug)
+      return {
+        organization,
+        models,
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          username: user.username,
+          isSuperAdmin: true,
+        },
+        membership: {
+          role: 'admin',
+        },
+      }
+    }
+
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 

@@ -1,36 +1,5 @@
 export type QrRasterFormat = 'png' | 'jpeg'
 
-function parseHexColorToRgb(color: string | undefined): {
-  r: number
-  g: number
-  b: number
-} {
-  const fallback = { r: 255, g: 255, b: 255 }
-  if (!color) return fallback
-
-  const hex = color.trim().toLowerCase()
-  if (!hex.startsWith('#')) return fallback
-
-  const raw = hex.slice(1)
-  if (raw.length === 3) {
-    const r = parseInt(raw[0] + raw[0], 16)
-    const g = parseInt(raw[1] + raw[1], 16)
-    const b = parseInt(raw[2] + raw[2], 16)
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return fallback
-    return { r, g, b }
-  }
-
-  if (raw.length === 6) {
-    const r = parseInt(raw.slice(0, 2), 16)
-    const g = parseInt(raw.slice(2, 4), 16)
-    const b = parseInt(raw.slice(4, 6), 16)
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return fallback
-    return { r, g, b }
-  }
-
-  return fallback
-}
-
 function isPngSignature(bytes: Buffer): boolean {
   return (
     bytes.length >= 26 &&
@@ -131,28 +100,18 @@ export async function ensureQrPngIsRgbDataUrl(
   // 6 = RGBA, 4 = grayscale+alpha
   if (colorType !== 6 && colorType !== 4) return normalized
 
-  const mod = await import('pngjs')
-  const PNG = (mod as any).PNG ?? (mod as any).default?.PNG
-  if (!PNG?.sync?.read || !PNG?.sync?.write) {
+  try {
+    const sharpMod = await import('sharp')
+    const sharpFn = (sharpMod as any).default ?? (sharpMod as any)
+    if (typeof sharpFn !== 'function') return normalized
+
+    const outBytes: Buffer = await sharpFn(bytes)
+      .flatten({ background: backgroundColor })
+      .png()
+      .toBuffer()
+
+    return `data:image/png;base64,${outBytes.toString('base64')}`
+  } catch {
     return normalized
   }
-
-  const src = PNG.sync.read(bytes)
-  const bg = parseHexColorToRgb(backgroundColor)
-  const out = new PNG({ width: src.width, height: src.height, colorType: 2 })
-
-  for (let i = 0; i < src.data.length; i += 4) {
-    const a = (src.data[i + 3] ?? 255) / 255
-    const r = src.data[i] ?? 0
-    const g = src.data[i + 1] ?? 0
-    const b = src.data[i + 2] ?? 0
-
-    out.data[i] = Math.round(r * a + bg.r * (1 - a))
-    out.data[i + 1] = Math.round(g * a + bg.g * (1 - a))
-    out.data[i + 2] = Math.round(b * a + bg.b * (1 - a))
-    out.data[i + 3] = 255
-  }
-
-  const outBytes: Buffer = PNG.sync.write(out, { colorType: 2 })
-  return `data:image/png;base64,${outBytes.toString('base64')}`
 }

@@ -131,6 +131,36 @@ describe('lib/auth/tenant-route', () => {
     }
   })
 
+  it('getTenantContext allows superadmin without membership when org is active', async () => {
+    mockGetTokenServer.mockResolvedValueOnce('t')
+    mockVerifyAuthToken.mockResolvedValueOnce({ email: 'x@example.com' })
+    mockUserFindOne.mockResolvedValueOnce({
+      _id: { toString: () => 'u1' },
+      email: 'x@example.com',
+      username: 'x',
+      isSuperAdmin: true,
+      memberships: [{ organizationSlug: 'other', role: 'member' }],
+    })
+    mockGetOrganizationContext.mockResolvedValueOnce({
+      id: 'o1',
+      slug: 'aces',
+      name: 'ACES',
+      status: 'active',
+    })
+    mockGetTenantModels.mockResolvedValueOnce({ ok: 'models' })
+
+    const { getTenantContext } = await import('@/lib/auth/tenant-route')
+    const result = await getTenantContext(new Request('http://localhost'))
+
+    expect(result).not.toBeInstanceOf(Response)
+    if (!(result instanceof Response)) {
+      expect(result.organization.slug).toBe('aces')
+      expect(result.user.isSuperAdmin).toBe(true)
+      expect(result.membership.role).toBe('admin')
+      expect(result.models).toEqual({ ok: 'models' })
+    }
+  })
+
   it('getTenantContext returns full tenant context on success', async () => {
     mockGetTokenServer.mockResolvedValueOnce('t')
     mockVerifyAuthToken.mockResolvedValueOnce({ email: 'x@example.com' })

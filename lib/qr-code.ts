@@ -170,33 +170,39 @@ async function tryConvertPngDataUrlToJpeg(
 
 async function isLowContrastQrPng(pngBuffer: Buffer): Promise<boolean> {
   try {
-    const { PNG } = await import('pngjs')
-    const png = (PNG as any).sync.read(pngBuffer)
-    const data: Uint8Array = png.data
-    const width: number = png.width
-    const height: number = png.height
+    const sharpMod = await import('sharp')
+    const sharpFn = (sharpMod as any).default ?? (sharpMod as any)
+    if (typeof sharpFn !== 'function') return true
 
-    const total = width * height
-    if (!total || !data || data.length < total * 4) return true
+    // Downscale and sample raw RGB pixels; this is fast and avoids extra deps.
+    const { data, info } = await sharpFn(pngBuffer)
+      .flatten({ background: '#ffffff' })
+      .resize(128, 128, { fit: 'fill' })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+
+    const channels = info?.channels ?? 0
+    if (channels < 3) return true
+
+    const total = info.width * info.height
+    if (!total || !data || data.length < total * channels) return true
 
     let dark = 0
     let light = 0
 
-    // Sample every Nth pixel for speed (about ~5k samples).
-    const step = Math.max(1, Math.floor(total / 5000))
-    for (let p = 0; p < total; p += step) {
-      const i = p * 4
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
+    for (let p = 0; p < total; p++) {
+      const i = p * channels
+      const r = data[i] ?? 0
+      const g = data[i + 1] ?? 0
+      const b = data[i + 2] ?? 0
       const y = 0.2126 * r + 0.7152 * g + 0.0722 * b
       if (y < 110) dark++
       else if (y > 200) light++
     }
 
-    const samples = Math.ceil(total / step)
-    const darkPct = dark / samples
-    const lightPct = light / samples
+    const darkPct = dark / total
+    const lightPct = light / total
 
     // A real QR should have a meaningful amount of both dark and light pixels.
     return darkPct < 0.05 || lightPct < 0.05
