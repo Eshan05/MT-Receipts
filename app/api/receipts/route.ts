@@ -238,6 +238,7 @@ export async function POST(request: NextRequest) {
       },
       items: processedItems,
       taxes: processedTaxes,
+      subtotalAmount: subtotal,
       totalAmount: Number.isFinite(computedTotalAmount)
         ? computedTotalAmount
         : totalAmount,

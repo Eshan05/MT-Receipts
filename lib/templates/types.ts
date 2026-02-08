@@ -5,6 +5,8 @@ export interface TemplateConfig {
   showQrCode: boolean
   footerText?: string
   organizationName?: string
+  websiteUrl?: string
+  contactEmail?: string
 }
 
 export interface TemplateTaxLine {

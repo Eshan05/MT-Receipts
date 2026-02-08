@@ -30,6 +30,7 @@ type ReceiptLean = {
   customer: ReceiptCustomer
   items: ReceiptItem[]
   taxes?: Array<{ name: string; rate: number; amount: number }>
+  subtotalAmount?: number
   totalAmount: number
   templateSlug?: string
   paymentMethod?: string
@@ -89,6 +90,7 @@ function formatPublicReceipt(
         total: item.total,
       })),
       taxes: receipt.taxes,
+      subtotalAmount: receipt.subtotalAmount,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
       notes: receipt.notes,
@@ -121,6 +123,7 @@ function formatPrivateReceipt(
       customer: receipt.customer,
       items: receipt.items,
       taxes: receipt.taxes,
+      subtotalAmount: receipt.subtotalAmount,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
       notes: receipt.notes,
@@ -413,6 +416,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
       items: processedItems,
       taxes: processedTaxes,
+      subtotalAmount: subtotal,
       totalAmount: Number.isFinite(computedTotalAmount)
         ? computedTotalAmount
         : totalAmount,

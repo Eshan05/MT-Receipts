@@ -13,7 +13,9 @@ export const PUBLIC_PATHS = [
 
 export const SUPERADMIN_PATHS = ['/s', '/superadmin', '/api/admins']
 
-export const STATIC_PATHS = ['/favicon.ico', '/_next', '/api']
+// Paths that should never be treated as tenant-scoped routes.
+// These are either Next.js internals or static files served from /public.
+export const STATIC_PATHS = ['/favicon.ico', '/_next', '/api', '/fonts']
 
 export const NON_TENANT_PATHS = [
   'v',

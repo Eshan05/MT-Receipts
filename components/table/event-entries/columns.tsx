@@ -314,10 +314,15 @@ export function createColumns({
       cell: ({ row }) => {
         const amount = row.original.totalAmount
         const items = row.original.items || []
-        const subtotal = items.reduce(
+        const computedSubtotal = items.reduce(
           (sum, item) => sum + (Number(item.total) || 0),
           0
         )
+        const subtotal =
+          typeof row.original.subtotalAmount === 'number' &&
+          Number.isFinite(row.original.subtotalAmount)
+            ? row.original.subtotalAmount
+            : computedSubtotal
 
         const taxes = Array.isArray(row.original.taxes)
           ? row.original.taxes

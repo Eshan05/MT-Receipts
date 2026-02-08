@@ -12,6 +12,8 @@ import {
   GripVertical,
   X,
   Plus,
+  MailIcon,
+  GlobeIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ColorPickerOutput, RgbaValue } from '@/components/derived/color-picker'
@@ -48,6 +50,8 @@ interface OrganizationSettings {
   logoUrl: string
   primaryColor: string
   secondaryColor: string
+  websiteUrl: string
+  contactEmail: string
   receiptNumberFormat: string
 }
 
@@ -156,6 +160,8 @@ export function OrganizationSettingsCredenza({
     logoUrl: '',
     primaryColor: '#3b82f6',
     secondaryColor: '#1e40af',
+    websiteUrl: '',
+    contactEmail: '',
     receiptNumberFormat: 'RCP-{eventCode}-{initials}{seq}',
   })
   const [formatTokens, setFormatTokens] = useState<FormatToken[]>([])
@@ -219,6 +225,8 @@ export function OrganizationSettingsCredenza({
           logoUrl: source.logoUrl || '',
           primaryColor: source.settings?.primaryColor || '#3b82f6',
           secondaryColor: source.settings?.secondaryColor || '#1e40af',
+          websiteUrl: source.settings?.websiteUrl || '',
+          contactEmail: source.settings?.contactEmail || '',
           receiptNumberFormat,
         })
         setFormatTokens(parseFormatTokens(receiptNumberFormat))
@@ -314,6 +322,8 @@ export function OrganizationSettingsCredenza({
             settings: {
               primaryColor: settings.primaryColor,
               secondaryColor: settings.secondaryColor,
+              websiteUrl: settings.websiteUrl.trim() || undefined,
+              contactEmail: settings.contactEmail.trim() || undefined,
               receiptNumberFormat: settings.receiptNumberFormat,
             },
           }
@@ -324,6 +334,8 @@ export function OrganizationSettingsCredenza({
             settings: {
               primaryColor: settings.primaryColor,
               secondaryColor: settings.secondaryColor,
+              websiteUrl: settings.websiteUrl.trim() || undefined,
+              contactEmail: settings.contactEmail.trim() || undefined,
               receiptNumberFormat: settings.receiptNumberFormat,
             },
           }
@@ -424,6 +436,44 @@ export function OrganizationSettingsCredenza({
               />
               <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
                 <Link2Icon size={12} />
+              </div>
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor='websiteUrl'>Email & Website</FieldLabel>
+            <div className='relative'>
+              <Input
+                id='websiteUrl'
+                value={settings.websiteUrl}
+                onChange={(e) =>
+                  setSettings({ ...settings, websiteUrl: e.target.value })
+                }
+                placeholder="Organization's contact email"
+                readOnly={!canEdit}
+                className='peer ps-7'
+              />
+              <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                <GlobeIcon size={12} />
+              </div>
+            </div>
+          </Field>
+
+          <Field>
+            {/* <FieldLabel htmlFor='contactEmail'>Contact Email</FieldLabel> */}
+            <div className='relative'>
+              <Input
+                id='contactEmail'
+                value={settings.contactEmail}
+                onChange={(e) =>
+                  setSettings({ ...settings, contactEmail: e.target.value })
+                }
+                placeholder="Organization's website"
+                readOnly={!canEdit}
+                className='peer ps-7'
+              />
+              <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                <MailIcon size={12} />
               </div>
             </div>
           </Field>

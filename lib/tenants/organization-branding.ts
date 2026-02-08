@@ -6,6 +6,8 @@ export interface OrganizationBranding {
   logoUrl?: string
   primaryColor?: string
   secondaryColor?: string
+  websiteUrl?: string
+  contactEmail?: string
   receiptNumberFormat?: string
   defaultTemplate?: string
   emailFromName?: string
@@ -31,6 +33,8 @@ export async function getOrganizationBrandingBySlug(
     logoUrl: organization.logoUrl || undefined,
     primaryColor: organization.settings?.primaryColor || undefined,
     secondaryColor: organization.settings?.secondaryColor || undefined,
+    websiteUrl: organization.settings?.websiteUrl || undefined,
+    contactEmail: organization.settings?.contactEmail || undefined,
     receiptNumberFormat:
       organization.settings?.receiptNumberFormat || undefined,
     defaultTemplate: organization.settings?.defaultTemplate || undefined,

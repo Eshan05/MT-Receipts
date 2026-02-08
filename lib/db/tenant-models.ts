@@ -60,6 +60,7 @@ export interface ITenantReceipt {
     rate: number
     amount: number
   }>
+  subtotalAmount?: number
   totalAmount: number
   paymentMethod?: 'cash' | 'upi' | 'card' | 'other'
   templateSlug?: string
@@ -208,6 +209,7 @@ const receiptSchema = new Schema<ITenantReceipt>(
         amount: { type: Number, required: true },
       },
     ],
+    subtotalAmount: { type: Number },
     totalAmount: { type: Number, required: true },
     paymentMethod: { type: String, enum: ['cash', 'upi', 'card', 'other'] },
     templateSlug: { type: String, default: 'professional' },

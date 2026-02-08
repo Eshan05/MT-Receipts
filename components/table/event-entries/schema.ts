@@ -34,6 +34,7 @@ export const eventEntrySchema = z.object({
   customer: receiptCustomerSchema,
   items: z.array(receiptItemSchema),
   taxes: z.array(receiptTaxLineSchema).optional(),
+  subtotalAmount: z.number().optional(),
   totalAmount: z.number(),
   paymentMethod: z.enum(['cash', 'upi', 'card', 'other']).optional(),
   emailSent: z.boolean(),

@@ -46,6 +46,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         price: item.price,
         total: item.total,
       })),
+      taxes: r.taxes,
+      subtotalAmount: r.subtotalAmount,
       totalAmount: r.totalAmount,
       paymentMethod: r.paymentMethod,
       emailSent: r.emailSent,

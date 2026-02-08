@@ -12,21 +12,56 @@ import type { TemplateProps } from './types'
 import path from 'path'
 
 const isServer = typeof window === 'undefined'
+
+const FONT_BODY = 'Geist'
+const FONT_DISPLAY = 'Fjalla One'
+const FONT_SCRIPT = 'Imperial Script'
+
 const getFontPath = (fontFile: string): string => {
   if (isServer) return path.join(process.cwd(), 'public', 'fonts', fontFile)
 
   return `/fonts/${fontFile}`
 }
 
-Font.register({
-  family: 'Fjalla One',
-  src: getFontPath('FjallaOne-Regular.ttf'),
-})
-Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
-Font.register({
-  family: 'Imperial Script',
-  src: getFontPath('ImperialScript-Regular.ttf'),
-})
+if (isServer) {
+  Font.register({
+    family: 'Fjalla One',
+    src: getFontPath('FjallaOne-Regular.ttf'),
+  })
+  Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
+  Font.register({
+    family: 'Imperial Script',
+    src: getFontPath('ImperialScript-Regular.ttf'),
+  })
+} else {
+  // Browser PDFViewer: avoid variable fonts (Geist-Variable.ttf) which can throw
+  // "Unknown font format" warnings in some environments.
+  Font.register({
+    family: 'Fjalla One',
+    src: getFontPath('FjallaOne-Regular.ttf'),
+  })
+  Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
+
+  Font.register({
+    family: 'Imperial Script',
+    src: getFontPath('ImperialScript-Regular.ttf'),
+  })
+}
+
+function formatDisplayDate(input: string): string {
+  if (typeof input !== 'string' || input.length === 0) return ''
+  const looksIso = /\d{4}-\d{2}-\d{2}T/.test(input)
+  if (!looksIso) return input
+
+  const parsed = new Date(input)
+  if (!Number.isFinite(parsed.getTime())) return input
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: '2-digit',
+    year: '2-digit',
+  }).format(parsed)
+}
 
 const createStyles = (primaryColor: string, secondaryColor?: string) =>
   StyleSheet.create({
@@ -35,13 +70,13 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
       fontSize: 9,
       backgroundColor: '#FFFFFF',
       color: '#1F2937',
-      fontFamily: 'Geist',
+      fontFamily: FONT_BODY,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      fontFamily: 'Fjalla One',
+      fontFamily: FONT_DISPLAY,
       marginBottom: 20,
     },
     receiptTitle: {
@@ -82,7 +117,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       marginBottom: 20,
-      fontFamily: 'Fjalla One',
+      fontFamily: FONT_DISPLAY,
     },
     infoColumn: {
       flex: 1,
@@ -95,7 +130,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
       textTransform: 'uppercase',
     },
     infoValue: {
-      fontFamily: 'Geist',
+      fontFamily: FONT_BODY,
       fontSize: 9,
       color: '#222',
       lineHeight: 1.2,
@@ -126,7 +161,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
       borderBottomColor: secondaryColor || '#d65147',
       paddingVertical: 4,
       marginTop: 10,
-      fontFamily: 'Fjalla One',
+      fontFamily: FONT_DISPLAY,
     },
     tableHeaderText: {
       fontSize: 9,
@@ -188,7 +223,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
       justifyContent: 'space-between',
       marginTop: 10,
       alignItems: 'center',
-      fontFamily: 'Fjalla One',
+      fontFamily: FONT_DISPLAY,
     },
     grandTotalLabel: {
       fontSize: 13,
@@ -208,7 +243,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
     },
     signature: {
       fontSize: 42, // Reduced from 70
-      fontFamily: 'Imperial Script',
+      fontFamily: FONT_SCRIPT,
       color: '#444',
     },
     footerLine: {
@@ -225,7 +260,7 @@ const createStyles = (primaryColor: string, secondaryColor?: string) =>
     },
     thankYou: {
       fontSize: 48, // Reduced from 64
-      fontFamily: 'Imperial Script',
+      fontFamily: FONT_SCRIPT,
       color: primaryColor,
     },
     termsSection: {
@@ -279,8 +314,11 @@ export default function ProfessionalTemplate({
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName || 'ACES'
+  const websiteUrl = config.websiteUrl?.trim()
+  const contactEmail = config.contactEmail?.trim()
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
   const taxLines = Array.isArray(taxes) ? taxes : []
+  const receiptDate = formatDisplayDate(date)
 
   return (
     <Document>
@@ -293,8 +331,11 @@ export default function ProfessionalTemplate({
               <Text style={styles.orgAddress}>
                 Association of Computer Engineers{'\n'}
                 RMDSSOE, Pune, MH, India{'\n'}
-                <Link src='https://aces-rmdssoe.in'>Website</Link> |{' '}
-                <Link src='mailto:aces.rmdssoe@sinhgad.edu'>Email</Link>
+                {websiteUrl ? <Link src={websiteUrl}>Website</Link> : null}
+                {websiteUrl && contactEmail ? ' | ' : null}
+                {contactEmail ? (
+                  <Link src={`mailto:${contactEmail}`}>Email</Link>
+                ) : null}
               </Text>
             </View>
           </View>
@@ -346,7 +387,7 @@ export default function ProfessionalTemplate({
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoRowLabel}>Receipt Date</Text>
-              <Text style={styles.infoRowValue}>{date}</Text>
+              <Text style={styles.infoRowValue}>{receiptDate}</Text>
             </View>
             {paymentMethod && (
               <View style={styles.infoRow}>

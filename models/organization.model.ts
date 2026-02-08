@@ -5,6 +5,8 @@ export interface IOrganizationSettings {
   primaryColor?: string
   secondaryColor?: string
   organizationName?: string
+  websiteUrl?: string
+  contactEmail?: string
   receiptNumberFormat?: string
   defaultTemplate?: string
   emailFromName?: string
@@ -49,6 +51,8 @@ const settingsSchema = new Schema<IOrganizationSettings>(
     primaryColor: { type: String, default: '#3b82f6' },
     secondaryColor: { type: String, default: '#1e40af' },
     organizationName: { type: String },
+    websiteUrl: { type: String, trim: true },
+    contactEmail: { type: String, trim: true },
     receiptNumberFormat: {
       type: String,
       default: 'RCP-{eventCode}-{initials}{seq}',

@@ -35,6 +35,14 @@ const updateOrganizationSchema = z.object({
       primaryColor: z.string().optional(),
       secondaryColor: z.string().optional(),
       organizationName: z.string().optional(),
+      websiteUrl: z.preprocess((value) => {
+        if (typeof value === 'string' && value.trim() === '') return undefined
+        return value
+      }, z.string().url().trim().optional()),
+      contactEmail: z.preprocess((value) => {
+        if (typeof value === 'string' && value.trim() === '') return undefined
+        return value
+      }, z.string().email().trim().optional()),
       receiptNumberFormat: z.string().optional(),
       defaultTemplate: z.string().optional(),
       emailFromName: z.string().optional(),

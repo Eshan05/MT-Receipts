@@ -129,6 +129,8 @@ function buildConfig(
       organizationName:
         orgBranding?.organizationName || orgName || 'Organization',
       logoUrl: orgBranding?.logoUrl || defaultLogoUrl,
+      websiteUrl: orgBranding?.websiteUrl,
+      contactEmail: orgBranding?.contactEmail,
     }
   }
 
@@ -144,6 +146,8 @@ function buildConfig(
       template.config.organizationName ||
       orgName ||
       'Organization',
+    websiteUrl: orgBranding?.websiteUrl,
+    contactEmail: orgBranding?.contactEmail,
   }
 }
 
