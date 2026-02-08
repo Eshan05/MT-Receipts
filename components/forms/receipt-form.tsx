@@ -81,6 +81,7 @@ import {
   type SmtpVaultMeta,
 } from '@/lib/tenants/smtp-vault-client'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ReceiptFormProps {
   templates: TemplateInfo[]
@@ -130,11 +131,13 @@ export function ReceiptForm({
   templates,
   preselectedEventId,
 }: ReceiptFormProps) {
+  const { currentOrganization } = useAuth()
   const [events, setEvents] = useState<IEvent[]>([])
   const [loadingEvents, setLoadingEvents] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [baseConfig, setBaseConfig] = useState<TemplateConfig>(defaultConfig)
   const [config, setConfig] = useState<TemplateConfig>(defaultConfig)
   const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
   const [selectedSmtpVaultId, setSelectedSmtpVaultId] = useState<string>('')
@@ -207,6 +210,81 @@ export function ReceiptForm({
     }
     fetchEvents()
   }, [])
+
+  useEffect(() => {
+    if (!currentOrganization?.slug) return
+
+    let cancelled = false
+
+    const loadOrganizationDefaults = async () => {
+      try {
+        const res = await fetch(
+          `/api/organizations/${currentOrganization.slug}`
+        )
+        if (!res.ok) return
+
+        const data = await res.json()
+
+        const logoUrlRaw =
+          typeof data?.logoUrl === 'string' ? data.logoUrl.trim() : ''
+        const organizationNameRaw =
+          typeof data?.settings?.organizationName === 'string'
+            ? data.settings.organizationName.trim()
+            : typeof data?.name === 'string'
+              ? data.name.trim()
+              : ''
+        const websiteUrlRaw =
+          typeof data?.settings?.websiteUrl === 'string'
+            ? data.settings.websiteUrl.trim()
+            : ''
+        const contactEmailRaw =
+          typeof data?.settings?.contactEmail === 'string'
+            ? data.settings.contactEmail.trim()
+            : ''
+
+        const nextBaseConfig: TemplateConfig = {
+          // primaryColor:
+          //   typeof data?.settings?.primaryColor === 'string' &&
+          //   data.settings.primaryColor.trim()
+          //     ? data.settings.primaryColor
+          //     : defaultConfig.primaryColor,
+          primaryColor: defaultConfig.primaryColor,
+          secondaryColor:
+            typeof data?.settings?.secondaryColor === 'string' &&
+            data.settings.secondaryColor.trim()
+              ? data.settings.secondaryColor
+              : undefined,
+          showQrCode: defaultConfig.showQrCode,
+          organizationName:
+            organizationNameRaw || defaultConfig.organizationName,
+          logoUrl: logoUrlRaw || undefined,
+          websiteUrl: websiteUrlRaw || undefined,
+          contactEmail: contactEmailRaw || undefined,
+        }
+
+        if (cancelled) return
+
+        setBaseConfig(nextBaseConfig)
+        setConfig((previous) => {
+          const looksUntouched =
+            previous.primaryColor === defaultConfig.primaryColor &&
+            previous.secondaryColor === defaultConfig.secondaryColor &&
+            previous.showQrCode === defaultConfig.showQrCode &&
+            previous.organizationName === defaultConfig.organizationName &&
+            previous.logoUrl === defaultConfig.logoUrl
+
+          return looksUntouched ? nextBaseConfig : previous
+        })
+      } catch {
+        // ignore; keep defaults
+      }
+    }
+
+    void loadOrganizationDefaults()
+    return () => {
+      cancelled = true
+    }
+  }, [currentOrganization?.slug])
 
   const loadSmtpVaults = useCallback(async () => {
     try {
@@ -464,9 +542,9 @@ export function ReceiptForm({
             totalAmount: 0,
             paymentMethod: 'cash',
             notes: '',
-            config: defaultConfig,
+            config: baseConfig,
           })
-          setConfig(defaultConfig)
+          setConfig(baseConfig)
           return 'Receipt created'
         },
         error: (err) =>
@@ -794,7 +872,7 @@ export function ReceiptForm({
                       <Button
                         variant='outline'
                         size='sm'
-                        onClick={() => setConfig(defaultConfig)}
+                        onClick={() => setConfig(baseConfig)}
                       >
                         Reset
                       </Button>

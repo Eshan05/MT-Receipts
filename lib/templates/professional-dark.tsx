@@ -24,26 +24,16 @@ const getFontPath = (fontFile: string) => {
   return `/fonts/${fontFile}`
 }
 
-if (isServer) {
-  Font.register({
-    family: 'Fjalla One',
-    src: getFontPath('FjallaOne-Regular.ttf'),
-  })
-  Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
-  Font.register({
-    family: 'Dancing Script',
-    src: getFontPath('ImperialScript-Regular.ttf'),
-  })
-} else {
-  Font.register({
-    family: 'Fjalla One',
-    src: getFontPath('FjallaOne-Regular.ttf'),
-  })
-  Font.register({
-    family: 'Dancing Script',
-    src: getFontPath('ImperialScript-Regular.ttf'),
-  })
-}
+Font.register({
+  family: 'Fjalla One',
+  src: getFontPath('FjallaOne-Regular.ttf'),
+})
+Font.register({ family: 'Geist', src: getFontPath('Geist-Variable.ttf') })
+
+Font.register({
+  family: 'Imperial Script',
+  src: getFontPath('ImperialScript-Regular.ttf'),
+})
 
 function formatDisplayDate(input: string): string {
   if (typeof input !== 'string' || input.length === 0) return ''

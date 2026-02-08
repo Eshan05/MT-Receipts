@@ -118,8 +118,7 @@ function buildConfig(
   orgName?: string,
   orgBranding?: Awaited<ReturnType<typeof getOrganizationBrandingBySlug>>
 ): TemplateConfig {
-  const defaultLogoUrl =
-    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
+  const defaultLogoUrl = 'https://avatars.githubusercontent.com/u/140711476?v=4'
 
   if (!template) {
     return {

@@ -441,26 +441,7 @@ export function OrganizationSettingsCredenza({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor='websiteUrl'>Email & Website</FieldLabel>
-            <div className='relative'>
-              <Input
-                id='websiteUrl'
-                value={settings.websiteUrl}
-                onChange={(e) =>
-                  setSettings({ ...settings, websiteUrl: e.target.value })
-                }
-                placeholder="Organization's contact email"
-                readOnly={!canEdit}
-                className='peer ps-7'
-              />
-              <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
-                <GlobeIcon size={12} />
-              </div>
-            </div>
-          </Field>
-
-          <Field>
-            {/* <FieldLabel htmlFor='contactEmail'>Contact Email</FieldLabel> */}
+            <FieldLabel htmlFor='contactEmail'>Contact Email</FieldLabel>
             <div className='relative'>
               <Input
                 id='contactEmail'
@@ -468,12 +449,31 @@ export function OrganizationSettingsCredenza({
                 onChange={(e) =>
                   setSettings({ ...settings, contactEmail: e.target.value })
                 }
-                placeholder="Organization's website"
+                placeholder='contact@theclub.tech'
                 readOnly={!canEdit}
                 className='peer ps-7'
               />
               <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
                 <MailIcon size={12} />
+              </div>
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor='websiteUrl'>Website</FieldLabel>
+            <div className='relative'>
+              <Input
+                id='websiteUrl'
+                value={settings.websiteUrl}
+                onChange={(e) =>
+                  setSettings({ ...settings, websiteUrl: e.target.value })
+                }
+                placeholder='https://theclub.tech'
+                readOnly={!canEdit}
+                className='peer ps-7'
+              />
+              <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                <GlobeIcon size={12} />
               </div>
             </div>
           </Field>
