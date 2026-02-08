@@ -69,7 +69,7 @@ describe('CreateOrgPage', () => {
   it('renders organization name field', () => {
     render(<CreateOrgPage />)
     const nameInput = screen.getByPlaceholderText(
-      /Association of Computer Engineers/
+      /Example Club — Robotics & AI/
     )
     expect(nameInput).toBeInTheDocument()
   })

@@ -303,7 +303,7 @@ export default function ProfessionalDarkTemplate({
   qrCodeData,
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor, config.secondaryColor)
-  const orgName = config.organizationName || 'ACES'
+  const orgName = config.organizationName?.trim() || 'Eshan'
   const websiteUrl = config.websiteUrl?.trim()
   const contactEmail = config.contactEmail?.trim()
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)

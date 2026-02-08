@@ -7,10 +7,7 @@ export const MadeBy = () => {
       <HeartIcon className='w-4 h-4 text-red-400/50 animate-pulse' />
       <span className='text-muted-foreground'>
         Made by{' '}
-        <Link
-          href='https://github.com/ACES-RMDSSOE'
-          className='hover:underline'
-        >
+        <Link href='https://github.com/Eshan05' className='hover:underline'>
           Eshan
         </Link>
       </span>

@@ -72,9 +72,8 @@ const defaultConfig: TemplateConfig = {
   showQrCode: true,
   footerText:
     'Thank you for your purchase! For support, contact support@example.com',
-  organizationName: 'ACES',
-  logoUrl:
-    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png',
+  organizationName: 'Eshan',
+  logoUrl: 'https://avatars.githubusercontent.com/u/140711476?v=4',
 }
 
 function generateSampleItems(count: number): TemplateItem[] {
@@ -307,7 +306,9 @@ async function main(): Promise<void> {
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0)
   const receiptNumber = generateReceiptNumber()
   const orgName =
-    options.config?.organizationName || defaultConfig.organizationName || 'ACES'
+    options.config?.organizationName ||
+    defaultConfig.organizationName ||
+    'Eshan'
 
   const qrCodeData = await generateReceiptQRCode(receiptNumber)
 

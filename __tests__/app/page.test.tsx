@@ -40,18 +40,20 @@ vi.mock('@/components/landing/landing-organizations-credenza', () => ({
 describe('LandingPage', () => {
   it('renders the logo', () => {
     render(<LandingPage />)
-    const logo = screen.getByAltText('ACES Logo')
+    const logo = screen.getByAltText('Eshan avatar')
     expect(logo).toBeInTheDocument()
   })
 
   it('renders the title', () => {
     render(<LandingPage />)
-    expect(screen.getByText('ACES Receipts')).toBeInTheDocument()
+    expect(screen.getByText('Eshan Receipts')).toBeInTheDocument()
   })
 
   it('renders the description', () => {
     render(<LandingPage />)
-    expect(screen.getByText(/Generate and manage receipts/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Generate, email, and verify event receipts/)
+    ).toBeInTheDocument()
   })
 
   it('renders Sign In button with correct link', () => {
@@ -71,8 +73,6 @@ describe('LandingPage', () => {
   it('has correct layout structure', () => {
     const { container } = render(<LandingPage />)
     const main = container.querySelector('main')
-    expect(main).toHaveClass('flex')
-    expect(main).toHaveClass('flex-col')
-    expect(main).toHaveClass('items-center')
+    expect(main).toHaveClass('min-h-screen')
   })
 })

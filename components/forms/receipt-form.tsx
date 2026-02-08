@@ -91,9 +91,8 @@ interface ReceiptFormProps {
 const defaultConfig: TemplateConfig = {
   primaryColor: '#25345b',
   showQrCode: true,
-  organizationName: 'ACES',
-  logoUrl:
-    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png',
+  organizationName: 'Eshan',
+  logoUrl: 'https://avatars.githubusercontent.com/u/140711476?v=4',
 }
 
 const defaultTemplateProps: TemplateProps = {

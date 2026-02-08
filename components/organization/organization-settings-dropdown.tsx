@@ -171,7 +171,7 @@ export function OrganizationSettingsCredenza({
       eventCode: 'HACK2026',
       initials: 'AR',
       seq: '00017',
-      orgCode: 'ACES',
+      orgCode: 'ORG',
       year: '2026',
       yy: '26',
       month: '02',
@@ -391,7 +391,7 @@ export function OrganizationSettingsCredenza({
                 onChange={(e) =>
                   setSettings({ ...settings, name: e.target.value })
                 }
-                placeholder='ACES'
+                placeholder='Example'
                 readOnly={!canEdit}
                 className='peer ps-7'
               />
@@ -410,7 +410,7 @@ export function OrganizationSettingsCredenza({
                 onChange={(e) =>
                   setSettings({ ...settings, description: e.target.value })
                 }
-                placeholder='Association of Computer Engineering Students'
+                placeholder='Short description of your organization'
                 readOnly={!canEdit}
                 rows={2}
                 className='peer ps-7 resize-none'

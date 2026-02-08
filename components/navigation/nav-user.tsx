@@ -161,10 +161,10 @@ export function NavUser({
               <span className='text-muted-foreground'>
                 Made by{' '}
                 <Link
-                  href='https://github.com/ACES-RMDSSOE'
+                  href='https://github.com/Eshan05'
                   className='hover:underline'
                 >
-                  ACES
+                  Eshan
                 </Link>
               </span>
             </div>

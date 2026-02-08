@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes'
 import { Geist, JetBrains_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { siteConfig } from '@/lib/site'
 import './globals.css'
 
 const geistSans = Geist({
@@ -16,10 +17,6 @@ export const jetBrainsMono = JetBrains_Mono({
 })
 
 export const isProduction: boolean = process.env.NODE_ENV === 'production'
-export const simpleURL =
-  process.env.NODE_ENV === 'production'
-    ? 'https://phas-orpin.vercel.app'
-    : 'http://localhost:3000'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -29,9 +26,40 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'ACES | Receipts Generator',
-  description:
-    'The internal web application used by ACES (Association of Computer Engineers) to generate and mail receipts for all events, external or internal. Contributions by Madhur, Eshan, Vivek, Aman, Bhavesh, Sumeet',
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.name,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  authors: [{ name: siteConfig.author.name, url: siteConfig.author.url }],
+  creator: siteConfig.author.name,
+  alternates: { canonical: '/' },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    url: siteConfig.url,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.name,
+    description: siteConfig.description,
+  },
 }
 
 export default function RootLayout({

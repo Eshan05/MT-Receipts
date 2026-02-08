@@ -198,8 +198,8 @@ function AuthPageContent() {
       >
         <header className='flex flex-col items-center space-y-1'>
           <Image
-            src='https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
-            alt='logo'
+            src='https://avatars.githubusercontent.com/u/140711476?v=4'
+            alt='Eshan avatar'
             width={100}
             height={100}
             className='w-[3.33em] h-[3.33em] rounded-full'

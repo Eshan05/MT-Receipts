@@ -227,7 +227,7 @@ function CreateOrgContent() {
                   <div className='relative'>
                     <Input
                       {...field}
-                      placeholder='ACES - Association of Computer Engineers'
+                      placeholder='Example Club — Robotics & AI'
                       aria-invalid={fieldState.invalid}
                       className='peer ps-7'
                     />

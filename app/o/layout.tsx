@@ -1,7 +1,14 @@
-'use client'
+import type { Metadata } from 'next'
+import { siteConfig } from '@/lib/site'
+import { OrgAuthProvider } from './org-auth-provider'
 
-import { AuthProvider } from '@/contexts/AuthContext'
+export const metadata: Metadata = {
+  title: 'Create Organization',
+  description: `Create an organization in ${siteConfig.name} to start generating receipts.`,
+  alternates: { canonical: '/o' },
+  robots: { index: false, follow: true },
+}
 
 export default function OrgLayout({ children }: { children: React.ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>
+  return <OrgAuthProvider>{children}</OrgAuthProvider>
 }

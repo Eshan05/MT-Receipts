@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +21,7 @@ import {
   createOrganizationHeaders,
   resolveOrganizationFromCache,
 } from '@/lib/tenants/organization-context'
+import { siteConfig } from '@/lib/site'
 
 interface ReceiptData {
   valid: boolean
@@ -55,6 +57,40 @@ interface ReceiptData {
     endDate?: string
   } | null
   message?: string
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ params: string[] }> | { params: string[] }
+}): Promise<Metadata> {
+  const resolvedParams = await params
+  const parts = Array.isArray(resolvedParams.params)
+    ? resolvedParams.params
+    : []
+
+  const receiptNumber = parts.length === 1 ? parts[0] : parts[1]
+  const title = receiptNumber
+    ? `Verify Receipt ${receiptNumber}`
+    : 'Receipt Verification'
+
+  const canonicalPath = parts.length ? `/v/${parts.join('/')}` : '/v'
+
+  return {
+    title,
+    description:
+      'Verify an event receipt using its receipt number (Optionally organization slug).',
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      type: 'website',
+      url: `${siteConfig.url}${canonicalPath}`,
+      title,
+      description:
+        'Verify an event receipt using its receipt number (Optionally organization slug).',
+      siteName: siteConfig.name,
+      locale: 'en_US',
+    },
+  }
 }
 
 function formatCurrency(amount: number): string {
@@ -202,7 +238,7 @@ async function ReceiptContent({
 
 function ReceiptView({
   data,
-  orgName = 'ACES',
+  orgName = 'Eshan Receipts',
   orgLogoUrl,
 }: {
   data: ReceiptData
@@ -238,7 +274,7 @@ function ReceiptView({
                 <Image
                   src={
                     orgLogoUrl ||
-                    'https://res.cloudinary.com/dygc8r0pv/image/upload/v1734452294/ACES_Logo_ACE_White_d6rz6a.png'
+                    'https://avatars.githubusercontent.com/u/140711476?v=4'
                   }
                   alt={orgName}
                   width={20}
