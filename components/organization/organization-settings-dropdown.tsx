@@ -42,7 +42,7 @@ import {
   ColorPickerAlpha,
   ColorPickerFormat,
 } from '@/components/derived/color-picker'
-import { motion, Reorder } from 'framer-motion'
+import { motion, Reorder, useDragControls } from 'framer-motion'
 
 interface OrganizationSettings {
   name: string
@@ -153,6 +153,7 @@ export function OrganizationSettingsCredenza({
   onUpdated,
 }: OrganizationSettingsCredenzaProps) {
   const { currentOrganization } = useAuth()
+  const controls = useDragControls()
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<OrganizationSettings>({
     name: '',
@@ -441,7 +442,9 @@ export function OrganizationSettingsCredenza({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor='contactEmail'>Contact Email</FieldLabel>
+            <FieldLabel htmlFor='contactEmail'>
+              Contact Email & Website
+            </FieldLabel>
             <div className='relative'>
               <Input
                 id='contactEmail'
@@ -449,7 +452,7 @@ export function OrganizationSettingsCredenza({
                 onChange={(e) =>
                   setSettings({ ...settings, contactEmail: e.target.value })
                 }
-                placeholder='contact@theclub.tech'
+                placeholder='Organization contact email'
                 readOnly={!canEdit}
                 className='peer ps-7'
               />
@@ -459,8 +462,8 @@ export function OrganizationSettingsCredenza({
             </div>
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor='websiteUrl'>Website</FieldLabel>
+          <Field className='-mt-1'>
+            {/* <FieldLabel htmlFor='websiteUrl'>Website</FieldLabel> */}
             <div className='relative'>
               <Input
                 id='websiteUrl'
@@ -468,7 +471,7 @@ export function OrganizationSettingsCredenza({
                 onChange={(e) =>
                   setSettings({ ...settings, websiteUrl: e.target.value })
                 }
-                placeholder='https://theclub.tech'
+                placeholder='Organization website link'
                 readOnly={!canEdit}
                 className='peer ps-7'
               />
@@ -612,55 +615,12 @@ export function OrganizationSettingsCredenza({
                   className='flex flex-nowrap items-start gap-1.5 min-h-10 p-2 bg-muted/30 rounded-md border border-dashed overflow-x-auto no-scrollbar'
                 >
                   {formatTokens.map((token) => (
-                    <Reorder.Item
+                    <DraggableTokenItem
                       key={token.id}
-                      value={token}
-                      className='cursor-grab active:cursor-grabbing shrink-0'
-                    >
-                      {token.type === 'placeholder' ? (
-                        <motion.div
-                          className='inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md border border-primary/20'
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          whileDrag={{ zIndex: 20 }}
-                        >
-                          <GripVertical className='w-3 h-3 opacity-50' />
-                          <span>{token.label}</span>
-                          <button
-                            type='button'
-                            onClick={() => removeToken(token.id)}
-                            className='ml-1 hover:bg-primary/20 rounded p-0.5'
-                          >
-                            <X className='w-3 h-3' />
-                          </button>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          className='inline-flex items-center gap-1 bg-background text-xs rounded-md border'
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          whileDrag={{ zIndex: 20 }}
-                        >
-                          <GripVertical className='w-3 h-3 opacity-50 ml-1' />
-                          <input
-                            type='text'
-                            value={token.value}
-                            onChange={(e) =>
-                              updateTokenValue(token.id, e.target.value)
-                            }
-                            className='w-auto min-w-8 max-w-24 px-1 py-1 bg-transparent outline-none text-center'
-                            placeholder='...'
-                          />
-                          <button
-                            type='button'
-                            onClick={() => removeToken(token.id)}
-                            className='hover:bg-muted rounded p-0.5 mr-0.5'
-                          >
-                            <X className='w-3 h-3' />
-                          </button>
-                        </motion.div>
-                      )}
-                    </Reorder.Item>
+                      token={token}
+                      removeToken={removeToken}
+                      updateTokenValue={updateTokenValue}
+                    />
                   ))}
                 </Reorder.Group>
 
@@ -703,5 +663,83 @@ export function OrganizationSettingsCredenza({
         </CredenzaFooter>
       </CredenzaContent>
     </Credenza>
+  )
+}
+
+function DraggableTokenItem({
+  token,
+  removeToken,
+  updateTokenValue,
+}: {
+  token: FormatToken
+  removeToken: (id: string) => void
+  updateTokenValue: (id: string, value: string) => void
+}) {
+  const controls = useDragControls()
+
+  return (
+    <Reorder.Item
+      value={token}
+      dragListener={false}
+      dragControls={controls}
+      className='shrink-0'
+    >
+      {token.type === 'placeholder' ? (
+        <motion.div
+          className='inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-md border border-primary/20'
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          whileDrag={{ zIndex: 20 }}
+        >
+          {/* Apply the drag start trigger and touch-action: none to the handle */}
+          <div
+            onPointerDown={(e) => controls.start(e)}
+            style={{ touchAction: 'none' }}
+            className='cursor-grab active:cursor-grabbing p-0.5 -ml-1 flex items-center justify-center'
+          >
+            <GripVertical className='w-3 h-3 opacity-50 hover:opacity-100' />
+          </div>
+
+          <span>{token.label}</span>
+          <button
+            type='button'
+            onClick={() => removeToken(token.id)}
+            className='ml-1 hover:bg-primary/20 rounded p-0.5'
+          >
+            <X className='w-3 h-3' />
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div
+          className='inline-flex items-center gap-1 bg-background text-xs rounded-md border'
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          whileDrag={{ zIndex: 20 }}
+        >
+          <div
+            onPointerDown={(e) => controls.start(e)}
+            style={{ touchAction: 'none' }}
+            className='cursor-grab active:cursor-grabbing p-0.5 flex items-center justify-center'
+          >
+            <GripVertical className='w-3 h-3 opacity-50 hover:opacity-100 ml-1' />
+          </div>
+
+          <input
+            type='text'
+            value={token.value}
+            onChange={(e) => updateTokenValue(token.id, e.target.value)}
+            className='w-fit min-w-8 max-w-20 px-1 py-1 bg-transparent outline-none text-center'
+            placeholder='...'
+          />
+          <button
+            type='button'
+            onClick={() => removeToken(token.id)}
+            className='hover:bg-muted rounded p-0.5 mr-0.5'
+          >
+            <X className='w-3 h-3' />
+          </button>
+        </motion.div>
+      )}
+    </Reorder.Item>
   )
 }
