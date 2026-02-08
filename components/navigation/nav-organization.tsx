@@ -5,8 +5,10 @@ import {
   ChevronsUpDown,
   CheckIcon,
   PlusIcon,
+  Users2Icon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +46,23 @@ export function NavOrganization() {
     return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}`
   }
 
+  const currentMembership = memberships.find(
+    (m) => m.organizationSlug === currentOrganization.slug
+  )
+
+  const logoSrc =
+    currentOrganization.logoUrl ||
+    currentMembership?.organizationLogoUrl ||
+    (currentOrganization.name ? getOrgAvatar(currentOrganization.name) : '')
+
+  const memberCount =
+    currentOrganization.memberCount ??
+    currentMembership?.organizationMemberCount
+
+  const description =
+    currentOrganization.description ||
+    currentMembership?.organizationDescription
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -54,14 +73,7 @@ export function NavOrganization() {
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
             >
               <Avatar className='h-8 w-8 rounded-lg'>
-                <AvatarImage
-                  src={
-                    currentOrganization.name
-                      ? getOrgAvatar(currentOrganization.name)
-                      : ''
-                  }
-                  alt={currentOrganization.name}
-                />
+                <AvatarImage src={logoSrc} alt={currentOrganization.name} />
                 <AvatarFallback className='rounded-lg'>
                   <Building2Icon className='h-4 w-4' />
                 </AvatarFallback>
@@ -96,16 +108,40 @@ export function NavOrganization() {
               >
                 <Avatar className='h-6 w-6 rounded-md'>
                   <AvatarImage
-                    src={getOrgAvatar(membership.organizationName)}
+                    src={
+                      membership.organizationLogoUrl ||
+                      getOrgAvatar(membership.organizationName)
+                    }
                     alt={membership.organizationName}
                   />
                   <AvatarFallback className='rounded-md text-xs'>
                     {membership.organizationName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <span className='flex-1 truncate'>
-                  {membership.organizationName}
-                </span>
+                <div className='grid flex-1 text-left text-sm leading-tight min-w-0'>
+                  <div className='flex min-w-0 items-center gap-2'>
+                    <span className='truncate font-medium'>
+                      {membership.organizationName}
+                    </span>
+                    <Badge
+                      variant='outline'
+                      className='shrink-0 text-tiny h-4 py-1'
+                    >
+                      <Users2Icon />
+                      {typeof membership.organizationMemberCount === 'number'
+                        ? membership.organizationMemberCount
+                        : '—'}
+                    </Badge>
+                  </div>
+                  {membership.organizationDescription ? (
+                    <span className='truncate text-2xs text-muted-foreground'>
+                      {membership.organizationDescription}
+                    </span>
+                  ) : null}
+                  <span className='truncate text-xs text-muted-foreground'>
+                    {membership.role === 'admin' ? 'Administrator' : 'Member'}
+                  </span>
+                </div>
                 {membership.organizationSlug === currentOrganization.slug && (
                   <CheckIcon className='h-4 w-4 text-primary' />
                 )}

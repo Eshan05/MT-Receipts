@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
+import { Types } from 'mongoose'
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = await getTenantContext()
+    const ctx = await getTenantContext(req)
     if (ctx instanceof NextResponse) return ctx
 
     const { Receipt } = ctx.models
@@ -14,12 +15,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ counts: {} }, { status: 200 })
     }
 
-    const eventIdArray = eventIds.split(',')
+    const eventObjectIds = eventIds
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id))
+
+    if (eventObjectIds.length === 0) {
+      return NextResponse.json({ counts: {} }, { status: 200 })
+    }
 
     const counts = await Receipt.aggregate([
       {
         $match: {
-          event: { $in: eventIdArray },
+          event: { $in: eventObjectIds },
           refunded: { $ne: true },
         },
       },

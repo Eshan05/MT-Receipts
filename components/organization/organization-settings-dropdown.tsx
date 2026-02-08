@@ -155,6 +155,8 @@ export function OrganizationSettingsCredenza({
   const { currentOrganization } = useAuth()
   const controls = useDragControls()
   const [loading, setLoading] = useState(false)
+  const [loadedSettings, setLoadedSettings] =
+    useState<OrganizationSettings | null>(null)
   const [settings, setSettings] = useState<OrganizationSettings>({
     name: '',
     description: '',
@@ -206,6 +208,13 @@ export function OrganizationSettingsCredenza({
     ? true
     : currentOrganization?.role === 'admin'
 
+  const normalizeUrl = (value: string): string => {
+    const trimmed = value.trim()
+    if (!trimmed) return ''
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed)) return trimmed
+    return `https://${trimmed}`
+  }
+
   const loadSettings = useCallback(async () => {
     if (!targetSlug) return
     try {
@@ -220,7 +229,7 @@ export function OrganizationSettingsCredenza({
         const receiptNumberFormat =
           source.settings?.receiptNumberFormat ||
           'RCP-{eventCode}-{initials}{seq}'
-        setSettings({
+        const nextSettings: OrganizationSettings = {
           name: source.name || '',
           description: source.description || '',
           logoUrl: source.logoUrl || '',
@@ -229,7 +238,9 @@ export function OrganizationSettingsCredenza({
           websiteUrl: source.settings?.websiteUrl || '',
           contactEmail: source.settings?.contactEmail || '',
           receiptNumberFormat,
-        })
+        }
+        setSettings(nextSettings)
+        setLoadedSettings(nextSettings)
         setFormatTokens(parseFormatTokens(receiptNumberFormat))
       }
     } catch {
@@ -314,37 +325,74 @@ export function OrganizationSettingsCredenza({
         ? `/api/admins/organizations/${targetSlug}`
         : `/api/organizations/${targetSlug}`
 
-      const body = isSuperadminMode
-        ? {
-            action: 'config',
-            name: settings.name,
-            description: settings.description,
-            logoUrl: settings.logoUrl.trim() || undefined,
-            settings: {
-              primaryColor: settings.primaryColor,
-              secondaryColor: settings.secondaryColor,
-              websiteUrl: settings.websiteUrl.trim() || undefined,
-              contactEmail: settings.contactEmail.trim() || undefined,
-              receiptNumberFormat: settings.receiptNumberFormat,
-            },
-          }
-        : {
-            name: settings.name,
-            description: settings.description,
-            logoUrl: settings.logoUrl.trim() || undefined,
-            settings: {
-              primaryColor: settings.primaryColor,
-              secondaryColor: settings.secondaryColor,
-              websiteUrl: settings.websiteUrl.trim() || undefined,
-              contactEmail: settings.contactEmail.trim() || undefined,
-              receiptNumberFormat: settings.receiptNumberFormat,
-            },
-          }
+      // Only send fields that changed. This prevents unrelated validation errors
+      // (e.g. legacy short org names) from blocking updates to contact email/website.
+      const baseline = loadedSettings
+      const patch: Record<string, unknown> = isSuperadminMode
+        ? { action: 'config' }
+        : {}
+
+      if (!baseline || settings.name !== baseline.name) {
+        patch.name = settings.name
+      }
+
+      if (!baseline || settings.description !== baseline.description) {
+        patch.description = settings.description
+      }
+
+      const logoUrlTrimmed = settings.logoUrl.trim()
+      const baselineLogoTrimmed = baseline?.logoUrl?.trim() ?? ''
+      if (!baseline || logoUrlTrimmed !== baselineLogoTrimmed) {
+        patch.logoUrl = logoUrlTrimmed || undefined
+      }
+
+      const settingsPatch: Record<string, unknown> = {}
+      if (!baseline || settings.primaryColor !== baseline.primaryColor) {
+        settingsPatch.primaryColor = settings.primaryColor
+      }
+      if (!baseline || settings.secondaryColor !== baseline.secondaryColor) {
+        settingsPatch.secondaryColor = settings.secondaryColor
+      }
+
+      const websiteUrlNormalized = normalizeUrl(settings.websiteUrl)
+      const baselineWebsiteNormalized = normalizeUrl(baseline?.websiteUrl ?? '')
+      if (!baseline || websiteUrlNormalized !== baselineWebsiteNormalized) {
+        // Send empty string when clearing so the server can explicitly unset it.
+        settingsPatch.websiteUrl = websiteUrlNormalized
+      }
+
+      const contactEmailTrimmed = settings.contactEmail.trim()
+      const baselineContactEmailTrimmed = (baseline?.contactEmail ?? '').trim()
+      if (!baseline || contactEmailTrimmed !== baselineContactEmailTrimmed) {
+        // Send empty string when clearing so the server can explicitly unset it.
+        settingsPatch.contactEmail = contactEmailTrimmed
+      }
+
+      if (
+        !baseline ||
+        settings.receiptNumberFormat !== baseline.receiptNumberFormat
+      ) {
+        settingsPatch.receiptNumberFormat = settings.receiptNumberFormat
+      }
+
+      if (Object.keys(settingsPatch).length > 0) {
+        patch.settings = settingsPatch
+      }
+
+      const hasChanges = isSuperadminMode
+        ? Object.keys(patch).length > 1
+        : Object.keys(patch).length > 0
+
+      if (!hasChanges) {
+        toast.message('No changes to save')
+        onOpenChange(false)
+        return
+      }
 
       const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(patch),
       })
 
       if (res.ok) {
@@ -356,8 +404,12 @@ export function OrganizationSettingsCredenza({
         onUpdated?.()
         onOpenChange(false)
       } else {
-        const data = await res.json()
-        toast.error(data.error || 'Failed to update settings')
+        const data = await res.json().catch(() => ({}))
+        const details = typeof data?.details === 'object' ? data.details : null
+        const detailsHint = details ? ' (check field values)' : ''
+        toast.error(
+          (data?.error as string) || `Failed to update settings${detailsHint}`
+        )
       }
     } catch {
       toast.error('Failed to update settings')

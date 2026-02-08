@@ -3,6 +3,8 @@
 import useSWRInfinite from 'swr/infinite'
 import { useMemo, useCallback } from 'react'
 import { IEvent } from '@/models/event.model'
+import { useParams } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface EventsResponse {
   events: IEvent[]
@@ -37,6 +39,11 @@ export function useInfiniteEvents(
 ): UseInfiniteEventsReturn {
   const { includeDeleted = false } = options
 
+  const { currentOrganization } = useAuth()
+  const params = useParams()
+  const tenantSlug = (params?.slug as string | undefined) || undefined
+  const cacheTenantSlug = tenantSlug ?? currentOrganization?.slug
+
   const getKey = useCallback(
     (pageIndex: number, previousPageData: EventsResponse | null) => {
       if (previousPageData && !previousPageData.hasMore) return null
@@ -44,13 +51,15 @@ export function useInfiniteEvents(
       const params = new URLSearchParams()
       params.set('limit', '12')
       if (includeDeleted) params.set('includeDeleted', 'true')
+      // Key-segmentation only: the API reads the active tenant from cookies.
+      if (cacheTenantSlug) params.set('tenantSlug', cacheTenantSlug)
       if (pageIndex > 0 && previousPageData?.nextCursor) {
         params.set('cursor', previousPageData.nextCursor)
       }
 
       return `/api/events?${params.toString()}`
     },
-    [includeDeleted]
+    [includeDeleted, cacheTenantSlug]
   )
 
   const { data, error, isLoading, isValidating, size, setSize, mutate } =

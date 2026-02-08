@@ -40,6 +40,7 @@ type SessionMembership = {
   organizationStatus?: string
   organizationCreatedAt?: string
   organizationExpectedMembers?: number
+  organizationMemberCount?: number
 }
 
 async function markMembershipLastSignedIn(
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
     user.lastSignIn = new Date()
     await user.save()
 
-    const memberships = await buildMemberships(user)
+    const memberships = await buildMemberships(user, true)
 
     let currentOrganization = null
 
@@ -163,6 +164,9 @@ export async function POST(request: Request) {
           slug: currentMembership.organizationSlug,
           name: currentMembership.organizationName,
           role: currentMembership.role,
+          logoUrl: currentMembership.organizationLogoUrl,
+          description: currentMembership.organizationDescription,
+          memberCount: currentMembership.organizationMemberCount,
         }
       }
     }
@@ -173,6 +177,9 @@ export async function POST(request: Request) {
         slug: memberships[0].organizationSlug,
         name: memberships[0].organizationName,
         role: memberships[0].role,
+        logoUrl: memberships[0].organizationLogoUrl,
+        description: memberships[0].organizationDescription,
+        memberCount: memberships[0].organizationMemberCount,
       }
 
       user.currentOrganizationSlug = memberships[0].organizationSlug
@@ -295,6 +302,10 @@ async function handleOrgSwitch(organizationSlug: string, request?: Request) {
   await user.save()
   await markMembershipLastSignedIn(user._id.toString(), organizationSlug)
 
+  const memberCount = await User.countDocuments({
+    'memberships.organizationId': org._id,
+  })
+
   const response = NextResponse.json({
     message: 'Organization switched',
     currentOrganization: {
@@ -302,6 +313,9 @@ async function handleOrgSwitch(organizationSlug: string, request?: Request) {
       slug: org.slug,
       name: org.name,
       role: membership.role,
+      logoUrl: org.logoUrl,
+      description: org.description,
+      memberCount,
     },
   })
 
@@ -340,6 +354,27 @@ async function buildMemberships(
   const orgIds = user.memberships.map((m) => m.organizationId)
   const orgs = await Organization.find({ _id: { $in: orgIds } })
 
+  const memberCounts = detailed
+    ? new Map<string, number>(
+        (
+          await User.aggregate([
+            { $unwind: '$memberships' },
+            {
+              $match: {
+                'memberships.organizationId': { $in: orgIds },
+              },
+            },
+            {
+              $group: {
+                _id: '$memberships.organizationId',
+                count: { $sum: 1 },
+              },
+            },
+          ])
+        ).map((row) => [String(row._id), Number(row.count) || 0])
+      )
+    : new Map<string, number>()
+
   for (const org of orgs) {
     await setCachedOrganization(org.slug, {
       id: org._id.toString(),
@@ -366,6 +401,8 @@ async function buildMemberships(
       membership.organizationStatus = org.status
       membership.organizationCreatedAt = org.createdAt.toISOString()
       membership.organizationExpectedMembers = org.expectedMembers
+      membership.organizationMemberCount =
+        memberCounts.get(m.organizationId.toString()) ?? 0
     }
 
     return membership
@@ -407,6 +444,9 @@ export async function GET(request: Request) {
           slug: currentMembership.organizationSlug,
           name: currentMembership.organizationName,
           role: currentMembership.role,
+          logoUrl: currentMembership.organizationLogoUrl,
+          description: currentMembership.organizationDescription,
+          memberCount: currentMembership.organizationMemberCount,
         }
       }
     }
@@ -417,6 +457,9 @@ export async function GET(request: Request) {
         slug: memberships[0].organizationSlug,
         name: memberships[0].organizationName,
         role: memberships[0].role,
+        logoUrl: memberships[0].organizationLogoUrl,
+        description: memberships[0].organizationDescription,
+        memberCount: memberships[0].organizationMemberCount,
       }
 
       user.currentOrganizationSlug = memberships[0].organizationSlug

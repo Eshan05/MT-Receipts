@@ -11,6 +11,18 @@ import { getSuperAdminContext } from '@/lib/auth/superadmin-route'
 import { getRequestMeta } from '@/lib/request-meta'
 import { writeAuditLog } from '@/lib/tenants/audit-log'
 
+function normalizeOptionalUrl(value: unknown): unknown {
+  if (typeof value !== 'string') return value
+
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed)
+  if (hasScheme) return trimmed
+
+  return `https://${trimmed}`
+}
+
 const updateOrganizationSchema = z.object({
   action: z.enum([
     'approve',
@@ -23,22 +35,17 @@ const updateOrganizationSchema = z.object({
   name: z.string().min(3).max(100).trim().optional(),
   description: z.string().max(500).trim().optional(),
   logoUrl: z
-    .preprocess((value) => {
-      if (typeof value === 'string' && value.trim() === '') {
-        return undefined
-      }
-      return value
-    }, z.string().url().trim().optional())
+    .preprocess(normalizeOptionalUrl, z.string().url().trim().optional())
     .optional(),
   settings: z
     .object({
       primaryColor: z.string().optional(),
       secondaryColor: z.string().optional(),
       organizationName: z.string().optional(),
-      websiteUrl: z.preprocess((value) => {
-        if (typeof value === 'string' && value.trim() === '') return undefined
-        return value
-      }, z.string().url().trim().optional()),
+      websiteUrl: z.preprocess(
+        normalizeOptionalUrl,
+        z.string().url().trim().optional()
+      ),
       contactEmail: z.preprocess((value) => {
         if (typeof value === 'string' && value.trim() === '') return undefined
         return value

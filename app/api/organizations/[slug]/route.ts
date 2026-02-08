@@ -9,24 +9,35 @@ import {
 } from '@/lib/redis'
 import { z } from 'zod'
 
+function normalizeOptionalUrl(value: unknown): unknown {
+  if (typeof value !== 'string') return value
+
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+
+  // If the user enters a bare domain (e.g. example.com), normalize to https://example.com
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed)
+  if (hasScheme) return trimmed
+
+  return `https://${trimmed}`
+}
+
 const updateOrganizationSchema = z.object({
   name: z.string().min(3).max(100).trim().optional(),
   description: z.string().max(500).trim().optional(),
-  logoUrl: z.preprocess((value) => {
-    if (typeof value === 'string' && value.trim() === '') {
-      return undefined
-    }
-    return value
-  }, z.string().url().trim().optional()),
+  logoUrl: z.preprocess(
+    normalizeOptionalUrl,
+    z.string().url().trim().optional()
+  ),
   settings: z
     .object({
       primaryColor: z.string().optional(),
       secondaryColor: z.string().optional(),
       organizationName: z.string().optional(),
-      websiteUrl: z.preprocess((value) => {
-        if (typeof value === 'string' && value.trim() === '') return undefined
-        return value
-      }, z.string().url().trim().optional()),
+      websiteUrl: z.preprocess(
+        normalizeOptionalUrl,
+        z.string().url().trim().optional()
+      ),
       contactEmail: z.preprocess((value) => {
         if (typeof value === 'string' && value.trim() === '') return undefined
         return value

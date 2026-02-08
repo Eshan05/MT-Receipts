@@ -169,6 +169,13 @@ export default function EventsPage() {
   }, [hasMore, isLoadingMore, loadMore])
 
   useEffect(() => {
+    // Reset derived state when switching tenants.
+    setItemCounts({})
+    setEntryCounts({})
+    setSelectedIds(new Set())
+  }, [slug])
+
+  useEffect(() => {
     const fetchItemCounts = async () => {
       const eventIds = events.map((e) => e._id?.toString()).filter(Boolean)
       if (eventIds.length > 0) {
@@ -203,10 +210,14 @@ export default function EventsPage() {
       }
     }
 
-    if (events.length > 0) {
-      fetchItemCounts()
-      fetchEntryCounts()
+    if (events.length === 0) {
+      setItemCounts({})
+      setEntryCounts({})
+      return
     }
+
+    fetchItemCounts()
+    fetchEntryCounts()
   }, [events])
 
   const handleEventCreated = (newEvent: IEvent) => {

@@ -27,6 +27,7 @@ export interface Membership {
   organizationStatus?: string
   organizationCreatedAt?: string
   organizationExpectedMembers?: number
+  organizationMemberCount?: number
 }
 
 export interface CurrentOrganization {
@@ -34,6 +35,9 @@ export interface CurrentOrganization {
   slug: string
   name: string
   role: 'admin' | 'member'
+  logoUrl?: string
+  description?: string
+  memberCount?: number
 }
 
 interface AuthContextProps {
@@ -79,7 +83,7 @@ export function AuthProvider({
 
   const refreshSession = useCallback(async () => {
     try {
-      const res = await fetch('/api/sessions')
+      const res = await fetch('/api/sessions?detailed=true')
 
       if (res.ok) {
         const data = await res.json()
