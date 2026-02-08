@@ -142,6 +142,70 @@ async function tryGenerateWithLoskir(options: ResolvedQrOptions) {
   }
 }
 
+async function tryConvertPngDataUrlToJpeg(
+  pngDataUrl: string,
+  quality: number
+): Promise<string | null> {
+  try {
+    if (!pngDataUrl.startsWith('data:image/png;base64,')) return null
+    const base64 = pngDataUrl.split(',')[1]
+    if (!base64) return null
+
+    const pngBuffer = Buffer.from(base64, 'base64')
+
+    const sharpMod = await import('sharp')
+    const sharpFn = (sharpMod as any).default ?? (sharpMod as any)
+    if (typeof sharpFn !== 'function') return null
+
+    const jpegBuffer: Buffer = await sharpFn(pngBuffer)
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality })
+      .toBuffer()
+
+    return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
+async function isLowContrastQrPng(pngBuffer: Buffer): Promise<boolean> {
+  try {
+    const { PNG } = await import('pngjs')
+    const png = (PNG as any).sync.read(pngBuffer)
+    const data: Uint8Array = png.data
+    const width: number = png.width
+    const height: number = png.height
+
+    const total = width * height
+    if (!total || !data || data.length < total * 4) return true
+
+    let dark = 0
+    let light = 0
+
+    // Sample every Nth pixel for speed (about ~5k samples).
+    const step = Math.max(1, Math.floor(total / 5000))
+    for (let p = 0; p < total; p += step) {
+      const i = p * 4
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      const y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+      if (y < 110) dark++
+      else if (y > 200) light++
+    }
+
+    const samples = Math.ceil(total / step)
+    const darkPct = dark / samples
+    const lightPct = light / samples
+
+    // A real QR should have a meaningful amount of both dark and light pixels.
+    return darkPct < 0.05 || lightPct < 0.05
+  } catch {
+    // If we can't decode, treat as unsafe.
+    return true
+  }
+}
+
 export async function generateQRCodeBase64(
   options: QRCodeOptions
 ): Promise<string> {
@@ -174,6 +238,20 @@ export async function generateQRCodeBase64(
     cornersColor,
     logo,
     logoSize,
+  }
+
+  if (format === 'jpeg' && engine !== 'wasm') {
+    const pngDataUrl = await tryGenerateWithLoskir(resolved)
+    if (pngDataUrl) {
+      const asJpeg = await tryConvertPngDataUrlToJpeg(pngDataUrl, jpegQuality)
+      return asJpeg || pngDataUrl
+    }
+
+    if (engine === 'native') {
+      throw new Error(
+        'Native QR engine unavailable (@loskir/styled-qr-code-node failed to load)'
+      )
+    }
   }
 
   if (engine !== 'wasm' && format === 'png') {
@@ -259,6 +337,25 @@ export async function generateQRCodeBase64(
       ? svgData
       : Buffer.from(await (svgData as Blob).arrayBuffer())
 
+    if (format === 'jpeg') {
+      try {
+        const sharpMod = await import('sharp')
+        const sharpFn = (sharpMod as any).default ?? (sharpMod as any)
+        if (typeof sharpFn !== 'function') {
+          throw new Error('sharp import did not resolve to a function')
+        }
+
+        const jpegBuffer: Buffer = await sharpFn(svgBuffer, { density: 300 })
+          .flatten({ background: '#ffffff' })
+          .jpeg({ quality: jpegQuality })
+          .toBuffer()
+
+        return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`
+      } catch {
+        // Fall through to resvg-wasm based JPEG rendering.
+      }
+    }
+
     const { Resvg } = await getResvgWasm()
     const resvg = new Resvg(new Uint8Array(svgBuffer), {
       fitTo: {
@@ -270,18 +367,38 @@ export async function generateQRCodeBase64(
     const rendered = resvg.render()
 
     if (format === 'jpeg') {
-      const asJpegFn = (rendered as any).asJpeg ?? (rendered as any).asJpg
-      if (typeof asJpegFn !== 'function') {
-        throw new Error('resvg renderer does not support JPEG output')
+      const pngBytes: Uint8Array = (rendered as any).asPng()
+      const pngBuffer = Buffer.from(pngBytes)
+
+      if (await isLowContrastQrPng(pngBuffer)) {
+        throw new Error('QR rasterization produced a low-contrast PNG')
       }
 
-      const jpegBytes: Uint8Array = asJpegFn.call(rendered, jpegQuality)
-      const jpegBuffer = Buffer.from(jpegBytes)
-      return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`
+      try {
+        const sharpMod = await import('sharp')
+        const sharpFn = (sharpMod as any).default ?? (sharpMod as any)
+        if (typeof sharpFn !== 'function') {
+          throw new Error('sharp import did not resolve to a function')
+        }
+
+        const jpegBuffer: Buffer = await sharpFn(pngBuffer)
+          .flatten({ background: '#ffffff' })
+          .jpeg({ quality: jpegQuality })
+          .toBuffer()
+
+        return `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`
+      } catch {
+        // If JPEG conversion fails in this environment, fall back to PNG.
+        return `data:image/png;base64,${pngBuffer.toString('base64')}`
+      }
     }
 
     const pngBytes: Uint8Array = (rendered as any).asPng()
     const pngBuffer = Buffer.from(pngBytes)
+
+    if (await isLowContrastQrPng(pngBuffer)) {
+      throw new Error('QR rasterization produced a low-contrast PNG')
+    }
     return `data:image/png;base64,${pngBuffer.toString('base64')}`
   } finally {
     globalAny.window = previousGlobals.window

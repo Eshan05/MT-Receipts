@@ -10,7 +10,6 @@ import {
   beforeEach,
   vi,
 } from 'vitest'
-import { NextRequest } from 'next/server'
 import mongoose from 'mongoose'
 import type { IUser } from '@/models/user.model'
 import type { IOrganization } from '@/models/organization.model'
@@ -42,6 +41,9 @@ import dbConnect from '@/lib/db-conn'
 import User from '@/models/user.model'
 import Organization from '@/models/organization.model'
 import { GET, POST } from '@/app/api/sessions/route'
+
+const makeSessionsRequest = (url = 'http://localhost/api/sessions') =>
+  new Request(url)
 
 describe('GET /api/sessions', () => {
   let testUser!: IUser
@@ -104,7 +106,7 @@ describe('GET /api/sessions', () => {
   it('returns 401 when not authenticated', async () => {
     vi.mocked(getTokenServer).mockResolvedValue(undefined)
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(401)
     const data = await response.json()
     expect(data.authenticated).toBe(false)
@@ -114,7 +116,7 @@ describe('GET /api/sessions', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.authenticated).toBe(true)
@@ -129,7 +131,7 @@ describe('GET /api/sessions', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.currentOrganization).toBeDefined()
@@ -144,7 +146,7 @@ describe('GET /api/sessions', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.currentOrganization).toBeDefined()
@@ -158,7 +160,7 @@ describe('GET /api/sessions', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.currentOrganization).toBeDefined()
@@ -179,7 +181,7 @@ describe('GET /api/sessions', () => {
       email: noMembershipsUser.email,
     })
 
-    const response = await GET()
+    const response = await GET(makeSessionsRequest())
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.authenticated).toBe(true)
@@ -260,8 +262,9 @@ describe('POST /api/sessions (Organization Switch)', () => {
   it('returns 401 when not authenticated', async () => {
     vi.mocked(getTokenServer).mockResolvedValue(undefined)
 
-    const request = new NextRequest('http://localhost:3000/api/sessions', {
+    const request = new Request('http://localhost:3000/api/sessions', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'switch', organizationSlug: org2.slug }),
     })
     const response = await POST(request)
@@ -272,8 +275,9 @@ describe('POST /api/sessions (Organization Switch)', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const request = new NextRequest('http://localhost:3000/api/sessions', {
+    const request = new Request('http://localhost:3000/api/sessions', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'switch',
         organizationSlug: otherOrg.slug,
@@ -287,8 +291,9 @@ describe('POST /api/sessions (Organization Switch)', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const request = new NextRequest('http://localhost:3000/api/sessions', {
+    const request = new Request('http://localhost:3000/api/sessions', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'switch',
         organizationSlug: 'nonexistent-org',
@@ -302,8 +307,9 @@ describe('POST /api/sessions (Organization Switch)', () => {
     vi.mocked(getTokenServer).mockResolvedValue('valid-token')
     vi.mocked(verifyAuthToken).mockResolvedValue({ email: testUser.email })
 
-    const request = new NextRequest('http://localhost:3000/api/sessions', {
+    const request = new Request('http://localhost:3000/api/sessions', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'switch', organizationSlug: org2.slug }),
     })
     const response = await POST(request)
