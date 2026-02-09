@@ -128,11 +128,10 @@ B2_SECRET_ACCESS_KEY=
 
 ![Landing Page](docs/images/Landing.png)
 ![Verification Page](docs/images/Verification.png)
-![Receipt Form](docs/images/ReceiptForm.png)
+![Receipt Form](docs/images/ReceiptsForm.png)
 ![Events Page](docs/images/EventsPage.png)
 ![Event Entries](docs/images/EventEntries.png)
-![Admin Dashboard](docs/images/Dashboard.png)
-![Superadmin Dashboard](docs/images/Superadmin_Orgs.png)
+![Superadmin](docs/images/Superadmin_Orgs.png)
 ![Members Page](docs/images/MembersPage.png)
 
 </div>
