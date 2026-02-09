@@ -185,7 +185,7 @@ export async function sendReceiptEmail({
   taxes,
   totalAmount,
   paymentMethod,
-  organizationName = 'Eshan',
+  organizationName = 'Acquittance',
   organizationLogo,
   primaryColor,
   secondaryColor,
@@ -381,7 +381,7 @@ export async function sendEmail({
     })
 
     const info = await transporter.sendMail({
-      from: `"${senderCredentials.label || 'Eshan Receipts'}" <${senderCredentials.user}>`,
+      from: `"${senderCredentials.label || 'Acquittance Receipts'}" <${senderCredentials.user}>`,
       to,
       subject,
       html,

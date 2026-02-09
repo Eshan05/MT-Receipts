@@ -122,7 +122,7 @@ const defaultTemplates = [
       primaryColor: '#2563EB',
       secondaryColor: '#F3F4F6',
       showQrCode: true,
-      organizationName: 'Eshan Events',
+      organizationName: 'Acquittance Events',
     },
     category: 'modern',
     version: 1,

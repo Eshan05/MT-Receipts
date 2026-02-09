@@ -72,7 +72,7 @@ const defaultConfig: TemplateConfig = {
   showQrCode: true,
   footerText:
     'Thank you for your purchase! For support, contact support@example.com',
-  organizationName: 'Eshan',
+  organizationName: 'Acquittance',
   logoUrl: 'https://avatars.githubusercontent.com/u/140711476?v=4',
 }
 
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
   const orgName =
     options.config?.organizationName ||
     defaultConfig.organizationName ||
-    'Eshan'
+    'Acquittance'
 
   const qrCodeData = await generateReceiptQRCode(receiptNumber)
 

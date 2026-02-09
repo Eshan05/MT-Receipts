@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/-Tailwind_CSS-38bdf8?style=for-the-badge&logoColor=white&logo=tailwindcss&color=06B6D4" alt="tailwindcss" />
     <img src="https://img.shields.io/badge/-MongoDB-4DB33D?style=for-the-badge&logoColor=white&logo=mongodb&color=4DB33D" alt="mongodb" />
   </div>
-  <h3 align="center"> Eshan Receipts <br /> Receipt Generator + QR Verification </h3>
+  <h3 align="center"> Acquittance <br /> Receipt Generator + QR Verification </h3>
 
    <div align="center">
      Multi-tenant receipt generation and verification platform. Create professional receipts, email them as PDFs, and verify authenticity via QR codes. Built for clubs of all sizes.
@@ -82,7 +82,7 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
 ## ⚙️ Setup
 
 ```shell
-git clone https://github.com/Eshan05/ACES-Receipts
+git clone <your-repo-url>
 cd ACES-Receipts
 pnpm install
 # Configure environment variables (see below)

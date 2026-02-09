@@ -23,7 +23,7 @@ export default function LandingPage() {
               <div className='absolute -inset-2 rounded-full bg-muted/60 blur' />
               <Image
                 src='https://avatars.githubusercontent.com/u/140711476?v=4'
-                alt='Eshan avatar'
+                alt={`${siteConfig.name} logo`}
                 width={96}
                 height={96}
                 className='relative h-20 w-20 rounded-full border object-cover sm:h-24 sm:w-24'

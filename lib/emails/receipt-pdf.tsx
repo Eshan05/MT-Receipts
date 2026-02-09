@@ -176,7 +176,7 @@ export function ReceiptPDF({
   totalAmount,
   paymentMethod,
   date,
-  organizationName = 'Eshan',
+  organizationName = 'Acquittance',
 }: ReceiptPDFProps) {
   return (
     <Document>

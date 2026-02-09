@@ -238,7 +238,7 @@ async function ReceiptContent({
 
 function ReceiptView({
   data,
-  orgName = 'Eshan Receipts',
+  orgName = siteConfig.name,
   orgLogoUrl,
 }: {
   data: ReceiptData

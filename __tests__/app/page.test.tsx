@@ -9,6 +9,7 @@ import type {
   PropsWithChildren,
 } from 'react'
 import LandingPage from '@/app/page'
+import { siteConfig } from '@/lib/site'
 
 type MockNextImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   src: string
@@ -40,13 +41,13 @@ vi.mock('@/components/landing/landing-organizations-credenza', () => ({
 describe('LandingPage', () => {
   it('renders the logo', () => {
     render(<LandingPage />)
-    const logo = screen.getByAltText('Eshan avatar')
+    const logo = screen.getByAltText(`${siteConfig.name} logo`)
     expect(logo).toBeInTheDocument()
   })
 
   it('renders the title', () => {
     render(<LandingPage />)
-    expect(screen.getByText('Eshan Receipts')).toBeInTheDocument()
+    expect(screen.getByText(siteConfig.name)).toBeInTheDocument()
   })
 
   it('renders the description', () => {
@@ -73,6 +74,6 @@ describe('LandingPage', () => {
   it('has correct layout structure', () => {
     const { container } = render(<LandingPage />)
     const main = container.querySelector('main')
-    expect(main).toHaveClass('min-h-screen')
+    expect(main).toHaveClass('h-svh')
   })
 })

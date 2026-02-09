@@ -24,12 +24,11 @@ function resolveSiteUrl(): string {
 }
 
 export const siteConfig: SiteConfig = {
-  name: 'Eshan Receipts',
+  name: 'Acquittance',
   description:
     'Generate, email, and verify event receipts for your organization.',
   author: {
-    name: 'Eshan',
-    url: 'https://github.com/Eshan05',
+    name: 'Acquittance',
   },
   url: resolveSiteUrl(),
 }

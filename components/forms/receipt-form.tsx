@@ -91,7 +91,7 @@ interface ReceiptFormProps {
 const defaultConfig: TemplateConfig = {
   primaryColor: '#25345b',
   showQrCode: true,
-  organizationName: 'Eshan',
+  organizationName: 'Acquittance',
   logoUrl: 'https://avatars.githubusercontent.com/u/140711476?v=4',
 }
 

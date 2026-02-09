@@ -32,6 +32,7 @@ import { useState } from 'react'
 import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
 import { OrganizationSettingsCredenza } from '@/components/organization/organization-settings-dropdown'
 import { BackupsCredenza } from '@/components/navigation/backups-credenza'
+import { siteConfig } from '@/lib/site'
 
 interface NavUserProps {
   user: ContextUser | undefined | null
@@ -160,12 +161,16 @@ export function NavUser({
               <Heart className='w-4 h-4 text-red-400/50 animate-pulse' />
               <span className='text-muted-foreground'>
                 Made by{' '}
-                <Link
-                  href='https://github.com/Eshan05'
-                  className='hover:underline'
-                >
-                  Eshan
-                </Link>
+                {siteConfig.author.url ? (
+                  <Link
+                    href={siteConfig.author.url}
+                    className='hover:underline'
+                  >
+                    {siteConfig.author.name}
+                  </Link>
+                ) : (
+                  siteConfig.author.name
+                )}
               </span>
             </div>
           </DropdownMenuContent>

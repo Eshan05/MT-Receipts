@@ -51,7 +51,7 @@ export function ReceiptEmail({
   totalAmount,
   paymentMethod,
   date,
-  organizationName = 'Eshan',
+  organizationName = 'Acquittance',
   organizationLogo,
   primaryColor = '#0f172a',
   secondaryColor = '#334155',

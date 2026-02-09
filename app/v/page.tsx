@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import FirstForm from './_components/first-form'
 import SignInForm from './_components/form'
+import { siteConfig } from '@/lib/site'
 
 const formSchema = z.object({
   email: z
@@ -199,7 +200,7 @@ function AuthPageContent() {
         <header className='flex flex-col items-center space-y-1'>
           <Image
             src='https://avatars.githubusercontent.com/u/140711476?v=4'
-            alt='Eshan avatar'
+            alt={`${siteConfig.name} logo`}
             width={100}
             height={100}
             className='w-[3.33em] h-[3.33em] rounded-full'

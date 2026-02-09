@@ -294,7 +294,7 @@ export function DataTableRowActions<TData>({
         primaryColor: templateConfig.primaryColor,
         secondaryColor: templateConfig.secondaryColor,
         showQrCode: true,
-        organizationName: 'Eshan',
+        organizationName: 'Acquittance',
         footerText: templateConfig.footerText,
       },
     }
