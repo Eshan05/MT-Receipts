@@ -7,7 +7,7 @@ const batchJSON = vi.fn(async (reqs: any[]) =>
 
 vi.mock('@/lib/queue/qstash', () => ({
   isQstashConfigured: () => true,
-  getAbsoluteJobUrl: vi.fn(() => 'https://base.test/api/jobs/receipt-emails'),
+  getAbsoluteJobUrl: vi.fn(() => 'https://base.test/api/jobs/emails'),
   getQstashClient: () => ({ publishJSON, batchJSON }),
   getQstashSigningConfig: () => ({
     currentSigningKey: 'sig_current',
@@ -17,7 +17,7 @@ vi.mock('@/lib/queue/qstash', () => ({
 }))
 
 describe('receipt email queue', () => {
-  it('publishes single job to /api/jobs/receipt-emails', async () => {
+  it('publishes single job to /api/jobs/emails', async () => {
     const { enqueueReceiptEmailJob } = await import('@/lib/queue/receipt-email')
     const { getAbsoluteJobUrl } = await import('@/lib/queue/qstash')
 
@@ -29,7 +29,7 @@ describe('receipt email queue', () => {
 
     expect(res.queued).toBe(true)
     expect(res.messageId).toBe('msg_1')
-    expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/receipt-emails')
+    expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/emails')
     expect(publishJSON).toHaveBeenCalled()
 
     // @ts-expect-error I wish I can switch to ts-go
@@ -41,7 +41,7 @@ describe('receipt email queue', () => {
     })
   })
 
-  it('publishes batch jobs to /api/jobs/receipt-emails', async () => {
+  it('publishes batch jobs to /api/jobs/emails', async () => {
     const { enqueueReceiptEmailJobs } =
       await import('@/lib/queue/receipt-email')
     const { getAbsoluteJobUrl } = await import('@/lib/queue/qstash')
@@ -61,7 +61,7 @@ describe('receipt email queue', () => {
 
     expect(res.queued).toBe(true)
     expect(res.messageIds).toEqual(['msg_1', 'msg_1'])
-    expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/receipt-emails')
+    expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/emails')
     expect(batchJSON).toHaveBeenCalled()
 
     const batchArgs = batchJSON.mock.calls[0]?.[0]

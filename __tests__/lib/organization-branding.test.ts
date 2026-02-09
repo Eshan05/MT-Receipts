@@ -40,9 +40,11 @@ describe('getOrganizationBrandingBySlug', () => {
       select: vi.fn().mockReturnValue({
         lean: vi.fn().mockResolvedValue({
           name: 'ACES',
+          description: 'Association of Computer Engineers Society',
           logoUrl: 'https://example.com/logo.png',
           settings: {
             organizationName: 'ACES Official',
+            address: 'RMDSSOE, Pune, MH, India',
             primaryColor: '#112233',
             secondaryColor: '#445566',
             receiptNumberFormat: '{orgCode}-{seq}',
@@ -57,7 +59,8 @@ describe('getOrganizationBrandingBySlug', () => {
     const result = await getOrganizationBrandingBySlug('ACES')
 
     expect(result).toEqual({
-      organizationName: 'ACES Official',
+      organizationName: 'Association of Computer Engineers Society',
+      organizationAddress: 'RMDSSOE, Pune, MH, India',
       logoUrl: 'https://example.com/logo.png',
       primaryColor: '#112233',
       secondaryColor: '#445566',
@@ -74,6 +77,7 @@ describe('getOrganizationBrandingBySlug', () => {
       select: vi.fn().mockReturnValue({
         lean: vi.fn().mockResolvedValue({
           name: 'Robotics Club',
+          description: undefined,
           logoUrl: undefined,
           settings: {},
         }),

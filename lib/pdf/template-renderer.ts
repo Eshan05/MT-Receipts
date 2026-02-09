@@ -127,6 +127,7 @@ function buildConfig(
       showQrCode: true,
       organizationName:
         orgBranding?.organizationName || orgName || 'Organization',
+      organizationAddress: orgBranding?.organizationAddress,
       logoUrl: orgBranding?.logoUrl || defaultLogoUrl,
       websiteUrl: orgBranding?.websiteUrl,
       contactEmail: orgBranding?.contactEmail,
@@ -145,6 +146,7 @@ function buildConfig(
       template.config.organizationName ||
       orgName ||
       'Organization',
+    organizationAddress: orgBranding?.organizationAddress,
     websiteUrl: orgBranding?.websiteUrl,
     contactEmail: orgBranding?.contactEmail,
   }

@@ -5,6 +5,7 @@ export interface TemplateConfig {
   showQrCode: boolean
   footerText?: string
   organizationName?: string
+  organizationAddress?: string
   websiteUrl?: string
   contactEmail?: string
 }

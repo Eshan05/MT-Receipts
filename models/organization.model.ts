@@ -5,6 +5,7 @@ export interface IOrganizationSettings {
   primaryColor?: string
   secondaryColor?: string
   organizationName?: string
+  address?: string
   websiteUrl?: string
   contactEmail?: string
   receiptNumberFormat?: string
@@ -51,6 +52,7 @@ const settingsSchema = new Schema<IOrganizationSettings>(
     primaryColor: { type: String, default: '#3b82f6' },
     secondaryColor: { type: String, default: '#1e40af' },
     organizationName: { type: String },
+    address: { type: String, trim: true },
     websiteUrl: { type: String, trim: true },
     contactEmail: { type: String, trim: true },
     receiptNumberFormat: {

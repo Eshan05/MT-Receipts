@@ -51,7 +51,7 @@ export async function enqueueReceiptEmailJob(job: ReceiptEmailJob): Promise<{
   }
 
   const client = getQstashClient()
-  const url = getAbsoluteJobUrl('/api/jobs/receipt-emails')
+  const url = getAbsoluteJobUrl('/api/jobs/emails')
 
   const result = await client.publishJSON({
     url,
@@ -90,7 +90,7 @@ export async function enqueueReceiptEmailJobs(
   }
 
   const client = getQstashClient()
-  const url = getAbsoluteJobUrl('/api/jobs/receipt-emails')
+  const url = getAbsoluteJobUrl('/api/jobs/emails')
 
   const results = await client.batchJSON(
     validJobs.map((body) => ({

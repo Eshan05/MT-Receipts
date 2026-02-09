@@ -304,6 +304,7 @@ export default function ProfessionalDarkTemplate({
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName?.trim() || 'Acquittance'
+  const orgAddress = config.organizationAddress?.trim()
   const websiteUrl = config.websiteUrl?.trim()
   const contactEmail = config.contactEmail?.trim()
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
@@ -323,8 +324,8 @@ export default function ProfessionalDarkTemplate({
             <View style={styles.orgSection}>
               <Text style={styles.orgName}>{orgName}</Text>
               <Text style={styles.orgAddress}>
-                Association of Computer Engineers{'\n'}
-                RMDSSOE, Pune, MH, India{'\n'}
+                {orgAddress || 'Organization address not set'}
+                {'\n'}
                 {websiteUrl ? (
                   <Link style={{ color: config.primaryColor }} src={websiteUrl}>
                     Website
@@ -339,6 +340,9 @@ export default function ProfessionalDarkTemplate({
                     Email
                   </Link>
                 ) : null}
+                {!websiteUrl && !contactEmail
+                  ? 'Organization details not set'
+                  : null}
               </Text>
             </View>
           </View>

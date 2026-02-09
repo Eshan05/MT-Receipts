@@ -3,6 +3,7 @@ import Organization from '@/models/organization.model'
 
 export interface OrganizationBranding {
   organizationName: string
+  organizationAddress?: string
   logoUrl?: string
   primaryColor?: string
   secondaryColor?: string
@@ -20,7 +21,7 @@ export async function getOrganizationBrandingBySlug(
   await dbConnect()
 
   const organization = await Organization.findOne({ slug: slug.toLowerCase() })
-    .select('name logoUrl settings')
+    .select('name description logoUrl settings')
     .lean()
 
   if (!organization) {
@@ -29,7 +30,10 @@ export async function getOrganizationBrandingBySlug(
 
   return {
     organizationName:
-      organization.settings?.organizationName || organization.name,
+      organization.description?.trim() ||
+      organization.settings?.organizationName ||
+      organization.name,
+    organizationAddress: organization.settings?.address || undefined,
     logoUrl: organization.logoUrl || undefined,
     primaryColor: organization.settings?.primaryColor || undefined,
     secondaryColor: organization.settings?.secondaryColor || undefined,

@@ -298,6 +298,7 @@ export default function ProfessionalTemplate({
 }: TemplateProps) {
   const styles = createStyles(config.primaryColor, config.secondaryColor)
   const orgName = config.organizationName?.trim() || 'Acquittance'
+  const orgAddress = config.organizationAddress?.trim()
   const websiteUrl = config.websiteUrl?.trim()
   const contactEmail = config.contactEmail?.trim()
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
@@ -313,8 +314,8 @@ export default function ProfessionalTemplate({
             <View style={styles.orgSection}>
               <Text style={styles.orgName}>{orgName}</Text>
               <Text style={styles.orgAddress}>
-                Association of Computer Engineers{'\n'}
-                RMDSSOE, Pune, MH, India{'\n'}
+                {orgAddress || 'Organization address not set'}
+                {'\n'}
                 {websiteUrl ? <Link src={websiteUrl}>Website</Link> : null}
                 {websiteUrl && contactEmail ? ' | ' : null}
                 {contactEmail ? (

@@ -69,7 +69,7 @@ class BatchFetchError extends Error {
 async function fetchBatchSummary(
   batchId: string
 ): Promise<ReceiptEmailBatchSummary> {
-  const res = await fetch(`/api/jobs/receipt-emails/batches/${batchId}`, {
+  const res = await fetch(`/api/jobs/emails/batches/${batchId}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
@@ -149,13 +149,11 @@ export function ReceiptEmailBatchTrackerProvider({
 
   const retryFailed = useCallback(
     async (batchId: string) => {
-      const res = await fetch(
-        `/api/jobs/receipt-emails/batches/${batchId}/retry`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }
-      )
+      const res = await fetch(`/api/jobs/emails/batches/${batchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'retry_failed' }),
+      })
 
       const data = (await res.json().catch(() => null)) as any
       if (!res.ok) {
