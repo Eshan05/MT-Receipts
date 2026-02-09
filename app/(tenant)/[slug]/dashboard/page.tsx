@@ -1,6 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
+import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   Card,
@@ -78,12 +79,27 @@ export default function DashboardPage() {
 
   if (!isAdmin) {
     return (
-      <div className='container py-6'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Dashboard</CardTitle>
-            <CardDescription>Admin access required.</CardDescription>
+      <div className=''>
+        <Card className='mx-auto w-full max-w-md ring-0'>
+          <CardHeader className='text-center'>
+            <div className='p-1 bg-muted rounded-full grid place-items-center size-10 mx-auto border'>
+              <ShieldAlert className='mx-auto size-6 text-muted-foreground' />
+            </div>
+            <CardTitle className='text-2xl shadow-heading font-bold mt-2'>
+              Admin Dashboard
+            </CardTitle>
+            <CardDescription className='-mt-1'>
+              This area is available to organization admins.
+            </CardDescription>
           </CardHeader>
+          <CardContent>
+            <div className='mx-auto max-w-md rounded-lg border border-dashed bg-muted/30 p-3 text-center'>
+              <p className='text-xs text-muted-foreground'>
+                You currently don’t have permission to view usage and limit
+                details. Contact an admin if you need access.
+              </p>
+            </div>
+          </CardContent>
         </Card>
       </div>
     )
