@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+
 import { getTenantContext } from '@/lib/auth/tenant-route'
+import { getReceiptEmailBatchSummary } from '@/lib/jobs/receipt-email-batches'
 import { getRequestMeta } from '@/lib/request-meta'
 import { createLogger } from '@/lib/logger'
 import { isQstashConfigured } from '@/lib/queue/qstash'
@@ -14,7 +17,36 @@ import {
 import { writeAuditLog } from '@/lib/tenants/audit-log'
 import { writeSystemLog } from '@/lib/system-logs'
 
-export async function POST(
+const retryBatchSchema = z.object({
+  action: z.enum(['retry_failed']),
+})
+
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ batchId: string }> }
+) {
+  const ctx = await getTenantContext(request)
+  if (ctx instanceof NextResponse) return ctx
+
+  const { batchId } = await props.params
+  if (!batchId) {
+    return NextResponse.json({ message: 'Missing batchId' }, { status: 400 })
+  }
+
+  const summary = await getReceiptEmailBatchSummary({
+    batchId,
+    organizationSlug: ctx.organization.slug,
+    limitFailedReceiptNumbers: 100,
+  })
+
+  if (!summary) {
+    return NextResponse.json({ message: 'Batch not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(summary)
+}
+
+export async function PATCH(
   request: NextRequest,
   props: { params: Promise<{ batchId: string }> }
 ) {
@@ -25,6 +57,26 @@ export async function POST(
   const { batchId } = await props.params
   if (!batchId) {
     return NextResponse.json({ message: 'Missing batchId' }, { status: 400 })
+  }
+
+  const requestBody = await request.json().catch(() => null)
+  const actionFromQuery = request.nextUrl.searchParams.get('action')
+  const parsed = retryBatchSchema.safeParse(
+    requestBody && typeof requestBody === 'object'
+      ? requestBody
+      : actionFromQuery
+        ? { action: actionFromQuery }
+        : null
+  )
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        message: 'Invalid action. Use action=retry_failed in body or query.',
+        details: parsed.error.format(),
+      },
+      { status: 400 }
+    )
   }
 
   const log = createLogger({
@@ -52,7 +104,7 @@ export async function POST(
     .select('receiptNumber')
     .lean()
 
-  const receiptNumbers = failedItems.map((i) => i.receiptNumber)
+  const receiptNumbers = failedItems.map((item) => item.receiptNumber)
   if (receiptNumbers.length === 0) {
     return NextResponse.json(
       { message: 'No failed emails to retry' },
@@ -60,7 +112,6 @@ export async function POST(
     )
   }
 
-  // Ensure receipts still exist and are not refunded.
   const receipts = await ctx.models.Receipt.find({
     receiptNumber: { $in: receiptNumbers },
     refunded: { $ne: true },
@@ -68,7 +119,7 @@ export async function POST(
     .select('receiptNumber')
     .lean()
 
-  const retryReceiptNumbers = receipts.map((r) => r.receiptNumber)
+  const retryReceiptNumbers = receipts.map((receipt) => receipt.receiptNumber)
   if (retryReceiptNumbers.length === 0) {
     return NextResponse.json(
       { message: 'No eligible receipts to retry' },

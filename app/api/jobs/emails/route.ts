@@ -92,7 +92,6 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
 
   const org = await resolveOrganizationFromCache(job.organizationSlug)
   if (!org || org.status !== 'active') {
-    // Not retriable; ack message.
     log.warn('org_not_found_or_inactive', { status: org?.status || null })
 
     void writeSystemLog({
@@ -150,7 +149,6 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       )
     }
 
-    // Let QStash retry.
     return NextResponse.json(
       { message: 'Rate limited', limiter: emailRl.policy.name },
       { status: 429 }
@@ -274,7 +272,6 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       )
     }
 
-    // Retrying won't help.
     return NextResponse.json({ ok: true, skipped: true }, { status: 200 })
   }
 
@@ -461,7 +458,6 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       }).catch(() => undefined)
     }
 
-    // 500 so QStash retries.
     return NextResponse.json(
       { message: 'Email send failed', error: result.error },
       { status: 500 }

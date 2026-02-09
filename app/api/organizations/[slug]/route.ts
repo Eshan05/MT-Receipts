@@ -34,6 +34,10 @@ const updateOrganizationSchema = z.object({
       primaryColor: z.string().optional(),
       secondaryColor: z.string().optional(),
       organizationName: z.string().optional(),
+      address: z.preprocess((value) => {
+        if (typeof value === 'string' && value.trim() === '') return undefined
+        return value
+      }, z.string().trim().optional()),
       websiteUrl: z.preprocess(
         normalizeOptionalUrl,
         z.string().url().trim().optional()
