@@ -32,6 +32,7 @@ import { useState } from 'react'
 import { EmailVaultCredenza } from '@/components/navigation/email-vault-credenza'
 import { OrganizationSettingsCredenza } from '@/components/organization/organization-settings-dropdown'
 import { BackupsCredenza } from '@/components/navigation/backups-credenza'
+import { ChangePasswordCredenza } from '@/components/navigation/change-password-credenza'
 import { siteConfig } from '@/lib/site'
 
 interface NavUserProps {
@@ -50,6 +51,7 @@ export function NavUser({
   const [vaultOpen, setVaultOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [backupsOpen, setBackupsOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const isAdmin = currentOrganization?.role === 'admin'
   const isSuperAdminMode = mode === 'superadmin'
 
@@ -148,6 +150,13 @@ export function NavUser({
                   </DropdownMenuItem>
                 </>
               )}
+              <DropdownMenuItem
+                className='cursor-pointer'
+                onClick={() => setChangePasswordOpen(true)}
+              >
+                <KeyRound className='h-4 w-4' />
+                Change Password
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -188,6 +197,10 @@ export function NavUser({
       {isSuperAdminMode && (
         <BackupsCredenza open={backupsOpen} onOpenChange={setBackupsOpen} />
       )}
+      <ChangePasswordCredenza
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
+      />
     </SidebarMenu>
   )
 }

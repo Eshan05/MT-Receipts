@@ -14,6 +14,7 @@ import {
   Plus,
   MailIcon,
   GlobeIcon,
+  LucideLocationEdit,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ColorPickerOutput, RgbaValue } from '@/components/derived/color-picker'
@@ -50,6 +51,7 @@ interface OrganizationSettings {
   logoUrl: string
   primaryColor: string
   secondaryColor: string
+  address: string
   websiteUrl: string
   contactEmail: string
   receiptNumberFormat: string
@@ -163,6 +165,7 @@ export function OrganizationSettingsCredenza({
     logoUrl: '',
     primaryColor: '#3b82f6',
     secondaryColor: '#1e40af',
+    address: '',
     websiteUrl: '',
     contactEmail: '',
     receiptNumberFormat: 'RCP-{eventCode}-{initials}{seq}',
@@ -235,6 +238,7 @@ export function OrganizationSettingsCredenza({
           logoUrl: source.logoUrl || '',
           primaryColor: source.settings?.primaryColor || '#3b82f6',
           secondaryColor: source.settings?.secondaryColor || '#1e40af',
+          address: source.settings?.address || '',
           websiteUrl: source.settings?.websiteUrl || '',
           contactEmail: source.settings?.contactEmail || '',
           receiptNumberFormat,
@@ -359,6 +363,12 @@ export function OrganizationSettingsCredenza({
       if (!baseline || websiteUrlNormalized !== baselineWebsiteNormalized) {
         // Send empty string when clearing so the server can explicitly unset it.
         settingsPatch.websiteUrl = websiteUrlNormalized
+      }
+
+      const addressTrimmed = settings.address.trim()
+      const baselineAddressTrimmed = (baseline?.address ?? '').trim()
+      if (!baseline || addressTrimmed !== baselineAddressTrimmed) {
+        settingsPatch.address = addressTrimmed
       }
 
       const contactEmailTrimmed = settings.contactEmail.trim()
@@ -532,6 +542,24 @@ export function OrganizationSettingsCredenza({
               </div>
             </div>
           </Field>
+          <Field className='-mt-1'>
+            {/* <FieldLabel htmlFor='websiteUrl'>Address</FieldLabel> */}
+            <div className='relative'>
+              <Input
+                id='address'
+                value={settings.address}
+                onChange={(e) =>
+                  setSettings({ ...settings, address: e.target.value })
+                }
+                placeholder='Organization address'
+                readOnly={!canEdit}
+                className='peer ps-7'
+              />
+              <div className='pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2 text-muted-foreground/80'>
+                <LucideLocationEdit size={12} />
+              </div>
+            </div>
+          </Field>
 
           <div className='grid grid-cols-2 gap-4'>
             <div className='space-y-1.5'>
@@ -624,7 +652,7 @@ export function OrganizationSettingsCredenza({
             <FieldLabel htmlFor='receiptFormat'>
               Receipt Number Format
             </FieldLabel>
-            <div className='relative'>
+            <div className='relative hidden'>
               <Input
                 id='receiptFormat'
                 value={settings.receiptNumberFormat}
@@ -639,7 +667,7 @@ export function OrganizationSettingsCredenza({
             </div>
 
             {canEdit && (
-              <div className='mt-3 space-y-2'>
+              <div className='mt-1 space-y-2'>
                 <div className='text-xs font-medium text-muted-foreground'>
                   Drag to reorder, or add placeholders:
                 </div>
