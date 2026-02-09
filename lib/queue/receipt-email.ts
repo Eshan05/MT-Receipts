@@ -30,6 +30,12 @@ export const receiptEmailJobSchema = z.object({
 
 export type ReceiptEmailJob = z.infer<typeof receiptEmailJobSchema>
 
+function getReceiptEmailFlowControlKey(organizationId: string): string {
+  // QStash requires keys to be alphanumeric, hyphen, underscore, or period.
+  // Avoid ':' to prevent runtime errors like: "flowControlKey must be alphanumeric...".
+  return `tenant.${organizationId}.receipt-email`
+}
+
 export async function enqueueReceiptEmailJob(job: ReceiptEmailJob): Promise<{
   queued: boolean
   messageId?: string
@@ -56,7 +62,7 @@ export async function enqueueReceiptEmailJob(job: ReceiptEmailJob): Promise<{
     ...(parsed.data.organizationId
       ? {
           flowControl: {
-            key: `tenant:${parsed.data.organizationId}:receipt-email`,
+            key: getReceiptEmailFlowControlKey(parsed.data.organizationId),
             parallelism: 1,
           },
         }
@@ -96,7 +102,7 @@ export async function enqueueReceiptEmailJobs(
       ...(body.organizationId
         ? {
             flowControl: {
-              key: `tenant:${body.organizationId}:receipt-email`,
+              key: getReceiptEmailFlowControlKey(body.organizationId),
               parallelism: 1,
             },
           }

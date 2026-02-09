@@ -36,7 +36,8 @@ export async function enqueueBackupsRunJob(job: BackupsRunJob): Promise<{
     timeout: 900,
     label: 'backups-run',
     flowControl: {
-      key: 'superadmin:backups-run',
+      // QStash requires keys to be alphanumeric, hyphen, underscore, or period.
+      key: 'superadmin.backups-run',
       parallelism: 1,
     },
   })

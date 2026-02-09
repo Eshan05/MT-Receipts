@@ -23,6 +23,7 @@ describe('receipt email queue', () => {
 
     const res = await enqueueReceiptEmailJob({
       organizationSlug: 'org',
+      organizationId: 'org_1',
       receiptNumber: 'R-1',
     })
 
@@ -30,6 +31,14 @@ describe('receipt email queue', () => {
     expect(res.messageId).toBe('msg_1')
     expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/receipt-emails')
     expect(publishJSON).toHaveBeenCalled()
+
+    // @ts-expect-error I wish I can switch to ts-go
+    const args = publishJSON.mock.calls[0]?.[0]
+    // @ts-expect-error I wish I can switch to ts-go
+    expect(args.flowControl).toMatchObject({
+      key: 'tenant.org_1.receipt-email',
+      parallelism: 1,
+    })
   })
 
   it('publishes batch jobs to /api/jobs/receipt-emails', async () => {
@@ -38,13 +47,28 @@ describe('receipt email queue', () => {
     const { getAbsoluteJobUrl } = await import('@/lib/queue/qstash')
 
     const res = await enqueueReceiptEmailJobs([
-      { organizationSlug: 'org', receiptNumber: 'R-1' },
-      { organizationSlug: 'org', receiptNumber: 'R-2' },
+      {
+        organizationSlug: 'org',
+        organizationId: 'org_1',
+        receiptNumber: 'R-1',
+      },
+      {
+        organizationSlug: 'org',
+        organizationId: 'org_1',
+        receiptNumber: 'R-2',
+      },
     ])
 
     expect(res.queued).toBe(true)
     expect(res.messageIds).toEqual(['msg_1', 'msg_1'])
     expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/receipt-emails')
     expect(batchJSON).toHaveBeenCalled()
+
+    const batchArgs = batchJSON.mock.calls[0]?.[0]
+    expect(Array.isArray(batchArgs)).toBe(true)
+    expect(batchArgs[0]?.flowControl).toMatchObject({
+      key: 'tenant.org_1.receipt-email',
+      parallelism: 1,
+    })
   })
 })

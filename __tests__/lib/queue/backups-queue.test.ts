@@ -24,5 +24,11 @@ describe('backups queue', () => {
     expect(res.messageId).toBe('msg_backup')
     expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/backups')
     expect(publishJSON).toHaveBeenCalled()
+
+    const args = publishJSON.mock.calls[0]?.[0]
+    expect(args.flowControl).toMatchObject({
+      key: 'superadmin.backups-run',
+      parallelism: 1,
+    })
   })
 })
