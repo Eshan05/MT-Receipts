@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -40,12 +40,11 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { downloadCSVTemplate, csvTemplateFields } from '@/utils/csv-template'
 import {
-  parseCSV,
-  checkDuplicates,
   type ParsedCSVRow,
   type CSVValidationResult,
   type DuplicateInfo,
 } from '@/utils/csv-parser'
+import { validateCsv } from '@/utils/csv-validation-worker'
 import { IEvent } from '@/models/event.model'
 import {
   Select,
@@ -72,7 +71,7 @@ interface CSVImportModalProps {
   onComplete: () => void
 }
 
-type Step = 'upload' | 'preview' | 'confirm' | 'importing'
+type Step = 'upload' | 'validating' | 'preview' | 'confirm' | 'importing'
 
 interface RowSelection {
   [key: number]: boolean
@@ -89,6 +88,12 @@ export function CSVImportModal({
   const [validationResult, setValidationResult] =
     useState<CSVValidationResult | null>(null)
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([])
+  const [validationProgress, setValidationProgress] = useState<{
+    current: number
+    total: number
+  }>({ current: 0, total: 0 })
+  const [isValidating, setIsValidating] = useState(false)
+  const validationControllerRef = useRef<AbortController | null>(null)
   const [rowSelection, setRowSelection] = useState<RowSelection>({})
   const [overrideDuplicates, setOverrideDuplicates] = useState<Set<number>>(
     new Set()
@@ -103,9 +108,13 @@ export function CSVImportModal({
   const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
 
   const resetState = useCallback(() => {
+    validationControllerRef.current?.abort()
+    validationControllerRef.current = null
     setStep('upload')
     setValidationResult(null)
     setDuplicates([])
+    setValidationProgress({ current: 0, total: 0 })
+    setIsValidating(false)
     setRowSelection({})
     setOverrideDuplicates(new Set())
     setImportProgress({ current: 0, total: 0 })
@@ -132,28 +141,59 @@ export function CSVImportModal({
   const handleFileUpload = useCallback(
     (file: File) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const text = e.target?.result as string
-        const result = parseCSV(text, event.items)
-        setValidationResult(result)
+        const controller = new AbortController()
+        validationControllerRef.current?.abort()
+        validationControllerRef.current = controller
 
-        if (result.rows.length > 0) {
-          const dupes = checkDuplicates(result.rows, existingEntries)
+        setIsValidating(true)
+        setStep('validating')
+        setValidationProgress({ current: 0, total: 0 })
+
+        try {
+          const { validationResult: result, duplicates: dupes } =
+            await validateCsv(
+              text,
+              {
+                eventItems: event.items,
+                existingEntries,
+              },
+              {
+                signal: controller.signal,
+                onProgress: (info) => setValidationProgress(info),
+              }
+            )
+
+          setValidationResult(result)
           setDuplicates(dupes)
 
-          // Initialize selection - all valid rows selected by default
-          const initialSelection: RowSelection = {}
-          result.rows.forEach((row) => {
-            const hasError = result.errors.some(
-              (e) => e.rowNumber === row.rowNumber
-            )
-            const isDupe = dupes.some((d) => d.rowNumber === row.rowNumber)
-            initialSelection[row.rowNumber] = !hasError && !isDupe
-          })
-          setRowSelection(initialSelection)
-        }
+          if (result.rows.length > 0) {
+            // Initialize selection - all valid rows selected by default
+            const initialSelection: RowSelection = {}
+            result.rows.forEach((row) => {
+              const hasError = result.errors.some(
+                (e) => e.rowNumber === row.rowNumber
+              )
+              const isDupe = dupes.some((d) => d.rowNumber === row.rowNumber)
+              initialSelection[row.rowNumber] = !hasError && !isDupe
+            })
+            setRowSelection(initialSelection)
+          }
 
-        setStep('preview')
+          setStep('preview')
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            setStep('upload')
+            return
+          }
+          const message = err instanceof Error ? err.message : 'Unknown error'
+          toast.error(`Failed to parse CSV: ${message}`)
+          setStep('upload')
+        } finally {
+          setIsValidating(false)
+          validationControllerRef.current = null
+        }
       }
       reader.readAsText(file)
     },
@@ -434,6 +474,40 @@ export function CSVImportModal({
                 </code>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Step 1.5: Validating */}
+        {step === 'validating' && isValidating && (
+          <div className='space-y-4 py-4 text-center'>
+            <Loader2 className='w-10 h-10 mx-auto animate-spin text-primary' />
+            <p className='font-medium'>Validating CSV…</p>
+            <Progress
+              value={
+                validationProgress.total > 0
+                  ? (validationProgress.current / validationProgress.total) *
+                    100
+                  : 0
+              }
+              className='w-full'
+            />
+            <p className='text-sm text-muted-foreground'>
+              {validationProgress.total > 0
+                ? `${validationProgress.current} of ${validationProgress.total}`
+                : 'Working…'}
+            </p>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => {
+                validationControllerRef.current?.abort()
+                setIsValidating(false)
+                setValidationProgress({ current: 0, total: 0 })
+                setStep('upload')
+              }}
+            >
+              Cancel
+            </Button>
           </div>
         )}
 

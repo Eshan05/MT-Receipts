@@ -47,6 +47,11 @@ export interface EventItem {
   price?: number
 }
 
+export interface ParseCSVOptions {
+  onProgress?: (info: { current: number; total: number }) => void
+  shouldCancel?: () => boolean
+}
+
 function parseItemsString(itemsStr: string): ParsedCSVRow['items'] {
   const items: ParsedCSVRow['items'] = []
 
@@ -99,7 +104,8 @@ function normalizePaymentMethod(
 
 export function parseCSV(
   csvText: string,
-  eventItems?: EventItem[]
+  eventItems?: EventItem[],
+  options?: ParseCSVOptions
 ): CSVValidationResult {
   const lines = csvText.split(/\r?\n/).filter((line) => line.trim())
   const result: CSVValidationResult = {
@@ -145,7 +151,22 @@ export function parseCSV(
   })
 
   // Parse data rows
+  const totalDataRows = Math.max(lines.length - 1, 0)
   for (let i = 1; i < lines.length; i++) {
+    if (options?.shouldCancel?.()) {
+      result.errors.push({
+        rowNumber: 0,
+        field: 'file',
+        message: 'Parsing cancelled',
+        severity: 'error',
+      })
+      return result
+    }
+
+    if (options?.onProgress && i % 25 === 0) {
+      options.onProgress({ current: i - 1, total: totalDataRows })
+    }
+
     const line = lines[i]
     if (!line.trim() || line.startsWith('--')) continue
 
@@ -279,6 +300,8 @@ export function parseCSV(
       result.invalidRowCount++
     }
   }
+
+  options?.onProgress?.({ current: totalDataRows, total: totalDataRows })
 
   return result
 }
