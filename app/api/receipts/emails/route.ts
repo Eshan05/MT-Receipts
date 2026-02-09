@@ -9,6 +9,15 @@ import { createLogger } from '@/lib/logger'
 import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
 import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
 import { writeAuditLog } from '@/lib/tenants/audit-log'
+import { isQstashConfigured } from '@/lib/queue/qstash'
+import { enqueueReceiptEmailJobs } from '@/lib/queue/receipt-email'
+import {
+  createReceiptEmailBatch,
+  createReceiptEmailBatchItems,
+  markReceiptEmailBatchEnqueued,
+  markReceiptEmailBatchEnqueueFailed,
+} from '@/lib/jobs/receipt-email-batches'
+import { writeSystemLog } from '@/lib/system-logs'
 
 type PopulatedEvent = {
   name: string
@@ -185,6 +194,129 @@ export async function POST(request: NextRequest) {
     }
 
     const { receiptNumbers } = filter
+
+    if (isQstashConfigured()) {
+      const receipts = await Receipt.find({
+        receiptNumber: { $in: receiptNumbers },
+        refunded: { $ne: true },
+      })
+        .select('_id receiptNumber customer.email')
+        .lean()
+
+      if (receipts.length === 0) {
+        return NextResponse.json(
+          { message: 'No eligible receipts to email' },
+          { status: 400 }
+        )
+      }
+
+      const eligibleReceiptNumbers = receipts.map((r) => r.receiptNumber)
+      const { batchId } = await createReceiptEmailBatch({
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        createdByUserId: ctx.user.id,
+        total: eligibleReceiptNumbers.length,
+        subject,
+        templateSlug,
+        smtpVaultId,
+      })
+
+      await createReceiptEmailBatchItems({
+        batchId,
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        receiptNumbers: eligibleReceiptNumbers,
+      })
+
+      const jobs = receipts.map((receipt) => ({
+        organizationSlug: ctx.organization.slug,
+        organizationId: ctx.organization.id,
+        receiptNumber: receipt.receiptNumber,
+        actor: { userId: ctx.user.id, username: ctx.user.username },
+        subject,
+        templateSlug,
+        smtpVaultId,
+        requestId: batchId,
+      }))
+
+      const queued = await enqueueReceiptEmailJobs(jobs).catch((err) => ({
+        queued: false,
+        messageIds: undefined,
+        error: err instanceof Error ? err.message : 'Failed to enqueue jobs',
+      }))
+
+      if (!queued.queued) {
+        await markReceiptEmailBatchEnqueueFailed({
+          batchId,
+          error: queued.error || 'Failed to enqueue jobs',
+        })
+
+        void writeSystemLog({
+          level: 'error',
+          kind: 'receipt_email_batch_enqueue_failed',
+          message: 'Failed to enqueue receipt email batch',
+          organizationId: ctx.organization.id,
+          organizationSlug: ctx.organization.slug,
+          batchId,
+          requestId: meta.requestId,
+          meta: {
+            requestedCount: receiptNumbers.length,
+            eligibleCount: jobs.length,
+            error: queued.error,
+          },
+        }).catch(() => undefined)
+
+        return NextResponse.json(
+          { message: 'Failed to queue emails', error: queued.error },
+          { status: 500 }
+        )
+      }
+
+      await markReceiptEmailBatchEnqueued({ batchId })
+
+      void writeSystemLog({
+        level: 'info',
+        kind: 'receipt_email_batch_enqueued',
+        message: 'Queued receipt email batch',
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        batchId,
+        requestId: meta.requestId,
+        meta: {
+          requestedCount: receiptNumbers.length,
+          queuedCount: jobs.length,
+        },
+      }).catch(() => undefined)
+
+      void writeAuditLog({
+        userId: ctx.user.id,
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        action: 'UPDATE',
+        resourceType: 'RECEIPT',
+        details: {
+          kind: 'bulk_email_queued',
+          requested: receiptNumbers.length,
+          queued: jobs.length,
+          messageIds: queued.messageIds?.slice(0, 25),
+          requestId: meta.requestId,
+          jobBatchId: batchId,
+        },
+        status: 'SUCCESS',
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      }).catch(() => undefined)
+
+      return NextResponse.json(
+        {
+          message: `Queued ${jobs.length} emails`,
+          queuedCount: jobs.length,
+          requestedCount: receiptNumbers.length,
+          jobBatchId: batchId,
+        },
+        { status: 202 }
+      )
+    }
 
     const receipts = await Receipt.find({
       receiptNumber: { $in: receiptNumbers },

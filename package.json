@@ -38,6 +38,7 @@
     "@react-pdf/renderer": "^4.3.2",
     "@resvg/resvg-wasm": "^2.6.2",
     "@tanstack/react-table": "^8.21.3",
+    "@upstash/qstash": "^2.9.0",
     "@upstash/redis": "^1.36.2",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",

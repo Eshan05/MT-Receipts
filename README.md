@@ -33,7 +33,7 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
 - **Email**: [`react-email`](https://react.email/) for beautiful email templates + Nodemailer/Mailgun
 - **QR Codes**: [`qr-code-styling`](https://github.com/kozakdenys/qr-code-styling) + [`@loskir/styled-qr-code-node`](https://github.com/loskir/styled-qr-code-node) for highly customizable QR codes
 - **Security**: JWT authentication, bcrypt password hashing, HMAC webhook signatures
-- **Caching / Rate Limiting**: [Upstash Redis](https://upstash.com/)
+- **Caching / Rate Limiting**: [Upstash Redis](https://upstash.com/) and Upstash QStash for queues and retries
 - **Storage**: Backblaze B2 (S3-compatible) for organization assets
 - **Charts**: [Recharts](https://recharts.org/) for data visualization
 
@@ -47,7 +47,7 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
 - 📅 **Create and manage events/campaigns** with custom items, pricing, and metadata. Perfect for conferences, workshops, meetups, and more!
 - 👥 **Track entries per event** with customer details, items purchased, and payment methods and easily editable
 - ⚡ **Bulk operations** - Select multiple events for batch actions like tagging, type changes, or deletion.
-- 📥 **CSV import/export** for entries with validation and duplicate detection. Easily migrate or backup your data.
+- 📥 **CSV import / export** for entries with validation and duplicate detection. Easily migrate or backup your data. Uses _web workers_
 - 🏷️ **Event types and tags** for better organization and filtering. Find what you need quickly.
 - 🏢 **Multi-tenant architecture** with complete data isolation per organization. Each organization has its own data, members, and settings. (Separate DB)
 - 🎨 **Organization branding** - custom logos, colors, and themes. Make the platform feel like your own!
@@ -64,6 +64,8 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
 - 📜 **Audit logging** for sensitive operations. Track every important change.
 - ♻️ **Soft deletes** with restore capability. Accidentally deleted something? Bring it back!
 - ⚡ **Optimized API endpoints** with caching strategies. Fast and efficient.
+- 🔁 **Queue and retries** using _Upstash QStash_ for email sending and such like a production grade application!
+- 🧪 **Comprehensive testing** with unit and integration tests. 400+ tests in total!
 
 ## 🤝 Usage
 
@@ -82,8 +84,8 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
 ## ⚙️ Setup
 
 ```shell
-git clone <your-repo-url>
-cd ACES-Receipts
+git clone https://github.com/Eshan05/MT-Receipts
+cd MT-Receipts
 pnpm install
 # Configure environment variables (see below)
 pnpm dev

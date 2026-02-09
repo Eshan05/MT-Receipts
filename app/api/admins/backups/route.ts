@@ -11,13 +11,14 @@ import dbConnect from '@/lib/db-conn'
 import Organization from '@/models/organization.model'
 import User from '@/models/user.model'
 import { getTenantModels } from '@/lib/db/tenant-models'
-import { gzipSync } from 'node:zlib'
-import crypto from 'node:crypto'
 import { getRequestMeta } from '@/lib/request-meta'
 import { createLogger } from '@/lib/logger'
 import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
 import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
 import { writeAuditLog } from '@/lib/tenants/audit-log'
+import { isQstashConfigured } from '@/lib/queue/qstash'
+import { enqueueBackupsRunJob } from '@/lib/queue/backups'
+import { runBackupsSnapshot } from '@/lib/backups/run-backups'
 
 export const runtime = 'nodejs'
 
@@ -69,10 +70,7 @@ export async function GET(request?: Request) {
           configured: false,
           ok: false,
           checked: null,
-          error:
-            err instanceof Error
-              ? err.message
-              : 'Backblaze B2 is not configured',
+          error: err instanceof Error ? err.message : String(err),
         }
         return NextResponse.json(payload, { status: 200 })
       }
@@ -80,7 +78,6 @@ export async function GET(request?: Request) {
     }
 
     const { client, bucket } = clientInfo
-
     if (bucket) {
       await client.send(new HeadBucketCommand({ Bucket: bucket }))
       const payload: BackupsHealthResponse = {
@@ -143,120 +140,53 @@ export async function POST(request?: Request) {
       return rateLimitedResponse(rl)
     }
 
-    const { client, bucket } = getB2S3Client({ requireBucket: true })
-
-    await dbConnect()
-
-    const [organizations, users] = await Promise.all([
-      Organization.find({}).lean(),
-      User.find({}).lean(),
-    ])
-
-    const tenants: Record<
-      string,
-      {
-        events: unknown[]
-        receipts: unknown[]
-        templates: unknown[]
-        sequences: unknown[]
-      }
-    > = {}
-
-    const tenantErrors: Array<{ slug: string; error: string }> = []
-
-    for (const org of organizations as Array<{ slug?: string }>) {
-      const slug = (org.slug || '').toLowerCase().trim()
-      if (!slug) continue
-
-      try {
-        const models = await getTenantModels(slug)
-        const [events, receipts, templates, sequences] = await Promise.all([
-          models.Event.find({}).lean(),
-          models.Receipt.find({}).lean(),
-          models.Template.find({}).lean(),
-          models.Sequence.find({}).lean(),
-        ])
-
-        tenants[slug] = {
-          events,
-          receipts,
-          templates,
-          sequences,
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        tenantErrors.push({ slug, error: message })
-      }
-    }
-
-    const createdAt = new Date().toISOString()
-    const snapshot = {
-      meta: {
-        kind: 'aces-receipts-backup',
-        createdAt,
-        createdByUserId: superAdmin.user.id,
-      },
-      master: {
-        organizations,
-        users,
-      },
-      tenants,
-      tenantErrors,
-    }
-
-    const json = JSON.stringify(snapshot)
-    const gz = gzipSync(Buffer.from(json, 'utf8'), { level: 9 })
-
-    const safeTimestamp = createdAt.replace(/[:.]/g, '-')
-    const nonce = crypto.randomBytes(4).toString('hex')
-    const key = `backups/${safeTimestamp}-${nonce}.json.gz`
-
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket!,
-        Key: key,
-        Body: gz,
-        ContentType: 'application/json',
-        ContentEncoding: 'gzip',
-      })
-    )
-
-    const payload: BackupsRunResponse = {
-      ok: true,
-      key,
-      bytes: gz.byteLength,
-      createdAt,
-      orgCount: organizations.length,
-      tenantCount: Object.keys(tenants).length,
-      tenantErrors,
-    }
-
-    log.info('backups_run_complete', {
-      userId: superAdmin.user.id,
-      key,
-      bytes: gz.byteLength,
-      orgCount: organizations.length,
-      tenantCount: Object.keys(tenants).length,
-      tenantErrorsCount: tenantErrors.length,
-    })
-
-    await writeAuditLog({
-      userId: superAdmin.user.id,
-      action: 'BACKUP',
-      resourceType: 'ORGANIZATION',
-      details: {
-        key,
-        bytes: gz.byteLength,
-        createdAt,
-        orgCount: organizations.length,
-        tenantCount: Object.keys(tenants).length,
-        tenantErrorsCount: tenantErrors.length,
+    if (isQstashConfigured()) {
+      const queued = await enqueueBackupsRunJob({
+        actorUserId: superAdmin.user.id,
         requestId: meta.requestId,
-      },
-      status: tenantErrors.length > 0 ? 'FAILURE' : 'SUCCESS',
+      }).catch((err) => ({
+        queued: false,
+        messageId: undefined,
+        error: err instanceof Error ? err.message : 'Failed to enqueue job',
+      }))
+
+      if (!queued.queued) {
+        log.warn('backups_enqueue_failed', { error: queued.error })
+      } else {
+        void writeAuditLog({
+          userId: superAdmin.user.id,
+          action: 'UPDATE',
+          resourceType: 'ORGANIZATION',
+          details: {
+            kind: 'backup_queued',
+            messageId: queued.messageId,
+            requestId: meta.requestId,
+          },
+          status: 'SUCCESS',
+          ipAddress: meta.ip,
+          userAgent: meta.userAgent,
+        }).catch(() => undefined)
+      }
+
+      return NextResponse.json(
+        {
+          ok: true,
+          queued: queued.queued,
+          messageId: queued.messageId,
+          error: queued.queued ? undefined : queued.error,
+        },
+        { status: queued.queued ? 202 : 200 }
+      )
+    }
+
+    const { client, bucket } = getB2S3Client({ requireBucket: true })
+    const payload = await runBackupsSnapshot({
+      createdByUserId: superAdmin.user.id,
+      requestId: meta.requestId,
       ipAddress: meta.ip,
       userAgent: meta.userAgent,
-    }).catch(() => undefined)
+      s3: { client, bucket: bucket! },
+    })
 
     return NextResponse.json(payload)
   } catch (error) {

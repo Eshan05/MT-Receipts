@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getTenantContext } from '@/lib/auth/tenant-route'
 import { sendReceiptEmail } from '@/lib/email'
 import { getOrganizationBrandingBySlug } from '@/lib/tenants/organization-branding'
+import { isQstashConfigured } from '@/lib/queue/qstash'
+import { enqueueReceiptEmailJob } from '@/lib/queue/receipt-email'
+import { getRequestMeta } from '@/lib/request-meta'
+import { writeAuditLog } from '@/lib/tenants/audit-log'
+import {
+  createReceiptEmailBatch,
+  createReceiptEmailBatchItems,
+  markReceiptEmailBatchEnqueued,
+  markReceiptEmailBatchEnqueueFailed,
+} from '@/lib/jobs/receipt-email-batches'
+import { writeSystemLog } from '@/lib/system-logs'
 
 type PopulatedEvent = {
   name: string
@@ -87,6 +98,112 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { message: 'Receipt event not found' },
         { status: 404 }
+      )
+    }
+
+    const meta = getRequestMeta(request)
+
+    if (isQstashConfigured()) {
+      const { batchId } = await createReceiptEmailBatch({
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        createdByUserId: ctx.user.id,
+        total: 1,
+        subject,
+        templateSlug,
+        smtpVaultId,
+      })
+
+      await createReceiptEmailBatchItems({
+        batchId,
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        receiptNumbers: [receipt.receiptNumber],
+      })
+
+      const queued = await enqueueReceiptEmailJob({
+        organizationSlug: ctx.organization.slug,
+        organizationId: ctx.organization.id,
+        receiptNumber: receipt.receiptNumber,
+        actor: { userId: ctx.user.id, username: ctx.user.username },
+        subject,
+        templateSlug,
+        smtpVaultId,
+        templateConfig,
+        requestId: batchId,
+      }).catch((err) => ({
+        queued: false,
+        messageId: undefined,
+        error: err instanceof Error ? err.message : 'Failed to enqueue email',
+      }))
+
+      if (!queued.queued) {
+        await markReceiptEmailBatchEnqueueFailed({
+          batchId,
+          error: queued.error || 'Failed to enqueue email',
+        })
+
+        void writeSystemLog({
+          level: 'error',
+          kind: 'receipt_email_batch_enqueue_failed',
+          message: 'Failed to enqueue single receipt email',
+          organizationId: ctx.organization.id,
+          organizationSlug: ctx.organization.slug,
+          batchId,
+          receiptNumber: receipt.receiptNumber,
+          requestId: meta.requestId,
+          meta: { error: queued.error },
+        }).catch(() => undefined)
+
+        return NextResponse.json(
+          {
+            message: 'Failed to queue email',
+            error: queued.error,
+          },
+          { status: 500 }
+        )
+      }
+
+      await markReceiptEmailBatchEnqueued({ batchId })
+
+      void writeSystemLog({
+        level: 'info',
+        kind: 'receipt_email_batch_enqueued',
+        message: 'Queued single receipt email',
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        batchId,
+        receiptNumber: receipt.receiptNumber,
+        requestId: meta.requestId,
+      }).catch(() => undefined)
+
+      void writeAuditLog({
+        userId: ctx.user.id,
+        organizationId: ctx.organization.id,
+        organizationSlug: ctx.organization.slug,
+        action: 'UPDATE',
+        resourceType: 'RECEIPT',
+        resourceId: receipt._id.toString(),
+        details: {
+          kind: 'receipt_email_queued',
+          receiptNumber: receipt.receiptNumber,
+          to: receipt.customer.email,
+          messageId: queued.messageId,
+          requestId: meta.requestId,
+          jobBatchId: batchId,
+        },
+        status: 'SUCCESS',
+        ipAddress: meta.ip,
+        userAgent: meta.userAgent,
+      }).catch(() => undefined)
+
+      return NextResponse.json(
+        {
+          message: 'Email queued',
+          messageId: queued.messageId,
+          jobBatchId: batchId,
+        },
+        { status: 202 }
       )
     }
 

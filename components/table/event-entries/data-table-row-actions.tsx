@@ -79,6 +79,7 @@ import {
   type SmtpVaultMeta,
 } from '@/lib/tenants/smtp-vault-client'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
+import { useReceiptEmailBatchTracker } from '@/contexts/receipt-email-batch-tracker'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>
@@ -91,6 +92,7 @@ export function DataTableRowActions<TData>({
   event,
   onUpdate,
 }: DataTableRowActionsProps<TData>) {
+  const { trackBatch } = useReceiptEmailBatchTracker()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -156,14 +158,30 @@ export function DataTableRowActions<TData>({
           },
         }),
       }).then(async (response) => {
-        if (!response.ok) throw new Error('Failed to send email')
+        const data = (await response.json().catch(() => null)) as {
+          message?: string
+          jobBatchId?: string
+        } | null
+
+        if (!response.ok) {
+          throw new Error(data?.message || 'Failed to queue email')
+        }
+
         setIsSendOpen(false)
-        return response.json()
+
+        const batchId =
+          typeof data?.jobBatchId === 'string' ? data.jobBatchId : undefined
+        if (batchId) trackBatch(batchId)
+
+        return { status: response.status, ...data }
       }),
       {
-        loading: 'Sending email...',
-        success: 'Email sent successfully',
-        error: 'Failed to send email',
+        loading: 'Queueing email...',
+        success: (result) =>
+          result?.message ||
+          (result?.status === 202 ? 'Email queued' : 'Email sent'),
+        error: (err) =>
+          err instanceof Error ? err.message : 'Failed to queue email',
         finally: () => setIsSending(false),
       }
     )
@@ -319,7 +337,7 @@ export function DataTableRowActions<TData>({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setIsSendOpen(true)}>
             <Mail className='mr-1' />
-            {entry.emailSent ? 'Resend Email' : 'Send Email'}
+            {entry.emailSent ? 'Queue Email Again' : 'Queue Email'}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleDownloadPdf}>
             <Download className='mr-1' />
@@ -400,7 +418,9 @@ export function DataTableRowActions<TData>({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {entry.emailSent ? 'Resend Receipt Email' : 'Send Receipt Email'}
+              {entry.emailSent
+                ? 'Queue Receipt Email Again'
+                : 'Queue Receipt Email'}
             </DialogTitle>
             <DialogDescription>
               Choose a template and sender for {entry.customer.email}.
@@ -595,7 +615,7 @@ export function DataTableRowActions<TData>({
               Cancel
             </Button>
             <Button onClick={handleSendEmail} disabled={isSending}>
-              {isSending ? 'Sending...' : 'Send Email'}
+              {isSending ? 'Queueing...' : 'Queue Email'}
             </Button>
           </DialogFooter>
         </DialogContent>

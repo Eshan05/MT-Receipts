@@ -10,6 +10,8 @@ import { createLogger } from '@/lib/logger'
 import { RATE_LIMITS } from '@/lib/tenants/rate-limits'
 import { checkRateLimit, rateLimitedResponse } from '@/lib/tenants/rate-limiter'
 import { writeAuditLog } from '@/lib/tenants/audit-log'
+import { isQstashConfigured } from '@/lib/queue/qstash'
+import { enqueueReceiptEmailJob } from '@/lib/queue/receipt-email'
 
 export async function GET(request: NextRequest) {
   const meta = getRequestMeta(request)
@@ -250,138 +252,181 @@ export async function POST(request: NextRequest) {
     })
 
     if (shouldSendEmail) {
-      const emailRl = await checkRateLimit({
-        policy: RATE_LIMITS.receiptEmailSend,
-        scope: `tenant:${ctx.organization.id}`,
-      })
-      if (!emailRl.success) {
-        log.warn('rate_limited', { limiter: emailRl.policy.name })
-        receipt.emailLog.push({
-          sentTo: receipt.customer.email,
-          status: 'failed',
-          sentAt: new Date(),
-          error: 'rate_limited',
-          sentByUserId: ctx.user.id,
-          sentByUsername: ctx.user.username,
-          smtpVaultId,
-        })
-
-        await receipt.save()
-
-        await writeAuditLog({
-          userId: ctx.user.id,
-          organizationId: ctx.organization.id,
+      if (isQstashConfigured()) {
+        const queued = await enqueueReceiptEmailJob({
           organizationSlug: ctx.organization.slug,
-          action: 'EMAIL_FAILED',
-          resourceType: 'RECEIPT',
-          resourceId: receipt._id.toString(),
-          details: {
-            receiptNumber: receipt.receiptNumber,
-            to: receipt.customer.email,
-            smtpVaultId: smtpVaultId || null,
-            error: 'rate_limited',
-            requestId: meta.requestId,
-          },
-          status: 'FAILURE',
-          ipAddress: meta.ip,
-          userAgent: meta.userAgent,
-        }).catch(() => undefined)
+          organizationId: ctx.organization.id,
+          receiptNumber: receipt.receiptNumber,
+          actor: { userId: ctx.user.id, username: ctx.user.username },
+          smtpVaultId,
+          requestId: meta.requestId,
+        }).catch((err) => ({
+          queued: false,
+          messageId: undefined,
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Failed to enqueue receipt email',
+        }))
 
-        // Continue returning 201 for the receipt creation.
-      } else {
-        try {
-          const result = await sendReceiptEmail({
-            to: receipt.customer.email,
-            receiptNumber: receipt.receiptNumber,
-            organizationSlug: ctx.organization.slug,
+        if (queued.queued) {
+          void writeAuditLog({
+            userId: ctx.user.id,
             organizationId: ctx.organization.id,
-            customerName: receipt.customer.name,
-            customerPhone: receipt.customer.phone,
-            customerAddress: receipt.customer.address,
-            eventName: event.name,
-            eventCode: event.eventCode,
-            eventType: event.type,
-            eventLocation: event.location,
-            eventStartDate: event.startDate?.toISOString(),
-            eventEndDate: event.endDate?.toISOString(),
-            items: receipt.items.map((item) => ({
-              name: item.name,
-              description: item.description,
-              quantity: item.quantity,
-              price: item.price,
-              total: item.total,
-            })),
-            taxes: receipt.taxes,
-            totalAmount: receipt.totalAmount,
-            paymentMethod: receipt.paymentMethod,
-            organizationName:
-              organizationBranding?.organizationName || ctx.organization.name,
-            organizationLogo: organizationBranding?.logoUrl,
-            primaryColor: organizationBranding?.primaryColor,
-            secondaryColor: organizationBranding?.secondaryColor,
-            emailFromName: organizationBranding?.emailFromName,
-            emailFromAddress: organizationBranding?.emailFromAddress,
-            notes: receipt.notes,
-            qrCodeData: receipt.qrCodeData,
+            organizationSlug: ctx.organization.slug,
+            action: 'UPDATE',
+            resourceType: 'RECEIPT',
+            resourceId: receipt._id.toString(),
+            details: {
+              kind: 'receipt_email_queued',
+              receiptNumber: receipt.receiptNumber,
+              to: receipt.customer.email,
+              messageId: queued.messageId,
+              requestId: meta.requestId,
+            },
+            status: 'SUCCESS',
+            ipAddress: meta.ip,
+            userAgent: meta.userAgent,
+          }).catch(() => undefined)
+        } else {
+          log.warn('receipt_email_enqueue_failed', { error: queued.error })
+        }
+
+        // Always continue returning 201 for the receipt creation.
+      } else {
+        const emailRl = await checkRateLimit({
+          policy: RATE_LIMITS.receiptEmailSend,
+          scope: `tenant:${ctx.organization.id}`,
+        })
+        if (!emailRl.success) {
+          log.warn('rate_limited', { limiter: emailRl.policy.name })
+          receipt.emailLog.push({
+            sentTo: receipt.customer.email,
+            status: 'failed',
+            sentAt: new Date(),
+            error: 'rate_limited',
+            sentByUserId: ctx.user.id,
+            sentByUsername: ctx.user.username,
             smtpVaultId,
           })
 
-          if (result.success) {
-            receipt.emailSent = true
-            receipt.emailSentAt = new Date()
-            receipt.emailLog.push({
-              sentTo: receipt.customer.email,
-              status: 'sent',
-              sentAt: new Date(),
-              sentByUserId: ctx.user.id,
-              sentByUsername: ctx.user.username,
-              smtpSender: result.senderEmail,
-              smtpVaultId: result.smtpVaultId,
-              messageId: result.messageId,
-            })
-          } else {
-            receipt.emailLog.push({
-              sentTo: receipt.customer.email,
-              status: 'failed',
-              sentAt: new Date(),
-              error: result.error,
-              sentByUserId: ctx.user.id,
-              sentByUsername: ctx.user.username,
-              smtpSender: result.senderEmail,
-              smtpVaultId: result.smtpVaultId,
-            })
-          }
-
           await receipt.save()
-
-          log.info('receipt_email_attempted', {
-            receiptNumber: receipt.receiptNumber,
-            success: result.success,
-            smtpVaultId: result.smtpVaultId || null,
-            senderEmail: result.senderEmail || null,
-          })
 
           await writeAuditLog({
             userId: ctx.user.id,
             organizationId: ctx.organization.id,
             organizationSlug: ctx.organization.slug,
-            action: result.success ? 'EMAIL_SENT' : 'EMAIL_FAILED',
+            action: 'EMAIL_FAILED',
             resourceType: 'RECEIPT',
             resourceId: receipt._id.toString(),
             details: {
               receiptNumber: receipt.receiptNumber,
               to: receipt.customer.email,
-              smtpVaultId: result.smtpVaultId || null,
-              senderEmail: result.senderEmail || null,
-              messageId: result.messageId || null,
+              smtpVaultId: smtpVaultId || null,
+              error: 'rate_limited',
               requestId: meta.requestId,
             },
-            status: result.success ? 'SUCCESS' : 'FAILURE',
+            status: 'FAILURE',
             ipAddress: meta.ip,
             userAgent: meta.userAgent,
           }).catch(() => undefined)
-        } catch (emailError) {
-          log.error('receipt_email_error', { error: emailError })
+
+          // Continue returning 201 for the receipt creation.
+        } else {
+          try {
+            const result = await sendReceiptEmail({
+              to: receipt.customer.email,
+              receiptNumber: receipt.receiptNumber,
+              organizationSlug: ctx.organization.slug,
+              organizationId: ctx.organization.id,
+              customerName: receipt.customer.name,
+              customerPhone: receipt.customer.phone,
+              customerAddress: receipt.customer.address,
+              eventName: event.name,
+              eventCode: event.eventCode,
+              eventType: event.type,
+              eventLocation: event.location,
+              eventStartDate: event.startDate?.toISOString(),
+              eventEndDate: event.endDate?.toISOString(),
+              items: receipt.items.map((item) => ({
+                name: item.name,
+                description: item.description,
+                quantity: item.quantity,
+                price: item.price,
+                total: item.total,
+              })),
+              taxes: receipt.taxes,
+              totalAmount: receipt.totalAmount,
+              paymentMethod: receipt.paymentMethod,
+              organizationName:
+                organizationBranding?.organizationName || ctx.organization.name,
+              organizationLogo: organizationBranding?.logoUrl,
+              primaryColor: organizationBranding?.primaryColor,
+              secondaryColor: organizationBranding?.secondaryColor,
+              emailFromName: organizationBranding?.emailFromName,
+              emailFromAddress: organizationBranding?.emailFromAddress,
+              notes: receipt.notes,
+              qrCodeData: receipt.qrCodeData,
+              smtpVaultId,
+            })
+
+            if (result.success) {
+              receipt.emailSent = true
+              receipt.emailSentAt = new Date()
+              receipt.emailLog.push({
+                sentTo: receipt.customer.email,
+                status: 'sent',
+                sentAt: new Date(),
+                sentByUserId: ctx.user.id,
+                sentByUsername: ctx.user.username,
+                smtpSender: result.senderEmail,
+                smtpVaultId: result.smtpVaultId,
+                messageId: result.messageId,
+              })
+            } else {
+              receipt.emailLog.push({
+                sentTo: receipt.customer.email,
+                status: 'failed',
+                sentAt: new Date(),
+                error: result.error,
+                sentByUserId: ctx.user.id,
+                sentByUsername: ctx.user.username,
+                smtpSender: result.senderEmail,
+                smtpVaultId: result.smtpVaultId,
+              })
+            }
+
+            await receipt.save()
+
+            log.info('receipt_email_attempted', {
+              receiptNumber: receipt.receiptNumber,
+              success: result.success,
+              smtpVaultId: result.smtpVaultId || null,
+              senderEmail: result.senderEmail || null,
+            })
+
+            await writeAuditLog({
+              userId: ctx.user.id,
+              organizationId: ctx.organization.id,
+              organizationSlug: ctx.organization.slug,
+              action: result.success ? 'EMAIL_SENT' : 'EMAIL_FAILED',
+              resourceType: 'RECEIPT',
+              resourceId: receipt._id.toString(),
+              details: {
+                receiptNumber: receipt.receiptNumber,
+                to: receipt.customer.email,
+                smtpVaultId: result.smtpVaultId || null,
+                senderEmail: result.senderEmail || null,
+                messageId: result.messageId || null,
+                requestId: meta.requestId,
+              },
+              status: result.success ? 'SUCCESS' : 'FAILURE',
+              ipAddress: meta.ip,
+              userAgent: meta.userAgent,
+            }).catch(() => undefined)
+          } catch (emailError) {
+            log.error('receipt_email_error', { error: emailError })
+          }
         }
       }
     }

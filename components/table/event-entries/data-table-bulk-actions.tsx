@@ -45,6 +45,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { EventEntry } from './schema'
 import { getAllTemplateInfo } from '@/lib/templates'
+import { useReceiptEmailBatchTracker } from '@/contexts/receipt-email-batch-tracker'
 import {
   Select,
   SelectContent,
@@ -72,6 +73,7 @@ export function DataTableBulkActions({
   onUpdate,
   eventCode,
 }: DataTableBulkActionsProps) {
+  const { trackBatch } = useReceiptEmailBatchTracker()
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [sendDialogOpen, setSendDialogOpen] = useState(false)
@@ -137,6 +139,14 @@ export function DataTableBulkActions({
       {
         loading: `${action}...`,
         success: (result) => {
+          const batchId =
+            action === 'queue emails' &&
+            typeof (result as any)?.jobBatchId === 'string'
+              ? ((result as any).jobBatchId as string)
+              : undefined
+
+          if (batchId) trackBatch(batchId)
+
           onUpdate()
           onClearSelection()
           return result.message || `${action} completed`
@@ -149,7 +159,7 @@ export function DataTableBulkActions({
   }
 
   const handleSendEmails = (templateSlug?: string, smtpVaultId?: string) =>
-    handleBulkAction('send emails', '/api/receipts/emails', 'POST', {
+    handleBulkAction('queue emails', '/api/receipts/emails', 'POST', {
       filter: { receiptNumbers },
       templateSlug,
       smtpVaultId,
@@ -269,7 +279,7 @@ export function DataTableBulkActions({
                 className='h-7 gap-1'
                 disabled={!hasPendingEmails || isProcessing !== null}
               >
-                {isProcessing === 'send emails' ? (
+                {isProcessing === 'queue emails' ? (
                   <Loader2 className='w-3 h-3 animate-spin' />
                 ) : (
                   <Mail className='w-3 h-3' />
@@ -280,7 +290,7 @@ export function DataTableBulkActions({
             <DropdownMenuContent align='end'>
               <DropdownMenuItem
                 onClick={() => setSendDialogOpen(true)}
-                disabled={isProcessing === 'send emails'}
+                disabled={isProcessing === 'queue emails'}
               >
                 Configure Send
               </DropdownMenuItem>
@@ -430,7 +440,7 @@ export function DataTableBulkActions({
       <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Send Emails</DialogTitle>
+            <DialogTitle>Queue Emails</DialogTitle>
             <DialogDescription>
               Choose template and sender for {selectedCount} selected entries.
             </DialogDescription>
@@ -496,9 +506,9 @@ export function DataTableBulkActions({
                   selectedVaultId === 'default' ? undefined : selectedVaultId
                 )
               }}
-              disabled={isProcessing === 'send emails'}
+              disabled={isProcessing === 'queue emails'}
             >
-              Send Emails
+              Queue Emails
             </Button>
           </DialogFooter>
         </DialogContent>
