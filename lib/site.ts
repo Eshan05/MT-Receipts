@@ -28,7 +28,8 @@ export const siteConfig: SiteConfig = {
   description:
     'Generate, email, and verify event receipts for your organization.',
   author: {
-    name: 'Acquittance',
+    name: 'Eshan',
+    url: 'https://github.com/Eshan05',
   },
   url: resolveSiteUrl(),
 }

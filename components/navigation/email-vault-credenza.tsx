@@ -193,7 +193,7 @@ export function EmailVaultCredenza({
     <Credenza open={open} onOpenChange={onOpenChange}>
       <CredenzaContent className='sm:max-w-xl'>
         <CredenzaHeader>
-          <CredenzaTitle className='flex items-center gap-2'>
+          <CredenzaTitle className='flex items-center max-sm:justify-center gap-2'>
             <Mail className='w-4 h-4' />
             Email Vault
           </CredenzaTitle>

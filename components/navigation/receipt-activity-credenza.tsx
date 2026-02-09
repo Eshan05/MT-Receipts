@@ -23,6 +23,7 @@ import {
   CredenzaBody,
   CredenzaContent,
   CredenzaDescription,
+  CredenzaFooter,
   CredenzaHeader,
   CredenzaTitle,
 } from '@/components/ui/credenza'
@@ -397,7 +398,7 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
             were delivered.
           </CredenzaDescription>
         </CredenzaHeader>
-        <CredenzaBody className='space-y-4'>
+        <CredenzaBody className='space-y-4 overflow-y-auto no-scrollbar'>
           <div className='flex items-center justify-between gap-2'>
             <div className='flex flex-1 items-center gap-2 flex-wrap'>
               <div className='relative'>
@@ -561,6 +562,15 @@ export function ReceiptActivityCredenza({ open, onOpenChange }: Props) {
             </Button>
           </div>
         </CredenzaBody>
+        <CredenzaFooter>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => onOpenChange(false)}
+          >
+            Close
+          </Button>
+        </CredenzaFooter>
       </CredenzaContent>
     </Credenza>
   )

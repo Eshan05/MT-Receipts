@@ -121,7 +121,7 @@ export function ChangePasswordCredenza({
     <Credenza open={open} onOpenChange={onOpenChange}>
       <CredenzaContent className=''>
         <CredenzaHeader>
-          <CredenzaTitle className='flex items-center gap-2'>
+          <CredenzaTitle className='flex items-center max-sm:justify-center gap-2'>
             <KeyRound className='w-4 h-4' />
             Change Password
           </CredenzaTitle>
