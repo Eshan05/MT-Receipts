@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/sidebar'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TenantThemeSync } from '@/components/organization/tenant-theme-sync'
-import { ReceiptEmailBatchTrackerProvider } from '@/contexts/receipt-email-batch-tracker'
+import { ReceiptEmailBatchTrackerProvider } from '@/contexts/ReceiptEmailBatchTracker'
 
 export default function TenantLayout({
   children,

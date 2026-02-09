@@ -45,7 +45,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { EventEntry } from './schema'
 import { getAllTemplateInfo } from '@/lib/templates'
-import { useReceiptEmailBatchTracker } from '@/contexts/receipt-email-batch-tracker'
+import { useReceiptEmailBatchTracker } from '@/contexts/ReceiptEmailBatchTracker'
 import {
   Select,
   SelectContent,

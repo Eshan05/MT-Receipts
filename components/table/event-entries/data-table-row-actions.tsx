@@ -79,7 +79,7 @@ import {
   type SmtpVaultMeta,
 } from '@/lib/tenants/smtp-vault-client'
 import { SenderSelectView } from '@/components/navigation/sender-select-view'
-import { useReceiptEmailBatchTracker } from '@/contexts/receipt-email-batch-tracker'
+import { useReceiptEmailBatchTracker } from '@/contexts/ReceiptEmailBatchTracker'
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>

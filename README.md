@@ -78,7 +78,7 @@ A **multi-tenant receipt generation and verification system** for clubs. Generat
    - Add items with quantities
    - Preview and generate receipt
    - PDF is automatically emailed to the customer
-5. **Verify Receipts** - Scan QR code or visit `/v/[receipt-number]` to verify authenticity
+5. **Verify Receipts** - Scan QR code or visit `/v/[org-slug]/[receipt-number]` to verify authenticity
 6. **Manage in Dashboard** - View usage, manage members, configure settings
 
 ## ⚙️ Setup
@@ -132,11 +132,8 @@ B2_SECRET_ACCESS_KEY=
 ![Events Page](docs/images/EventsPage.png)
 ![Event Entries](docs/images/EventEntries.png)
 ![Admin Dashboard](docs/images/Dashboard.png)
-![Superadmin Dashboard](docs/images/SuperadminDashboard.png)
+![Superadmin Dashboard](docs/images/Superadmin_Orgs.png)
 ![Members Page](docs/images/MembersPage.png)
-![QR Code Preview](docs/images/QRCode.png)
-![Email Template](docs/images/EmailTemplate.png)
-![PDF Receipt](docs/images/PDFReceipt.png)
 
 </div>
 

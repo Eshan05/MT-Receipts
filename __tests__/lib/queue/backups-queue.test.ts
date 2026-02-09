@@ -25,7 +25,9 @@ describe('backups queue', () => {
     expect(getAbsoluteJobUrl).toHaveBeenCalledWith('/api/jobs/backups')
     expect(publishJSON).toHaveBeenCalled()
 
+    // @ts-expect-error Why
     const args = publishJSON.mock.calls[0]?.[0]
+    // @ts-expect-error Why
     expect(args.flowControl).toMatchObject({
       key: 'superadmin.backups-run',
       parallelism: 1,
