@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/site'
-import { OrgAuthProvider } from '@/contexts/org-auth-provider'
+import { OrgAuthProvider } from '@/contexts/OrgAuthProvider'
 
 export const metadata: Metadata = {
   title: 'Create Organization',
