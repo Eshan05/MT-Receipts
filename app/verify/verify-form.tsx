@@ -149,7 +149,7 @@ export default function VerifyForm() {
         </Button>
       </div>
 
-      <div className='text-xs text-muted-foreground'>{helperText}</div>
+      {/* <div className='text-xs text-muted-foreground'>{helperText}</div> */}
       {error && <div className='text-xs text-destructive'>{error}</div>}
     </form>
   )
