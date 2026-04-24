@@ -23,6 +23,10 @@ type PopulatedEvent = {
   endDate?: Date
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
 function isPopulatedEvent(value: unknown): value is PopulatedEvent {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
@@ -89,6 +93,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (receipt.refunded) {
       return NextResponse.json(
         { message: 'Cannot send email for refunded receipt' },
+        { status: 400 }
+      )
+    }
+
+    if (!receipt.customer?.email || !isValidEmail(receipt.customer.email)) {
+      return NextResponse.json(
+        { message: 'Receipt has no valid customer email to send to' },
         { status: 400 }
       )
     }
@@ -232,6 +243,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       taxes: receipt.taxes,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
+      organizationEmail: organizationBranding?.organizationEmail!,
       organizationName:
         organizationBranding?.organizationName || ctx.organization.name,
       organizationLogo: organizationBranding?.logoUrl,

@@ -4,6 +4,7 @@ import { RESERVED_SLUGS } from '../utils/reserved-slugs'
 export const PUBLIC_PATHS = [
   '/',
   '/v',
+  '/verify',
   '/login',
   '/signup',
   '/o',
@@ -19,6 +20,7 @@ export const STATIC_PATHS = ['/favicon.ico', '/_next', '/api', '/fonts']
 
 export const NON_TENANT_PATHS = [
   'v',
+  'verify',
   'api',
   's',
   'superadmin',

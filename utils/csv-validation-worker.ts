@@ -4,6 +4,7 @@ import {
   type CSVValidationResult,
   type DuplicateInfo,
   type EventItem,
+  type ParseCSVOptions,
 } from '@/utils/csv-parser'
 
 type ExistingEntry = { customerEmail: string; items: { name: string }[] }
@@ -18,6 +19,10 @@ type WorkerResultPayload = {
 type ValidateOptions = {
   signal?: AbortSignal
   onProgress?: (info: { current: number; total: number }) => void
+  parseOptions?: Pick<
+    ParseCSVOptions,
+    'allowMissingEmail' | 'defaultCustomerAddress'
+  >
 }
 
 let workerSingleton: Worker | null = null
@@ -49,7 +54,9 @@ export async function validateCsv(
   duplicates: DuplicateInfo[]
 }> {
   if (!canUseWorker()) {
-    const validationResult = parseCSV(csvText, params.eventItems)
+    const validationResult = parseCSV(csvText, params.eventItems, {
+      ...(options?.parseOptions || {}),
+    })
     const duplicates =
       validationResult.rows.length > 0
         ? checkDuplicates(validationResult.rows, params.existingEntries)
@@ -144,6 +151,7 @@ export async function validateCsv(
       csvText,
       eventItems: params.eventItems,
       existingEntries: params.existingEntries,
+      parseOptions: options?.parseOptions,
     })
   })
 }

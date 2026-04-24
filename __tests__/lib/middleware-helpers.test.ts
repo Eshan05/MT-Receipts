@@ -24,6 +24,7 @@ describe('Path Constants', () => {
     it('contains expected public paths', () => {
       expect(PUBLIC_PATHS).toContain('/')
       expect(PUBLIC_PATHS).toContain('/v')
+      expect(PUBLIC_PATHS).toContain('/verify')
       expect(PUBLIC_PATHS).toContain('/login')
       expect(PUBLIC_PATHS).toContain('/signup')
       expect(PUBLIC_PATHS).toContain('/o')
@@ -49,6 +50,7 @@ describe('Path Constants', () => {
   describe('NON_TENANT_PATHS', () => {
     it('contains non-tenant path segments', () => {
       expect(NON_TENANT_PATHS).toContain('v')
+      expect(NON_TENANT_PATHS).toContain('verify')
       expect(NON_TENANT_PATHS).toContain('api')
       expect(NON_TENANT_PATHS).toContain('superadmin')
       expect(NON_TENANT_PATHS).toContain('o')
@@ -98,6 +100,11 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/o')).toBe(true)
   })
 
+  it('returns true for verify path', () => {
+    expect(isPublicPath('/verify')).toBe(true)
+    expect(isPublicPath('/verify/anything')).toBe(true)
+  })
+
   it('returns true for public path subroutes', () => {
     expect(isPublicPath('/api/sessions')).toBe(true)
     expect(isPublicPath('/api/users')).toBe(true)
@@ -143,6 +150,7 @@ describe('isSuperAdminPath', () => {
 describe('isNonTenantPath', () => {
   it('returns true for non-tenant segments', () => {
     expect(isNonTenantPath('v')).toBe(true)
+    expect(isNonTenantPath('verify')).toBe(true)
     expect(isNonTenantPath('api')).toBe(true)
     expect(isNonTenantPath('s')).toBe(true)
     expect(isNonTenantPath('superadmin')).toBe(true)
@@ -201,6 +209,7 @@ describe('extractSlugFromPath', () => {
 
   it('returns null for non-tenant paths', () => {
     expect(extractSlugFromPath('/v/RC-001')).toBe(null)
+    expect(extractSlugFromPath('/verify')).toBe(null)
     expect(extractSlugFromPath('/s/dashboard')).toBe(null)
     expect(extractSlugFromPath('/api/users')).toBe(null)
     expect(extractSlugFromPath('/superadmin')).toBe(null)

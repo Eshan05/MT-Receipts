@@ -1,10 +1,12 @@
 import type { TemplateComponent, TemplateInfo, TemplateProps } from './types'
 import ProfessionalTemplate from './professional'
 import ProfessionalDarkTemplate from './professional-dark'
+import AProfessionalTemplate from '@/lib/templates/aces-professional'
 
 export const templateRegistry: Record<string, TemplateComponent> = {
   professional: ProfessionalTemplate,
   'professional-dark': ProfessionalDarkTemplate,
+  'aces-professional': AProfessionalTemplate,
 }
 
 export const templateInfo: Record<string, TemplateInfo> = {
@@ -20,6 +22,13 @@ export const templateInfo: Record<string, TemplateInfo> = {
     name: 'Professional Dark',
     description:
       'Dark mode variant with neutral zinc tones and sky blue accents.',
+    category: 'professional',
+  },
+  'aces-professional': {
+    slug: 'aces-professional',
+    name: 'ACES Professional',
+    description:
+      'A professional template inspired by the ACES brand, featuring a clean layout and bold typography.',
     category: 'professional',
   },
 }

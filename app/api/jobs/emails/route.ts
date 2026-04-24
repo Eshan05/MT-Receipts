@@ -319,6 +319,7 @@ export const POST = verifySignatureAppRouter(async (req: NextRequest) => {
       taxes: receipt.taxes,
       totalAmount: receipt.totalAmount,
       paymentMethod: receipt.paymentMethod,
+      organizationEmail: organizationBranding?.organizationEmail!,
       organizationName: organizationBranding?.organizationName || org.name,
       organizationLogo: organizationBranding?.logoUrl,
       primaryColor:

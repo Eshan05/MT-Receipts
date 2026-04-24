@@ -38,6 +38,10 @@ function isPopulatedEvent(value: unknown): value is PopulatedEvent {
   )
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
 export async function GET(request: NextRequest) {
   const meta = getRequestMeta(request)
   const baseLog = createLogger({
@@ -199,6 +203,7 @@ export async function POST(request: NextRequest) {
       const receipts = await Receipt.find({
         receiptNumber: { $in: receiptNumbers },
         refunded: { $ne: true },
+        'customer.email': { $exists: true, $ne: '' },
       })
         .select('_id receiptNumber customer.email')
         .lean()
@@ -332,6 +337,12 @@ export async function POST(request: NextRequest) {
 
     for (const receipt of receipts) {
       try {
+        if (!receipt.customer?.email || !isValidEmail(receipt.customer.email)) {
+          failedCount++
+          errors.push(`${receipt.receiptNumber}: missing or invalid email`)
+          continue
+        }
+
         const emailRl = await checkRateLimit({
           policy: RATE_LIMITS.receiptEmailSend,
           scope: `tenant:${ctx.organization.id}`,

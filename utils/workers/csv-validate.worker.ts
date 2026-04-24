@@ -1,4 +1,9 @@
-import { parseCSV, checkDuplicates, type EventItem } from '@/utils/csv-parser'
+import {
+  parseCSV,
+  checkDuplicates,
+  type EventItem,
+  type ParseCSVOptions,
+} from '@/utils/csv-parser'
 
 type ExistingEntry = { customerEmail: string; items: { name: string }[] }
 
@@ -8,6 +13,10 @@ type ValidateRequest = {
   csvText: string
   eventItems?: EventItem[]
   existingEntries: ExistingEntry[]
+  parseOptions?: Pick<
+    ParseCSVOptions,
+    'allowMissingEmail' | 'defaultCustomerAddress'
+  >
 }
 
 type CancelRequest = {
@@ -43,6 +52,7 @@ self.onmessage = (event: MessageEvent<RequestMessage>) => {
         post({ type: 'progress', id: msg.id, current, total })
       },
       shouldCancel: () => cancelled,
+      ...(msg.parseOptions || {}),
     })
 
     if (cancelled) {

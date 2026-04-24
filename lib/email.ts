@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 import { render } from '@react-email/components'
-import ReceiptEmail from '@/lib/emails/receipt-email'
+import { ReceiptEmail } from '@/lib/emails/receipt-email'
 import {
   renderReceiptPDF,
   streamToBuffer,
@@ -153,6 +153,7 @@ export interface SendReceiptOptions {
   totalAmount: number
   paymentMethod?: string
   organizationName?: string
+  organizationEmail?: string
   organizationLogo?: string
   primaryColor?: string
   secondaryColor?: string
@@ -186,6 +187,7 @@ export async function sendReceiptEmail({
   totalAmount,
   paymentMethod,
   organizationName = 'Acquittance',
+  organizationEmail,
   organizationLogo,
   primaryColor,
   secondaryColor,
@@ -206,6 +208,15 @@ export async function sendReceiptEmail({
   })
 
   try {
+    const senderCredentials = await resolveSenderCredentials({
+      smtpVaultId,
+      organizationId,
+      organizationSlug,
+    })
+
+    const resolvedOrganizationEmail =
+      organizationEmail || emailFromAddress || senderCredentials.user
+
     const effectivePrimaryColor = templateConfig?.primaryColor || primaryColor
     const effectiveSecondaryColor =
       templateConfig?.secondaryColor || secondaryColor
@@ -222,6 +233,7 @@ export async function sendReceiptEmail({
         paymentMethod,
         date,
         organizationName,
+        organizationEmail: resolvedOrganizationEmail,
         organizationLogo,
         primaryColor: effectivePrimaryColor,
         secondaryColor: effectiveSecondaryColor,
@@ -291,11 +303,6 @@ export async function sendReceiptEmail({
     const { stream } = await renderReceiptPDF(renderOptions)
     const pdfBuffer = await streamToBuffer(stream)
 
-    const senderCredentials = await resolveSenderCredentials({
-      smtpVaultId,
-      organizationId,
-      organizationSlug,
-    })
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

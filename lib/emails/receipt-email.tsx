@@ -35,6 +35,7 @@ interface ReceiptEmailProps {
   paymentMethod?: string
   date: string
   organizationName?: string
+  organizationEmail: string
   organizationLogo?: string
   primaryColor?: string
   secondaryColor?: string
@@ -52,6 +53,7 @@ export function ReceiptEmail({
   paymentMethod,
   date,
   organizationName = 'Acquittance',
+  organizationEmail,
   organizationLogo,
   primaryColor = '#0f172a',
   secondaryColor = '#334155',
@@ -250,12 +252,11 @@ export function ReceiptEmail({
                 <Text className='text-slate-500 text-xs m-0 mt-1'>
                   For any queries, please contact us at{' '}
                   <Link
-                    href={`mailto:${emailFromAddress || `${organizationName.toLowerCase()}@example.com`}`}
+                    href={`mailto:${emailFromAddress || `${organizationEmail}`}`}
                     className='text-slate-700 underline'
                     style={{ color: secondaryColor }}
                   >
-                    {emailFromAddress ||
-                      `${organizationName.toLowerCase()}@example.com`}
+                    {emailFromAddress || `${organizationEmail}`}
                   </Link>
                 </Text>
               </Section>

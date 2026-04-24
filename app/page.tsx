@@ -29,7 +29,7 @@ export default function LandingPage() {
               <div className='absolute -inset-2 rounded-full bg-muted/60 blur' />
               <Image
                 src='https://avatars.githubusercontent.com/u/140711476?v=4'
-                alt='Eshan avatar'
+                alt={`${siteConfig.name} logo`}
                 width={96}
                 height={96}
                 className='relative h-20 w-20 rounded-full border object-cover sm:h-24 sm:w-24'
@@ -66,6 +66,12 @@ export default function LandingPage() {
               <Button className='w-full gap-2'>
                 <ReceiptIcon className='h-4 w-4' />
                 Sign In
+              </Button>
+            </Link>
+            <Link href='/verify' className='w-full sm:w-auto'>
+              <Button variant='outline' className='w-full gap-2'>
+                <CheckCheck className='h-4 w-4' />
+                Verify
               </Button>
             </Link>
             <Link href='/o' className='w-full sm:w-auto'>

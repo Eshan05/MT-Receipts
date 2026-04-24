@@ -3,6 +3,7 @@ import Organization from '@/models/organization.model'
 
 export interface OrganizationBranding {
   organizationName: string
+  organizationEmail?: string
   organizationAddress?: string
   logoUrl?: string
   primaryColor?: string
@@ -34,6 +35,7 @@ export async function getOrganizationBrandingBySlug(
       organization.settings?.organizationName ||
       organization.name,
     organizationAddress: organization.settings?.address || undefined,
+    organizationEmail: organization.settings?.contactEmail || undefined,
     logoUrl: organization.logoUrl || undefined,
     primaryColor: organization.settings?.primaryColor || undefined,
     secondaryColor: organization.settings?.secondaryColor || undefined,

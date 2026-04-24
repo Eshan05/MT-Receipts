@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -106,6 +107,10 @@ export function CSVImportModal({
   const [sendEmails, setSendEmails] = useState(false)
   const [smtpVaults, setSmtpVaults] = useState<SmtpVaultMeta[]>([])
   const [selectedVaultId, setSelectedVaultId] = useState<string>('default')
+  const [allowMissingEmail, setAllowMissingEmail] = useState(false)
+  const [defaultCustomerAddress, setDefaultCustomerAddress] = useState(
+    event.location || ''
+  )
 
   const resetState = useCallback(() => {
     validationControllerRef.current?.abort()
@@ -121,7 +126,14 @@ export function CSVImportModal({
     setImportResults({ success: 0, failed: 0 })
     setSendEmails(false)
     setSelectedVaultId('default')
-  }, [])
+    setAllowMissingEmail(false)
+    setDefaultCustomerAddress(event.location || '')
+  }, [event.location])
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -162,6 +174,10 @@ export function CSVImportModal({
               {
                 signal: controller.signal,
                 onProgress: (info) => setValidationProgress(info),
+                parseOptions: {
+                  allowMissingEmail,
+                  defaultCustomerAddress: defaultCustomerAddress?.trim() || '',
+                },
               }
             )
 
@@ -197,7 +213,7 @@ export function CSVImportModal({
       }
       reader.readAsText(file)
     },
-    [existingEntries]
+    [allowMissingEmail, defaultCustomerAddress, event.items, existingEntries]
   )
 
   const handleDrop = useCallback(
@@ -363,6 +379,10 @@ export function CSVImportModal({
   }
 
   const selectedCount = Object.values(rowSelection).filter(Boolean).length
+  const selectedRows = getSelectedRows()
+  const selectedInvalidEmailCount = selectedRows.filter(
+    (row) => !row.customerEmail || !isValidEmail(row.customerEmail)
+  ).length
   const validRowsCount =
     validationResult?.rows.filter((row) => {
       const hasError = validationResult.errors.some(
@@ -445,6 +465,40 @@ export function CSVImportModal({
             </div>
 
             <div className='bg-muted/50 rounded-lg p-4'>
+              <div className='space-y-3 mb-4'>
+                <div className='flex items-start gap-2'>
+                  <Checkbox
+                    checked={allowMissingEmail}
+                    onCheckedChange={(v) => setAllowMissingEmail(Boolean(v))}
+                    id='allow-missing-email'
+                  />
+                  <div className='space-y-0.5'>
+                    <label
+                      htmlFor='allow-missing-email'
+                      className='text-xs font-medium leading-none'
+                    >
+                      Allow missing/invalid emails (Save Only)
+                    </label>
+                    <p className='text-2xs text-muted-foreground'>
+                      Useful when you don’t have email for everyone. “Save &
+                      Send Emails” requires valid emails.
+                    </p>
+                  </div>
+                </div>
+
+                <div className='space-y-1'>
+                  <p className='text-xs font-medium'>
+                    Default location / address (optional)
+                  </p>
+                  <Input
+                    value={defaultCustomerAddress}
+                    onChange={(e) => setDefaultCustomerAddress(e.target.value)}
+                    placeholder='Applied to blank “Customer Address” cells'
+                    className='h-9'
+                  />
+                </div>
+              </div>
+
               <p className='text-sm font-medium mb-2'>CSV Format:</p>
               <div className='grid grid-cols-2 gap-0.5 text-xs'>
                 {csvTemplateFields.slice(0, 6).map((field) => (
@@ -925,11 +979,31 @@ export function CSVImportModal({
                 >
                   Save Only
                 </Button>
-                <Button size='sm' onClick={() => handleImport(true)}>
+                <Button
+                  size='sm'
+                  disabled={selectedInvalidEmailCount > 0}
+                  onClick={() => {
+                    if (selectedInvalidEmailCount > 0) {
+                      toast.error(
+                        'Some selected rows are missing/invalid email. Use “Save Only” or fix the emails.'
+                      )
+                      return
+                    }
+                    handleImport(true)
+                  }}
+                >
                   Save & Send Emails
                 </Button>
               </div>
             </div>
+
+            {selectedInvalidEmailCount > 0 && (
+              <p className='text-2xs text-muted-foreground'>
+                {selectedInvalidEmailCount} selected entr
+                {selectedInvalidEmailCount === 1 ? 'y is' : 'ies are'} missing a
+                valid email. Only “Save Only” is available.
+              </p>
+            )}
           </div>
         )}
 

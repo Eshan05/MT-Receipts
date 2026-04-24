@@ -55,4 +55,37 @@ describe('parseCSV', () => {
     )
     expect(result.validRowCount).toBeLessThan(100)
   })
+
+  it('detects the header even when not on the first line', () => {
+    const csvText = [
+      '```python',
+      'print("not a csv")',
+      '```',
+      'Customer Name,Customer Email,Customer Phone,Customer Address,Items,Payment Method,Notes,Email Sent',
+      'Jane,,,+91 9999999999,"T-Shirt x1 @500",cash,,no',
+    ].join('\n')
+
+    const result = parseCSV(csvText, [{ name: 'T-Shirt' }], {
+      allowMissingEmail: true,
+    })
+
+    expect(result.errors).toHaveLength(0)
+    expect(result.validRowCount).toBe(1)
+    expect(result.warnings.some((w) => w.field === 'customerEmail')).toBe(true)
+  })
+
+  it('applies default customer address when blank', () => {
+    const header =
+      'Customer Name,Customer Email,Customer Phone,Customer Address,Items,Payment Method,Notes,Email Sent'
+    const row = 'A,a@example.com,,,"T-Shirt x1 @500",cash,,no'
+    const csvText = [header, row].join('\n')
+
+    const result = parseCSV(csvText, [{ name: 'T-Shirt' }], {
+      defaultCustomerAddress: 'Pune',
+    })
+
+    expect(result.errors).toHaveLength(0)
+    expect(result.validRowCount).toBe(1)
+    expect(result.rows[0].customerAddress).toBe('Pune')
+  })
 })

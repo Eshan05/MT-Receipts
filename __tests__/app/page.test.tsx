@@ -71,6 +71,12 @@ describe('LandingPage', () => {
     expect(createOrgLink).toHaveAttribute('href', '/o')
   })
 
+  it('renders Verify button with correct link', () => {
+    render(<LandingPage />)
+    const verifyLink = screen.getByRole('link', { name: /verify/i })
+    expect(verifyLink).toHaveAttribute('href', '/verify')
+  })
+
   it('has correct layout structure', () => {
     const { container } = render(<LandingPage />)
     const main = container.querySelector('main')

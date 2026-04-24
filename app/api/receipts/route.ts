@@ -141,6 +141,17 @@ export async function POST(request: NextRequest) {
       smtpVaultId,
     } = body
 
+    const normalizeEmail = (value: unknown): string => {
+      if (typeof value !== 'string') return ''
+      return value.trim().toLowerCase()
+    }
+
+    const isValidEmail = (value: string): boolean => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+    }
+
+    const normalizedCustomerEmail = normalizeEmail(customer?.email)
+
     if (!eventId || !customer || !items) {
       return NextResponse.json(
         { message: 'Missing required fields' },
@@ -226,7 +237,19 @@ export async function POST(request: NextRequest) {
       subtotal +
       (processedTaxes?.reduce((sum: number, tax) => sum + tax.amount, 0) || 0)
 
-    const shouldSendEmail = sendEmail && !emailSent
+    const shouldSendEmail = Boolean(sendEmail) && !emailSent
+
+    if (shouldSendEmail) {
+      if (!normalizedCustomerEmail || !isValidEmail(normalizedCustomerEmail)) {
+        return NextResponse.json(
+          {
+            message:
+              'Cannot send email: customer email is missing or invalid. Save without sending, or provide a valid email.',
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     const receipt = await Receipt.create({
       receiptNumber,
@@ -234,7 +257,7 @@ export async function POST(request: NextRequest) {
       templateSlug: typeof templateSlug === 'string' ? templateSlug : undefined,
       customer: {
         name: customer.name,
-        email: customer.email,
+        email: normalizedCustomerEmail,
         phone: customer.phone,
         address: customer.address,
       },
@@ -250,6 +273,25 @@ export async function POST(request: NextRequest) {
       notes,
       createdBy: ctx.user.id,
     })
+
+    try {
+      const mod = await import('@/models/receipt-verification-index.model')
+      const ReceiptVerificationIndex =
+        (mod as any).default ?? (mod as any).ReceiptVerificationIndex
+      if (ReceiptVerificationIndex) {
+        await ReceiptVerificationIndex.updateOne(
+          { receiptNumber: receipt.receiptNumber },
+          {
+            $set: {
+              organizationSlug: ctx.organization.slug,
+            },
+          },
+          { upsert: true }
+        )
+      }
+    } catch {
+      // Best-effort; receipt creation should not fail if indexing fails.
+    }
 
     if (shouldSendEmail) {
       if (isQstashConfigured()) {

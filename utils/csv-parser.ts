@@ -50,6 +50,12 @@ export interface EventItem {
 export interface ParseCSVOptions {
   onProgress?: (info: { current: number; total: number }) => void
   shouldCancel?: () => boolean
+  allowMissingEmail?: boolean
+  defaultCustomerAddress?: string
+}
+
+function normalizeHeaderToken(value: string): string {
+  return value.toLowerCase().trim().replace(/\s+/g, '')
 }
 
 function parseItemsString(itemsStr: string): ParsedCSVRow['items'] {
@@ -132,16 +138,53 @@ export function parseCSV(
     ? eventItems.map((i) => i.name.trim())
     : null
 
+  const templateHeaderTokens = csvTemplateFields.map((field) => {
+    const labelNormalized = normalizeHeaderToken(field.label)
+    const keyNormalized = normalizeHeaderToken(field.key)
+    return { labelNormalized, keyNormalized }
+  })
+
+  const requiredHeaderTokens = ['customername', 'items', 'paymentmethod']
+
+  const headerIndex = (() => {
+    let foundIndex = -1
+    for (let idx = 0; idx < lines.length; idx++) {
+      const candidate = lines[idx]
+      const normalized = parseCSVLine(candidate).map(normalizeHeaderToken)
+      if (normalized.length < 3) continue
+
+      const hasRequired = requiredHeaderTokens.every((token) =>
+        normalized.includes(token)
+      )
+
+      if (!hasRequired) continue
+
+      let matchCount = 0
+      for (const token of templateHeaderTokens) {
+        if (
+          normalized.includes(token.labelNormalized) ||
+          normalized.includes(token.keyNormalized)
+        ) {
+          matchCount++
+        }
+      }
+
+      // Must look like our template header line, not just a random CSV line.
+      // Allow minimal headers (e.g., only required columns).
+      if (matchCount >= requiredHeaderTokens.length) foundIndex = idx
+    }
+
+    return foundIndex !== -1 ? foundIndex : 0
+  })()
+
   // Parse header
-  const headerLine = lines[0]
-  const headers = parseCSVLine(headerLine).map((h) =>
-    h.toLowerCase().trim().replace(/\s+/g, '')
-  )
+  const headerLine = lines[headerIndex]
+  const headers = parseCSVLine(headerLine).map(normalizeHeaderToken)
 
   // Map headers to field indices
   const fieldIndices: Record<string, number> = {}
   csvTemplateFields.forEach((field) => {
-    const labelNormalized = field.label.toLowerCase().replace(/\s+/g, '')
+    const labelNormalized = normalizeHeaderToken(field.label)
     const index = headers.findIndex(
       (h) => h === labelNormalized || h === field.key.toLowerCase()
     )
@@ -151,8 +194,8 @@ export function parseCSV(
   })
 
   // Parse data rows
-  const totalDataRows = Math.max(lines.length - 1, 0)
-  for (let i = 1; i < lines.length; i++) {
+  const totalDataRows = Math.max(lines.length - headerIndex - 1, 0)
+  for (let i = headerIndex + 1; i < lines.length; i++) {
     if (options?.shouldCancel?.()) {
       result.errors.push({
         rowNumber: 0,
@@ -163,12 +206,24 @@ export function parseCSV(
       return result
     }
 
-    if (options?.onProgress && i % 25 === 0) {
-      options.onProgress({ current: i - 1, total: totalDataRows })
+    if (options?.onProgress && (i - headerIndex) % 25 === 0) {
+      options.onProgress({ current: i - headerIndex - 1, total: totalDataRows })
     }
 
     const line = lines[i]
-    if (!line.trim() || line.startsWith('--')) continue
+    const trimmedLine = line.trim()
+    if (!trimmedLine) continue
+    if (trimmedLine.startsWith('--')) continue
+    if (trimmedLine.startsWith('```')) continue
+
+    // Ignore repeated header lines (common when CSV content is pasted twice).
+    const maybeHeader = parseCSVLine(trimmedLine).map(normalizeHeaderToken)
+    if (
+      maybeHeader.length === headers.length &&
+      maybeHeader.every((h, idx) => h === headers[idx])
+    ) {
+      continue
+    }
 
     const values = parseCSVLine(line)
     const rowNumber = i + 1
@@ -184,13 +239,18 @@ export function parseCSV(
     }
 
     const customerName = getValue('customerName').trim()
-    const customerEmail = getValue('customerEmail').trim().toLowerCase()
+    const customerEmailRaw = getValue('customerEmail').trim()
+    const customerEmail = customerEmailRaw.toLowerCase()
     const customerPhone = getValue('customerPhone').trim()
-    const customerAddress = getValue('customerAddress').trim()
+    let customerAddress = getValue('customerAddress').trim()
     const itemsStr = getValue('items').trim()
     const paymentMethodStr = getValue('paymentMethod').trim()
     const notes = getValue('notes').trim()
     const emailSentStr = getValue('emailSent').trim().toLowerCase()
+
+    if (!customerAddress && options?.defaultCustomerAddress) {
+      customerAddress = options.defaultCustomerAddress.trim()
+    }
 
     let hasError = false
 
@@ -206,21 +266,41 @@ export function parseCSV(
     }
 
     if (!customerEmail) {
-      result.errors.push({
-        rowNumber,
-        field: 'customerEmail',
-        message: 'Customer email is required',
-        severity: 'error',
-      })
-      hasError = true
+      if (options?.allowMissingEmail) {
+        result.warnings.push({
+          rowNumber,
+          field: 'customerEmail',
+          message:
+            'Customer email missing (receipt can be saved but not emailed)',
+          severity: 'warning',
+        })
+      } else {
+        result.errors.push({
+          rowNumber,
+          field: 'customerEmail',
+          message: 'Customer email is required',
+          severity: 'error',
+        })
+        hasError = true
+      }
     } else if (!isValidEmail(customerEmail)) {
-      result.errors.push({
-        rowNumber,
-        field: 'customerEmail',
-        message: 'Invalid email format',
-        severity: 'error',
-      })
-      hasError = true
+      if (options?.allowMissingEmail) {
+        result.warnings.push({
+          rowNumber,
+          field: 'customerEmail',
+          message:
+            'Invalid email format (receipt can be saved but not emailed)',
+          severity: 'warning',
+        })
+      } else {
+        result.errors.push({
+          rowNumber,
+          field: 'customerEmail',
+          message: 'Invalid email format',
+          severity: 'error',
+        })
+        hasError = true
+      }
     }
 
     if (!itemsStr) {
@@ -342,6 +422,7 @@ export function checkDuplicates(
 
   // Check within CSV
   for (const row of parsedRows) {
+    if (!row.customerEmail) continue
     const prevRow = seenEmails.get(row.customerEmail)
     if (prevRow !== undefined) {
       duplicates.push({
@@ -357,6 +438,7 @@ export function checkDuplicates(
 
   // Check against existing entries
   for (const row of parsedRows) {
+    if (!row.customerEmail) continue
     const existing = existingEntries.find(
       (e) =>
         e.customerEmail.toLowerCase() === row.customerEmail.toLowerCase() &&

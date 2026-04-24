@@ -25,7 +25,7 @@ function resolveSiteUrl(): string {
 
 export const siteConfig: SiteConfig = {
   name: 'Acquittance',
-  description: 'Generate, email, and verify receipts with your team.',
+  description: 'Generate, email, and verify event receipts with your team.',
   author: {
     name: 'Eshan',
     url: 'https://github.com/Eshan05',

@@ -18,7 +18,8 @@ export const csvTemplateFields: CSVTemplateField[] = [
     key: 'customerEmail',
     label: 'Customer Email',
     required: true,
-    description: 'Email address for sending receipt',
+    description:
+      'Email address for sending receipt (required for “Save & Send Emails”; optional for “Save Only”)',
     example: 'john@example.com',
   },
   {
