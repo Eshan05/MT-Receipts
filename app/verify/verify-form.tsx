@@ -70,7 +70,11 @@ function parseCertificateInput(raw: string): ParsedTarget {
   return tryParsePath(value)
 }
 
-export default function VerifyForm() {
+export default function VerifyForm({
+  defaultOrganizationSlug,
+}: {
+  defaultOrganizationSlug?: string
+}) {
   const router = useRouter()
   const [input, setInput] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -94,8 +98,11 @@ export default function VerifyForm() {
         setError(null)
 
         const receiptNumber = encodeURIComponent(parsed.receiptNumber)
-        if (parsed.organizationSlug) {
-          const organizationSlug = encodeURIComponent(parsed.organizationSlug)
+        const resolvedOrganizationSlug =
+          parsed.organizationSlug || defaultOrganizationSlug
+
+        if (resolvedOrganizationSlug) {
+          const organizationSlug = encodeURIComponent(resolvedOrganizationSlug)
           router.push(`/v/${organizationSlug}/${receiptNumber}`)
           return
         }

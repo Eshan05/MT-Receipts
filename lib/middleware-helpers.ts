@@ -37,6 +37,14 @@ export function isStaticPath(pathname: string): boolean {
 }
 
 export function isPublicPath(pathname: string): boolean {
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.length >= 2 && segments[1] === 'verify') {
+    const firstSegment = segments[0]
+    if (!isNonTenantPath(firstSegment) && !isReservedSlug(firstSegment)) {
+      return true
+    }
+  }
+
   return PUBLIC_PATHS.some(
     (publicPath) =>
       pathname === publicPath || pathname.startsWith(publicPath + '/')

@@ -105,6 +105,11 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/verify/anything')).toBe(true)
   })
 
+  it('returns true for org-scoped verify path', () => {
+    expect(isPublicPath('/aces/verify')).toBe(true)
+    expect(isPublicPath('/aces/verify/anything')).toBe(true)
+  })
+
   it('returns true for public path subroutes', () => {
     expect(isPublicPath('/api/sessions')).toBe(true)
     expect(isPublicPath('/api/users')).toBe(true)
